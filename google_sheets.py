@@ -1,5 +1,4 @@
-import csv, requests, io, re, uuid
-from datetime import datetime
+import csv, requests, io, uuid
 
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSK89d4Ff2rFhmQpCdzExmpZ3L_bwPtFHlsnHUjKgmqPFeYNTieaU0jmFc4Y_ZTJbAzVc9MYKM2fc8f/pub?output=csv"
 APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxD8ChNf0FF8QO5Q39R9OfDUqSUeyNhUv5edm3tC48kpeke-jp66YFIPimZwpAdhfGm/exec"
@@ -12,16 +11,32 @@ def get_all_data():
         reader = csv.reader(io.StringIO(response.text))
         next(reader) 
         for row in reader:
-            if not row or not row[0]: continue
+            if not row or not row[0].strip(): continue
             
-            # حماية هندسية: إكمال الأعمدة الفارغة لتجنب خطأ IndexError
-            row += [''] * (10 - len(row))
+            # حماية: إكمال الصفوف ليصبح طولها 12 عموداً دائماً
+            row += [''] * (12 - len(row))
             
-            data = {'type': row[0].lower(), 'id': row[1], 'u_id': row[2], 'c1': row[3], 'c2': row[4], 'c3': row[5], 'c4': row[6], 'c5': row[7], 'c6': row[8], 'active': row[9]}
+            # تعيين البيانات بدقة متناهية حسب ترتيب ملف الإكسل الخاص بك
+            data_type = row[0].strip().lower()
+            item_id = row[1].strip()
+            user_id = row[2].strip()
+            name = row[3].strip()
+            desc = row[4].strip()
+            store_slug = row[5].strip()  # رابط المتجر
+            price = row[6].strip()       # الهاتف أو السعر
+            category = row[7].strip()    # التصنيف
+            image_url = row[8].strip()   # الصورة
+            password = row[9].strip()    # الرقم السري
+            active = row[10].strip().upper() # حالة التفعيل
             
-            if data['type'] == 'user': database['users'].append({'id': data['id'], 'username': data['c1'], 'store_slug': data['c2'], 'password': data['c6'], 'active': data['active']})
-            elif data['type'] == 'product': database['products'].append(data)
-            elif data['type'] == 'setting': database['settings'].append(data)
+            is_active = 'TRUE' if active in ['TRUE', '1', 'نعم', 'مفعل', 'نشط'] else 'FALSE'
+            
+            if data_type in ['user', 'تاجر']:
+                database['users'].append({'id': item_id, 'username': name, 'store_slug': store_slug, 'password': password, 'active': is_active})
+            elif data_type in ['product', 'منتج']:
+                database['products'].append({'id': item_id, 'u_id': user_id, 'name': name, 'description': desc, 'price': price, 'category': category, 'image_url': image_url, 'active': is_active})
+            elif data_type in ['setting', 'اعدادات']:
+                database['settings'].append({'u_id': user_id, 'c1': name, 'c2': desc})
     except Exception as e: print(e)
     return database
 

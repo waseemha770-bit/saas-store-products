@@ -14,13 +14,8 @@ def view_store(slug):
     user = next((u for u in db['users'] if u.get('store_slug') == slug and u.get('active') == 'TRUE'), None)
     if not user: return "المتجر غير موجود أو غير مفعل", 404
     
-    # الحل الآمن هنا: استخدام get() بدلاً من الأقواس المربعة
-    settings = next((s for s in db.get('settings', []) if s.get('u_id') == user.get('id')), {
-        'c1': user.get('username'), 
-        'c2': 'مرحباً بكم في متجري'
-    })
-    
-    products = [{'name': p.get('c1'), 'price': p.get('c3'), 'description': p.get('c2'), 'category': p.get('c4'), 'image_url': p.get('c5')} for p in db.get('products', []) if p.get('u_id') == user.get('id')]
+    settings = next((s for s in db.get('settings', []) if s.get('u_id') == user.get('id')), {'c1': user.get('username'), 'c2': 'مرحباً بكم'})
+    products = [p for p in db.get('products', []) if p.get('u_id') == user.get('id') and p.get('active') == 'TRUE']
     
     return render_template('store.html', user=user, settings=settings, products=products)
 
@@ -28,13 +23,12 @@ def view_store(slug):
 def login():
     if request.method == 'POST':
         db = google_sheets.get_all_data()
-        # تأمين تسجيل الدخول أيضاً
-        user = next((u for u in db['users'] if u.get('store_slug') == request.form.get('slug') and u.get('password') == request.form.get('pass')), None)
+        user = next((u for u in db['users'] if u.get('store_slug') == request.form.get('slug') and u.get('password') == request.form.get('pass') and u.get('active') == 'TRUE'), None)
         if user:
             session['user_id'] = user.get('id')
             session['store_slug'] = user.get('store_slug')
             return redirect(url_for('dashboard'))
-        flash("بيانات الدخول خاطئة", "danger")
+        flash("بيانات الدخول خاطئة أو المتجر غير مفعل", "danger")
     return render_template('login.html')
 
 @app.route('/dashboard', methods=['GET', 'POST'])
@@ -42,10 +36,8 @@ def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
     if request.method == 'POST':
         success = google_sheets.add_product_to_sheet(session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'))
-        if success:
-            flash("تم إضافة المنتج بنجاح", "success")
-        else:
-            flash("حدث خطأ في الاتصال بقاعدة البيانات", "danger")
+        if success: flash("تم إضافة المنتج بنجاح", "success")
+        else: flash("خطأ في الاتصال بقاعدة البيانات", "danger")
         return redirect(url_for('dashboard'))
         
     products = [p for p in google_sheets.get_all_data().get('products', []) if p.get('u_id') == session['user_id']]
