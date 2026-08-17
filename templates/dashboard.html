@@ -2,27 +2,101 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>لوحة التحكم</title>
+    <title>لوحة التحكم | TajerGo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <style>body{font-family:'Cairo',sans-serif; background-color:#f4f6f9;}</style>
 </head>
-<body class="bg-light">
-    <div class="container py-5">
-        <div class="d-flex justify-content-between mb-4">
-            <h2>لوحة تحكم المتجر</h2>
-            <a href="/logout" class="btn btn-danger">تسجيل الخروج</a>
+<body>
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">TajerGo لوحة التحكم</a>
+            <div>
+                <a href="/store/{{ store_slug }}" target="_blank" class="btn btn-outline-light btn-sm mx-2">عرض متجري</a>
+                <a href="/logout" class="btn btn-danger btn-sm">خروج</a>
+            </div>
         </div>
-        <form method="POST" class="row g-2 mb-4">
-            <input name="name" class="form-control mb-2" placeholder="اسم المنتج" required>
-            <input name="price" class="form-control mb-2" placeholder="السعر" required>
-            <input name="desc" class="form-control mb-2" placeholder="الوصف">
-            <input name="cat" class="form-control mb-2" placeholder="التصنيف">
-            <input name="img" class="form-control mb-2" placeholder="رابط الصورة">
-            <button class="btn btn-success">إضافة المنتج</button>
-        </form>
-        <h3>منتجاتك:</h3>
-        <ul class="list-group">
-            {% for p in products %}<li class="list-group-item fw-bold">{{p.c1}} <span class="text-success mx-2">{{p.c3}}</span></li>{% endfor %}
+    </nav>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}
+        {% endwith %}
+
+        <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+            <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#products">المنتجات</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#settings">إعدادات المتجر</button></li>
         </ul>
+
+        <div class="tab-content">
+            <!-- تبويب المنتجات -->
+            <div class="tab-pane fade show active" id="products">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-body">
+                        <h5 class="mb-3 fw-bold">إضافة منتج جديد</h5>
+                        <form method="POST" class="row g-3">
+                            <input type="hidden" name="action" value="add_product">
+                            <div class="col-md-6"><input name="name" class="form-control" placeholder="اسم المنتج" required></div>
+                            <div class="col-md-6"><input name="price" class="form-control" placeholder="السعر" required></div>
+                            <div class="col-md-12"><input name="desc" class="form-control" placeholder="الوصف"></div>
+                            <div class="col-md-6"><input name="cat" class="form-control" placeholder="التصنيف"></div>
+                            <div class="col-md-6"><input name="img" class="form-control" placeholder="رابط الصورة (اختياري)"></div>
+                            <div class="col-12"><button class="btn btn-success w-100 fw-bold">إضافة المنتج</button></div>
+                        </form>
+                    </div>
+                </div>
+                <div class="row">
+                    {% for p in products %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold">{{ p.name }}</h6>
+                                <p class="text-muted small">{{ p.description }}</p>
+                                <span class="badge bg-primary">{{ p.price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- تبويب الإعدادات (التخصيص) -->
+            <div class="tab-pane fade" id="settings">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <h5 class="mb-4 fw-bold">تخصيص واجهة متجرك بالكامل</h5>
+                        <form method="POST" class="row g-3">
+                            <input type="hidden" name="action" value="save_settings">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">اسم المتجر</label>
+                                <input name="store_name" class="form-control" value="{{ settings.store_name }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">لون المتجر (Theme)</label>
+                                <input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label small fw-bold">وصف المتجر (يظهر في الواجهة)</label>
+                                <input name="store_desc" class="form-control" value="{{ settings.store_desc }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">رقم الواتساب للطلبات (مع رمز الدولة)</label>
+                                <input name="whatsapp" class="form-control" placeholder="مثال: 967770000000" value="{{ settings.whatsapp }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">اسم العملة</label>
+                                <input name="currency" class="form-control" placeholder="مثال: ريال يمني" value="{{ settings.currency }}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">النص على زر الشراء</label>
+                                <input name="btn_text" class="form-control" placeholder="مثال: اشتري الآن" value="{{ settings.btn_text }}">
+                            </div>
+                            <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold">حفظ الإعدادات</button></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
