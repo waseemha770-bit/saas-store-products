@@ -29,7 +29,6 @@ def add_product(user_id, name, desc, price, cat, img, stock):
 
 def get_products(user_id): return list(products_col.find({"u_id": user_id}))
 
-# --- عمليات الإدارة العليا (Super Admin) ---
 def get_all_users(): return list(users_col.find({}))
 def create_new_merchant(name, slug, password):
     if users_col.find_one({"store_slug": slug}): return False
@@ -45,12 +44,12 @@ def delete_user(user_id):
     settings_col.delete_one({"u_id": user_id})
     orders_col.delete_many({"store_id": user_id})
 
-# --- عمليات الطلبات (Orders) ---
-def create_order(store_id, customer_name, customer_phone, items, total):
+# تغيير اسم المصفوفة هنا إلى cart_items لتجنب التعارض
+def create_order(store_id, customer_name, customer_phone, cart_items, total):
     order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
     orders_col.insert_one({
         "order_id": order_id, "store_id": store_id, "customer_name": customer_name,
-        "customer_phone": customer_phone, "items": items, "total": total, "date": datetime.now()
+        "customer_phone": customer_phone, "cart_items": cart_items, "total": total, "date": datetime.now()
     })
     return order_id
 

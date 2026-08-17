@@ -22,7 +22,6 @@
           {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
 
-        <!-- التبويبات الموثوقة التي تعمل 100% -->
         <ul class="nav nav-tabs mb-4 bg-white p-2 rounded shadow-sm" id="myTab" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#products" type="button" role="tab">المنتجات والمخزون</button>
@@ -73,7 +72,8 @@
                                     <tr>
                                         <td class="fw-bold">{{ o.order_id }}</td>
                                         <td>{{ o.customer_name }}<br><span class="text-primary">{{ o.customer_phone }}</span></td>
-                                        <td class="text-start">{% for i in o.items %} - {{ i.name }} <span class="badge bg-secondary">عدد {{ i.qty }}</span><br> {% endfor %}</td>
+                                        <!-- تم تحديث هذا السطر ليقرأ cart_items بدلاً من items -->
+                                        <td class="text-start">{% for i in o.cart_items %} - {{ i.name }} <span class="badge bg-secondary">عدد {{ i.qty }}</span><br> {% endfor %}</td>
                                         <td class="fw-bold text-success">{{ o.total }}</td>
                                         <td dir="ltr"><small>{{ o.date.strftime('%Y-%m-%d %H:%M') }}</small></td>
                                     </tr>
@@ -121,7 +121,6 @@
                 </div>
             </div>
 
-            <!-- قسم إدارة المنصة (Super Admin) يظهر لك فقط -->
             {% if is_super_admin %}
             <div class="tab-pane fade" id="superadmin" role="tabpanel">
                 <div class="row">
