@@ -2,13 +2,21 @@ from pymongo import MongoClient
 import uuid
 from datetime import datetime
 
-MONGO_URI = "mongodb+srv://Waseemha770_db_user:I911XN3Cc2MsnX1t@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# تم دمج كلمة المرور بنجاح في رابط الاتصال
+MONGO_URI = "mongodb+srv://Waseemha770_db_user:4jEhLw7goJiOAb1O@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 client = MongoClient(MONGO_URI)
 db = client['tajergo_db']
 users_col = db['users']
 products_col = db['products']
 settings_col = db['settings']
+
+# تهيئة المتجر تلقائياً إذا كانت القاعدة فارغة
+if users_col.count_documents({}) == 0:
+    user_id = "U-1000"
+    users_col.insert_one({"id": user_id, "username": "متجر الإدارة", "store_slug": "admin-store", "password": "admin", "active": "TRUE"})
+    settings_col.insert_one({"u_id": user_id, "c1": "متجر الإدارة", "c2": "مرحباً بكم في متجري على MongoDB السريعة!"})
+    print("تم إنشاء متجر admin-store التلقائي بنجاح!")
 
 def authenticate_user(slug, password):
     return users_col.find_one({"store_slug": slug, "password": password, "active": "TRUE"})
