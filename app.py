@@ -29,7 +29,6 @@ def login():
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
-    
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_product':
@@ -39,15 +38,33 @@ def dashboard():
             settings_data = {
                 'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'),
                 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'),
-                'btn_text': request.form.get('btn_text'), 'theme_color': request.form.get('theme_color')
+                'btn_text': request.form.get('btn_text'), 'theme_color': request.form.get('theme_color'),
+                'font_family': request.form.get('font_family'), 'header_size': request.form.get('header_size')
             }
             database.update_settings(session['user_id'], settings_data)
-            flash("تم حفظ إعدادات المتجر بنجاح!", "success")
+            flash("تم تحديث المظهر بنجاح!", "success")
         return redirect(url_for('dashboard'))
         
     products = database.get_products(session['user_id'])
     settings = database.get_settings(session['user_id'])
     return render_template('dashboard.html', products=products, settings=settings, store_slug=session['store_slug'])
+
+# صفحة سرية لمدير النظام (أنت) لإضافة تجار جدد
+@app.route('/system-admin', methods=['GET', 'POST'])
+def system_admin():
+    if request.method == 'POST':
+        admin_pass = request.form.get('admin_pass')
+        if admin_pass != 'waseem2026': return "رقم سري خاطئ", 403
+        if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')):
+            return f"تم إنشاء المتجر بنجاح! يمكن للتاجر الدخول باسم: {request.form.get('slug')}"
+        return "خطأ: رابط المتجر مستخدم مسبقاً!"
+    return '''<html dir="rtl"><body style="font-family:Arial; padding:40px;">
+    <h2>إضافة تاجر جديد للمنصة</h2><form method="POST">
+    <input name="admin_pass" type="password" placeholder="الرقم السري للنظام" required><br><br>
+    <input name="name" placeholder="اسم التاجر" required><br><br>
+    <input name="slug" placeholder="رابط المتجر (انجليزي فقط)" required><br><br>
+    <input name="password" placeholder="الرقم السري للتاجر" required><br><br>
+    <button type="submit">إنشاء المتجر</button></form></body></html>'''
 
 @app.route('/logout')
 def logout(): 

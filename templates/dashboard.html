@@ -10,7 +10,7 @@
 <body>
     <nav class="navbar navbar-dark bg-dark mb-4 shadow">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="#">TajerGo لوحة التحكم</a>
+            <a class="navbar-brand fw-bold" href="#">لوحة تحكم التاجر</a>
             <div>
                 <a href="/store/{{ store_slug }}" target="_blank" class="btn btn-outline-light btn-sm mx-2">عرض متجري</a>
                 <a href="/logout" class="btn btn-danger btn-sm">خروج</a>
@@ -22,17 +22,16 @@
           {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
 
-        <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+        <ul class="nav nav-pills mb-4">
             <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#products">المنتجات</button></li>
-            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#settings">إعدادات المتجر</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#settings">المظهر والإعدادات</button></li>
         </ul>
 
         <div class="tab-content">
-            <!-- تبويب المنتجات -->
+            <!-- المنتجات -->
             <div class="tab-pane fade show active" id="products">
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body">
-                        <h5 class="mb-3 fw-bold">إضافة منتج جديد</h5>
                         <form method="POST" class="row g-3">
                             <input type="hidden" name="action" value="add_product">
                             <div class="col-md-6"><input name="name" class="form-control" placeholder="اسم المنتج" required></div>
@@ -44,53 +43,38 @@
                         </form>
                     </div>
                 </div>
-                <div class="row">
-                    {% for p in products %}
-                    <div class="col-md-4 mb-3">
-                        <div class="card h-100 shadow-sm border-0">
-                            <div class="card-body">
-                                <h6 class="fw-bold">{{ p.name }}</h6>
-                                <p class="text-muted small">{{ p.description }}</p>
-                                <span class="badge bg-primary">{{ p.price }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
             </div>
 
-            <!-- تبويب الإعدادات (التخصيص) -->
+            <!-- الإعدادات والمظهر -->
             <div class="tab-pane fade" id="settings">
                 <div class="card shadow-sm border-0">
                     <div class="card-body">
-                        <h5 class="mb-4 fw-bold">تخصيص واجهة متجرك بالكامل</h5>
                         <form method="POST" class="row g-3">
                             <input type="hidden" name="action" value="save_settings">
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">اسم المتجر</label>
-                                <input name="store_name" class="form-control" value="{{ settings.store_name }}">
+                                <label class="form-label small fw-bold">نوع الخط (Font)</label>
+                                <select name="font_family" class="form-select">
+                                    <option value="Cairo" {% if settings.font_family == 'Cairo' %}selected{% endif %}>Cairo (كلاسيكي وأنيق)</option>
+                                    <option value="Tajawal" {% if settings.font_family == 'Tajawal' %}selected{% endif %}>Tajawal (رسمي وجاد)</option>
+                                    <option value="Almarai" {% if settings.font_family == 'Almarai' %}selected{% endif %}>Almarai (حديث ونظيف)</option>
+                                    <option value="Changa" {% if settings.font_family == 'Changa' %}selected{% endif %}>Changa (عريض وبارز)</option>
+                                </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-bold">لون المتجر (Theme)</label>
-                                <input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}">
+                                <label class="form-label small fw-bold">حجم رأس المتجر (Header)</label>
+                                <select name="header_size" class="form-select">
+                                    <option value="small" {% if settings.header_size == 'small' %}selected{% endif %}>صغير (مدمج)</option>
+                                    <option value="medium" {% if settings.header_size == 'medium' %}selected{% endif %}>متوسط (الافتراضي)</option>
+                                    <option value="large" {% if settings.header_size == 'large' %}selected{% endif %}>كبير (لإبراز اسم المتجر)</option>
+                                </select>
                             </div>
-                            <div class="col-md-12">
-                                <label class="form-label small fw-bold">وصف المتجر (يظهر في الواجهة)</label>
-                                <input name="store_desc" class="form-control" value="{{ settings.store_desc }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">رقم الواتساب للطلبات (مع رمز الدولة)</label>
-                                <input name="whatsapp" class="form-control" placeholder="مثال: 967770000000" value="{{ settings.whatsapp }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">اسم العملة</label>
-                                <input name="currency" class="form-control" placeholder="مثال: ريال يمني" value="{{ settings.currency }}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label small fw-bold">النص على زر الشراء</label>
-                                <input name="btn_text" class="form-control" placeholder="مثال: اشتري الآن" value="{{ settings.btn_text }}">
-                            </div>
-                            <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold">حفظ الإعدادات</button></div>
+                            <div class="col-md-6"><label class="form-label small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
+                            <div class="col-md-6"><label class="form-label small fw-bold">لون المتجر (Theme)</label><input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}"></div>
+                            <div class="col-md-12"><label class="form-label small fw-bold">وصف المتجر</label><input name="store_desc" class="form-control" value="{{ settings.store_desc }}"></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold">رقم الواتساب</label><input name="whatsapp" class="form-control" value="{{ settings.whatsapp }}"></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold">العملة</label><input name="currency" class="form-control" value="{{ settings.currency }}"></div>
+                            <div class="col-md-4"><label class="form-label small fw-bold">النص على زر الشراء</label><input name="btn_text" class="form-control" value="{{ settings.btn_text }}"></div>
+                            <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold">حفظ التغييرات</button></div>
                         </form>
                     </div>
                 </div>
