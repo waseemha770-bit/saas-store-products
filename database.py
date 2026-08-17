@@ -2,7 +2,7 @@ from pymongo import MongoClient
 import uuid
 from datetime import datetime
 
-# تم دمج كلمة المرور بنجاح في رابط الاتصال
+# تٌمً دٍمًجّ کْلَمًةّ آلَمًروٌر بًنِجّآحً فُيَ رآبًطِ آلَآتٌصّآلَ
 MONGO_URI = "mongodb+srv://Waseemha770_db_user:4jEhLw7goJiOAb1O@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 client = MongoClient(MONGO_URI)
@@ -11,12 +11,12 @@ users_col = db['users']
 products_col = db['products']
 settings_col = db['settings']
 
-# تهيئة المتجر تلقائياً إذا كانت القاعدة فارغة
+# تٌهّيَئةّ آلَمًتٌجّر تٌلَقُآئيَآً إذِآ کْآنِتٌ آلَقُآعٌدٍةّ فُآرغُةّ
 if users_col.count_documents({}) == 0:
     user_id = "U-1000"
-    users_col.insert_one({"id": user_id, "username": "متجر الإدارة", "store_slug": "admin-store", "password": "admin", "active": "TRUE"})
-    settings_col.insert_one({"u_id": user_id, "c1": "متجر الإدارة", "c2": "مرحباً بكم في متجري على MongoDB السريعة!"})
-    print("تم إنشاء متجر admin-store التلقائي بنجاح!")
+    users_col.insert_one({"id": user_id, "username": "مًتٌجّر آلَإدٍآرةّ", "store_slug": "admin-store", "password": "admin", "active": "TRUE"})
+    settings_col.insert_one({"u_id": user_id, "c1": "مًتٌجّر آلَإدٍآرةّ", "c2": "مًرحًبًآً بًکْمً فُيَ مًتٌجّريَ عٌلَﮯ MongoDB آلَسِريَعٌةّ!"})
+    print("تٌمً إنِشُآء مًتٌجّر admin-store آلَتٌلَقُآئيَ بًنِجّآحً!")
 
 def authenticate_user(slug, password):
     return users_col.find_one({"store_slug": slug, "password": password, "active": "TRUE"})
@@ -28,9 +28,9 @@ def get_settings(user_id):
     setting = settings_col.find_one({"u_id": user_id})
     if not setting:
         return {
-            'store_name': 'متجري', 'store_desc': 'أهلاً بكم في متجرنا', 
-            'whatsapp': '', 'currency': 'ريال', 
-            'btn_text': 'اطلب الآن عبر الواتساب', 'theme_color': '#0d6efd'
+            'store_name': 'مًتٌجّريَ', 'store_desc': 'أهّلَآً بًکْمً فُيَ مًتٌجّرنِآ', 
+            'whatsapp': '', 'currency': 'ريَآلَ', 
+            'btn_text': 'آطِلَبً آلَآنِ عٌبًر آلَوٌآتٌسِآبً', 'theme_color': '#0d6efd'
         }
     return setting
 
