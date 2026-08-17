@@ -2,8 +2,8 @@ from pymongo import MongoClient
 import uuid
 from datetime import datetime
 
-# تٌمً دٍمًجّ کْلَمًةّ آلَمًروٌر بًنِجّآحً فُيَ رآبًطِ آلَآتٌصّآلَ
-MONGO_URI = "mongodb+srv://Waseemha770_db_user:4jEhLw7goJiOAb1O@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# آلَرآبًطِ آلَجّدٍيَدٍ مًعٌ آلَمًسِتٌخِدٍمً آلَذِيَ أنِشُأنِآهّ لَلَتٌوٌ (مًضمًوٌنِ 100%)
+MONGO_URI = "mongodb+srv://tajeradmin:tajerpassword123@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 client = MongoClient(MONGO_URI)
 db = client['tajergo_db']
@@ -11,7 +11,6 @@ users_col = db['users']
 products_col = db['products']
 settings_col = db['settings']
 
-# تٌهّيَئةّ آلَمًتٌجّر تٌلَقُآئيَآً إذِآ کْآنِتٌ آلَقُآعٌدٍةّ فُآرغُةّ
 if users_col.count_documents({}) == 0:
     user_id = "U-1000"
     users_col.insert_one({"id": user_id, "username": "مًتٌجّر آلَإدٍآرةّ", "store_slug": "admin-store", "password": "admin", "active": "TRUE"})
