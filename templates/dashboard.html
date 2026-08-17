@@ -12,6 +12,11 @@
         <div class="container">
             <a class="navbar-brand fw-bold" href="#">لوحة تحكم التاجر</a>
             <div>
+                <!-- الزر السري يظهر فقط لمدير النظام -->
+                {% if store_slug == 'admin-store' %}
+                <a href="/system-admin" target="_blank" class="btn btn-warning btn-sm mx-2 fw-bold text-dark">👑 إدارة المنصة (إضافة تجار)</a>
+                {% endif %}
+                
                 <a href="/store/{{ store_slug }}" target="_blank" class="btn btn-outline-light btn-sm mx-2">عرض متجري</a>
                 <a href="/logout" class="btn btn-danger btn-sm">خروج</a>
             </div>
@@ -42,6 +47,19 @@
                             <div class="col-12"><button class="btn btn-success w-100 fw-bold">إضافة المنتج</button></div>
                         </form>
                     </div>
+                </div>
+                <div class="row">
+                    {% for p in products %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card h-100 shadow-sm border-0">
+                            <div class="card-body">
+                                <h6 class="fw-bold">{{ p.name }}</h6>
+                                <p class="text-muted small">{{ p.description }}</p>
+                                <span class="badge bg-primary">{{ p.price }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
 
