@@ -12,22 +12,19 @@ def get_all_data():
         next(reader) 
         for row in reader:
             if not row or not row[0].strip(): continue
-            
-            # حماية: إكمال الصفوف ليصبح طولها 12 عموداً دائماً
             row += [''] * (12 - len(row))
             
-            # تعيين البيانات بدقة متناهية حسب ترتيب ملف الإكسل الخاص بك
             data_type = row[0].strip().lower()
             item_id = row[1].strip()
             user_id = row[2].strip()
             name = row[3].strip()
             desc = row[4].strip()
-            store_slug = row[5].strip()  # رابط المتجر
-            price = row[6].strip()       # الهاتف أو السعر
-            category = row[7].strip()    # التصنيف
-            image_url = row[8].strip()   # الصورة
-            password = row[9].strip()    # الرقم السري
-            active = row[10].strip().upper() # حالة التفعيل
+            store_slug = row[5].strip() 
+            price = row[6].strip()       
+            category = row[7].strip()    
+            image_url = row[8].strip()   
+            password = row[9].strip()    
+            active = row[10].strip().upper() 
             
             is_active = 'TRUE' if active in ['TRUE', '1', 'نعم', 'مفعل', 'نشط'] else 'FALSE'
             
