@@ -11,27 +11,28 @@ def home():
 @app.route('/store/<slug>')
 def view_store(slug):
     db = google_sheets.get_all_data()
-    user = next((u for u in db['users'] if u['store_slug'] == slug and u['active'] == 'TRUE'), None)
-    if not user: return "المتجر غير موجود", 404
+    user = next((u for u in db['users'] if u.get('store_slug') == slug and u.get('active') == 'TRUE'), None)
+    if not user: return "المتجر غير موجود أو غير مفعل", 404
     
-    settings = next((s for s in db['settings'] if s['u_id'] == user['id']), {
-        'store_name': user['username'], 
-        'store_description': 'مرحباً بكم في متجري',
-        'store_phone': '', 'currency': 'ريال', 'primary_color': '#0d6efd', 'store_logo': ''
+    # الحل الآمن هنا: استخدام get() بدلاً من الأقواس المربعة
+    settings = next((s for s in db.get('settings', []) if s.get('u_id') == user.get('id')), {
+        'c1': user.get('username'), 
+        'c2': 'مرحباً بكم في متجري'
     })
-    products = [{'name': p['c1'], 'price': p['c3'], 'description': p['c2'], 'category': p['c4'], 'image_url': p['c5']} for p in db['products'] if p['u_id'] == user['id']]
     
-    store_data = {'user': user, 'settings': settings}
-    return render_template('store.html', store=store_data, products=products)
+    products = [{'name': p.get('c1'), 'price': p.get('c3'), 'description': p.get('c2'), 'category': p.get('c4'), 'image_url': p.get('c5')} for p in db.get('products', []) if p.get('u_id') == user.get('id')]
+    
+    return render_template('store.html', user=user, settings=settings, products=products)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         db = google_sheets.get_all_data()
-        user = next((u for u in db['users'] if u['store_slug'] == request.form['slug'] and u['password'] == request.form['pass']), None)
+        # تأمين تسجيل الدخول أيضاً
+        user = next((u for u in db['users'] if u.get('store_slug') == request.form.get('slug') and u.get('password') == request.form.get('pass')), None)
         if user:
-            session['user_id'] = user['id']
-            session['store_slug'] = user['store_slug']
+            session['user_id'] = user.get('id')
+            session['store_slug'] = user.get('store_slug')
             return redirect(url_for('dashboard'))
         flash("بيانات الدخول خاطئة", "danger")
     return render_template('login.html')
@@ -40,10 +41,14 @@ def login():
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
     if request.method == 'POST':
-        google_sheets.add_product_to_sheet(session['user_id'], request.form['name'], request.form['desc'], request.form['price'], request.form['cat'], request.form['img'])
-        flash("تم إضافة المنتج بنجاح", "success")
+        success = google_sheets.add_product_to_sheet(session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'))
+        if success:
+            flash("تم إضافة المنتج بنجاح", "success")
+        else:
+            flash("حدث خطأ في الاتصال بقاعدة البيانات", "danger")
         return redirect(url_for('dashboard'))
-    products = [p for p in google_sheets.get_all_data()['products'] if p['u_id'] == session['user_id']]
+        
+    products = [p for p in google_sheets.get_all_data().get('products', []) if p.get('u_id') == session['user_id']]
     return render_template('dashboard.html', products=products, store_slug=session['store_slug'])
 
 @app.route('/logout')
