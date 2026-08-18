@@ -2,7 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import database
 
 app = Flask(__name__)
-app.secret_key = 'tajergo_super_secure_key_2026'
+import os
+app.secret_key = os.getenv('SECRET_KEY', 'default_fallback_key')
 
 @app.route('/')
 def home(): return redirect(url_for('login'))

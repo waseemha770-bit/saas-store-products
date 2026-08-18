@@ -1,8 +1,9 @@
 from pymongo import MongoClient
-import uuid
+import uuid, os
 from datetime import datetime
 
-MONGO_URI = "mongodb+srv://tajeradmin:tajerpassword123@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# قراءة الرابط من متغيرات البيئة بأمان تام
+MONGO_URI = os.getenv("MONGO_URI")
 
 client = MongoClient(MONGO_URI)
 db = client['tajergo_db']
@@ -44,7 +45,6 @@ def delete_user(user_id):
     settings_col.delete_one({"u_id": user_id})
     orders_col.delete_many({"store_id": user_id})
 
-# تغيير اسم المصفوفة هنا إلى cart_items لتجنب التعارض
 def create_order(store_id, customer_name, customer_phone, cart_items, total):
     order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
     orders_col.insert_one({
