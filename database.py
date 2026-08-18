@@ -3,7 +3,6 @@ import uuid, os
 from datetime import datetime
 
 MONGO_URI = os.getenv("MONGO_URI") or "mongodb+srv://tajeradmin:tajerpassword123@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-
 client = MongoClient(MONGO_URI)
 db = client['tajergo_db']
 users_col = db['users']
@@ -16,7 +15,7 @@ def get_user_by_slug(slug): return users_col.find_one({"store_slug": slug, "acti
 
 def get_settings(user_id):
     setting = settings_col.find_one({"u_id": user_id})
-    if not setting: return {'store_name': 'متجري', 'store_desc': 'وصف المتجر', 'whatsapp': '', 'currency': 'ريال', 'theme_color': '#0d6efd', 'font_family': 'Cairo', 'header_size': 'medium'}
+    if not setting: return {'store_name': 'متجري', 'store_desc': 'وصف المتجر', 'whatsapp': '', 'currency': 'ريال', 'theme_color': '#0d6efd', 'font_family': 'Cairo', 'header_size': 'medium', 'facebook': '', 'instagram': '', 'tiktok': ''}
     return setting
 
 def update_settings(user_id, data): settings_col.update_one({"u_id": user_id}, {"$set": data}, upsert=True)
@@ -28,10 +27,7 @@ def add_product(user_id, name, desc, price, cat, img, stock):
 
 def edit_product(product_id, user_id, name, desc, price, cat, img, stock):
     try:
-        products_col.update_one(
-            {"id": product_id, "u_id": user_id},
-            {"$set": {"name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock)}}
-        )
+        products_col.update_one({"id": product_id, "u_id": user_id}, {"$set": {"name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock)}})
         return True
     except: return False
 
@@ -49,13 +45,8 @@ def delete_user(user_id):
     users_col.delete_one({"id": user_id}); products_col.delete_many({"u_id": user_id})
     settings_col.delete_one({"u_id": user_id}); orders_col.delete_many({"store_id": user_id})
 
-# إضافة العنوان وطريقة الدفع إلى الفاتورة
 def create_order(store_id, customer_name, customer_phone, customer_address, payment_info, cart_items, total):
     order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
-    orders_col.insert_one({
-        "order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone,
-        "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, "total": total, "date": datetime.now()
-    })
+    orders_col.insert_one({"order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone, "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, "total": total, "date": datetime.now()})
     return order_id
-
 def get_orders(store_id): return list(orders_col.find({"store_id": store_id}).sort("date", -1))

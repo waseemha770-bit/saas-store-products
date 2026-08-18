@@ -1,100 +1,69 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ settings.store_name }}</title>
     <link href="https://fonts.googleapis.com/css2?family={{ settings.font_family|default('Cairo') }}:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- استدعاء مكتبة الأيقونات (شريط البحث، المشاركة، السوشيال ميديا) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --main-color: {{ settings.theme_color|default('#0d6efd') }}; }
         body { font-family: '{{ settings.font_family|default('Cairo') }}', sans-serif; background-color: #f9fbfd; padding-bottom: 80px; }
-        
-        {% if settings.header_size == 'small' %} .hero-section { padding: 40px 0; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; margin-bottom: 30px; } .hero-title { font-size: 2rem; }
-        {% elif settings.header_size == 'large' %} .hero-section { padding: 120px 0; border-bottom-left-radius: 80px; border-bottom-right-radius: 80px; margin-bottom: 60px; } .hero-title { font-size: 4.5rem; }
-        {% else %} .hero-section { padding: 80px 0; border-bottom-left-radius: 50px; border-bottom-right-radius: 50px; margin-bottom: 50px; } .hero-title { font-size: 3rem; } {% endif %}
-
+        {% if settings.header_size == 'small' %} .hero-section { padding: 40px 0; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; margin-bottom: 20px; } .hero-title { font-size: 2rem; }
+        {% elif settings.header_size == 'large' %} .hero-section { padding: 120px 0; border-bottom-left-radius: 80px; border-bottom-right-radius: 80px; margin-bottom: 40px; } .hero-title { font-size: 4.5rem; }
+        {% else %} .hero-section { padding: 80px 0; border-bottom-left-radius: 50px; border-bottom-right-radius: 50px; margin-bottom: 30px; } .hero-title { font-size: 3rem; } {% endif %}
         .hero-section { background: linear-gradient(135deg, var(--main-color), #2b2b2b); color: white; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        
-        /* تحسين حدود صور وكروت المنتجات لتكون واضحة */
         .product-card { border: 1px solid #dcdcdc; border-radius: 15px; box-shadow: 0 6px 12px rgba(0,0,0,0.06); }
         .product-img { height: 200px; object-fit: cover; width: 100%; border-top-left-radius: 15px; border-top-right-radius: 15px; border-bottom: 1px solid #eee; }
-        
         .btn-custom { background-color: var(--main-color); color: white; font-weight: bold; transition: all 0.3s;}
-        
         #floating-cart { position: fixed; bottom: 20px; left: 20px; background-color: var(--main-color); color: white; border-radius: 50px; padding: 15px 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); cursor: pointer; z-index: 1000; font-weight: bold; font-size: 1.1rem; display: none; transition: transform 0.2s;}
         
-        /* تحسين حدود تبويبات التصنيفات لتظهر كأزرار واضحة */
-        .category-tabs {
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: hidden;
-            -webkit-overflow-scrolling: touch;
-            padding-bottom: 15px;
-            margin-bottom: 25px;
-            gap: 10px;
-            scrollbar-width: none; 
-        }
+        .category-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding-bottom: 15px; margin-bottom: 25px; gap: 10px; scrollbar-width: none; }
         .category-tabs::-webkit-scrollbar { display: none; }
-        .category-tabs .nav-link {
-            border-radius: 30px;
-            white-space: nowrap;
-            color: #333;
-            font-weight: bold;
-            background-color: #fff;
-            border: 2px solid #ccc; /* حدود سميكة وواضحة */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }
-        .category-tabs .nav-link.active {
-            background-color: var(--main-color);
-            color: white;
-            border-color: var(--main-color);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            transform: scale(1.05);
-        }
+        .category-tabs .nav-link { border-radius: 30px; white-space: nowrap; color: #333; font-weight: bold; background-color: #fff; border: 2px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; }
+        .category-tabs .nav-link.active { background-color: var(--main-color); color: white; border-color: var(--main-color); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transform: scale(1.05); }
     </style>
 </head>
 <body>
-    <div class="hero-section">
-        <div class="container">
-            <h1 class="fw-bold hero-title">{{ settings.store_name }}</h1>
-            <p class="lead" style="opacity: 0.9;">{{ settings.store_desc }}</p>
+    <div class="hero-section"><div class="container"><h1 class="fw-bold hero-title">{{ settings.store_name }}</h1><p class="lead" style="opacity: 0.9;">{{ settings.store_desc }}</p></div></div>
+
+    <!-- شريط البحث السريع وزر المشاركة -->
+    <div class="container mb-4 d-flex gap-2">
+        <div class="input-group shadow-sm border-0" style="border-radius: 10px; overflow:hidden;">
+            <span class="input-group-text bg-white border-0 text-muted"><i class="fas fa-search"></i></span>
+            <input type="text" id="searchInput" class="form-control border-0" placeholder="ابحث عن منتجك هنا..." onkeyup="filterProducts()">
         </div>
+        <button class="btn btn-outline-primary shadow-sm fw-bold text-nowrap" style="border-radius:10px;" onclick="shareStore()"><i class="fas fa-share-nodes"></i> مشاركة</button>
     </div>
 
     <div class="container pb-2">
         {% set grouped_products = products | groupby('category') %}
-        
         {% if grouped_products %}
-            <!-- تبويبات التصنيفات القابلة للتمرير -->
+            <!-- التبويبات -->
             <ul class="nav nav-pills category-tabs" id="categoryTabs" role="tablist">
                 {% for category, items in grouped_products %}
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link {% if loop.first %}active{% endif %} px-4 py-2" id="tab-btn-{{ loop.index }}" data-bs-toggle="pill" data-bs-target="#tab-pane-{{ loop.index }}" type="button" role="tab">
-                        {{ category if category else 'منتجات عامة' }}
-                    </button>
-                </li>
+                <li class="nav-item" role="presentation"><button class="nav-link {% if loop.first %}active{% endif %} px-4 py-2" id="tab-btn-{{ loop.index }}" data-bs-toggle="pill" data-bs-target="#tab-pane-{{ loop.index }}" type="button" role="tab">{{ category if category else 'عام' }}</button></li>
                 {% endfor %}
             </ul>
 
-            <!-- محتوى المنتجات الخاص بكل تصنيف -->
+            <!-- محتوى التبويبات (الأقسام) -->
             <div class="tab-content" id="categoryTabsContent">
                 {% for category, items in grouped_products %}
-                <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="tab-pane-{{ loop.index }}" role="tabpanel">
+                <div class="tab-pane fade {% if loop.first %}show active{% endif %} category-section" id="tab-pane-{{ loop.index }}" role="tabpanel">
                     <div class="row">
                         {% for p in items %}
-                        <div class="col-md-3 col-6 mb-4">
+                        <!-- تم إضافة data-name هنا ليسهل على الجافاسكربت البحث فيه -->
+                        <div class="col-md-3 col-6 mb-4 product-wrapper" data-name="{{ p.name }}">
                             <div class="card product-card h-100">
                                 <img src="{{ p.image_url if p.image_url else 'https://via.placeholder.com/400x300?text=بدون+صورة' }}" class="product-img">
                                 <div class="card-body p-3 d-flex flex-column">
                                     <h6 class="fw-bold">{{ p.name }}</h6>
                                     <small class="text-muted mb-2" style="height:40px; overflow:hidden;">{{ p.description }}</small>
                                     <h5 class="text-primary fw-bold mt-auto mb-3">{{ p.price }} <small class="text-muted fs-6">{{ settings.currency }}</small></h5>
-                                    
                                     {% set current_stock = p.get('stock', 1) %}
                                     {% if current_stock > 0 %}
-                                        <button class="btn btn-custom w-100 btn-sm mt-auto" onclick="addToCart('{{ p.name }}', {{ p.price }})">🛒 أضف للسلة</button>
+                                        <button class="btn btn-custom w-100 btn-sm mt-auto" onclick="addToCart('{{ p.name }}', {{ p.price }})"><i class="fas fa-cart-plus"></i> إضافة</button>
                                     {% else %}
                                         <button class="btn btn-secondary w-100 btn-sm mt-auto" disabled>نفذت الكمية</button>
                                     {% endif %}
@@ -111,44 +80,64 @@
         {% endif %}
     </div>
 
-    <!-- بصمة المبرمج -->
-    <div class="container text-center mt-3 mb-5">
-        <p class="text-muted" style="font-size: 0.8rem; font-weight: bold; opacity: 0.6;">
-            برمجة المهندس / وسيم همدان (771954200)
-        </p>
-    </div>
-
-    <!-- السلة العائمة -->
-    <div id="floating-cart" onclick="openCartModal()">🛒 السلة (<span id="cart-count">0</span>) | الإجمالي: <span id="cart-total">0</span></div>
-
-    <!-- نافذة إتمام الطلب -->
-    <div class="modal fade" id="cartModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title fw-bold text-dark">إتمام الطلب 🚀</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <ul id="cart-items" class="list-group mb-3"></ul>
-                    <div class="d-flex justify-content-between align-items-center mb-4 bg-light p-3 rounded">
-                        <h5 class="fw-bold mb-0">الإجمالي:</h5><h4 class="fw-bold text-primary mb-0"><span id="modal-total">0</span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h4>
-                    </div>
-                    
-                    <h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">بيانات التوصيل والدفع:</h6>
-                    <div class="mb-3"><label class="form-label small fw-bold">الاسم الكامل *</label><input type="text" id="customer-name" class="form-control bg-light" required></div>
-                    <div class="mb-3"><label class="form-label small fw-bold">رقم الهاتف *</label><input type="tel" id="customer-phone" class="form-control bg-light" required></div>
-                    <div class="mb-3"><label class="form-label small fw-bold">العنوان الدقيق *</label><input type="text" id="customer-address" class="form-control bg-light" required></div>
-                    <div class="mb-4"><label class="form-label small fw-bold">طريقة وإثبات الدفع</label><input type="text" id="customer-payment" class="form-control bg-light" placeholder="الدفع عند الاستلام أو رقم الحوالة"></div>
-
-                    <button id="btn-submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" onclick="checkout()">إرسال الطلب عبر الواتساب 💬</button>
-                </div>
-            </div>
+    <!-- الفوتر: أيقونات التواصل وبصمة المبرمج -->
+    <div class="container text-center mt-5 mb-4">
+        <div class="d-flex justify-content-center gap-4 mb-3">
+            {% if settings.get('facebook') %}<a href="{{ settings.facebook }}" target="_blank" class="text-primary fs-3"><i class="fab fa-facebook"></i></a>{% endif %}
+            {% if settings.get('instagram') %}<a href="{{ settings.instagram }}" target="_blank" class="text-danger fs-3"><i class="fab fa-instagram"></i></a>{% endif %}
+            {% if settings.get('tiktok') %}<a href="{{ settings.tiktok }}" target="_blank" class="text-dark fs-3"><i class="fab fa-tiktok"></i></a>{% endif %}
         </div>
+        <p class="text-muted" style="font-size: 0.8rem; font-weight: bold; opacity: 0.6;">برمجة المهندس / وسيم همدان (771954200)</p>
     </div>
+
+    <div id="floating-cart" onclick="openCartModal()">🛒 السلة (<span id="cart-count">0</span>) | <span id="cart-total">0</span></div>
+
+    <!-- نافذة الدفع -->
+    <div class="modal fade" id="cartModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-light"><h5 class="modal-title fw-bold text-dark">إتمام الطلب 🚀</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul id="cart-items" class="list-group mb-3"></ul><div class="d-flex justify-content-between align-items-center mb-4 bg-light p-3 rounded"><h5 class="fw-bold mb-0">الإجمالي:</h5><h4 class="fw-bold text-primary mb-0"><span id="modal-total">0</span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h4></div><h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">بيانات التوصيل والدفع:</h6><div class="mb-3"><label class="form-label small fw-bold">الاسم الكامل *</label><input type="text" id="customer-name" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">رقم الهاتف *</label><input type="tel" id="customer-phone" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">العنوان الدقيق *</label><input type="text" id="customer-address" class="form-control bg-light" required></div><div class="mb-4"><label class="form-label small fw-bold">إثبات الدفع</label><input type="text" id="customer-payment" class="form-control bg-light" placeholder="الدفع عند الاستلام أو رقم الحوالة"></div><button id="btn-submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" onclick="checkout()"><i class="fab fa-whatsapp"></i> إرسال الطلب</button></div></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 1. نظام البحث الذكي والفوري
+        function filterProducts() {
+            let term = document.getElementById('searchInput').value.toLowerCase();
+            let allProducts = document.querySelectorAll('.product-wrapper');
+            
+            // إذا كان يبحث، افتح جميع التبويبات ليرى النتائج في كل مكان
+            if(term.length > 0) {
+                document.querySelectorAll('.tab-pane').forEach(t => { t.classList.add('show', 'active'); });
+                document.querySelectorAll('.category-tabs').forEach(t => { t.style.display = 'none'; });
+            } else {
+                // العودة للوضع الطبيعي (إظهار التبويب الأول فقط وإعادة شريط التبويبات)
+                document.querySelectorAll('.category-tabs').forEach(t => { t.style.display = 'flex'; });
+                let first = true;
+                document.querySelectorAll('.tab-pane').forEach(t => {
+                    if(first) { t.classList.add('show', 'active'); first = false; }
+                    else { t.classList.remove('show', 'active'); }
+                });
+            }
+
+            allProducts.forEach(card => {
+                let name = card.getAttribute('data-name').toLowerCase();
+                if(name.includes(term)) { card.style.display = 'block'; } 
+                else { card.style.display = 'none'; }
+            });
+        }
+
+        // 2. نظام المشاركة السريع
+        function shareStore() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '{{ settings.store_name }}',
+                    text: 'تفضل بزيارة متجري وتسوق أفضل المنتجات!',
+                    url: window.location.href
+                }).catch(err => console.log('خطأ في المشاركة', err));
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert("تم نسخ رابط المتجر بنجاح!");
+            }
+        }
+
+        // 3. نظام السلة
         let cart = []; let cartModalInstance = null;
         document.addEventListener("DOMContentLoaded", function(){ cartModalInstance = new bootstrap.Modal(document.getElementById('cartModal')); });
         function addToCart(name, price) { let item = cart.find(i => i.name === name); if(item) { item.qty++; } else { cart.push({name: name, price: price, qty: 1}); } updateCartUI(); }
@@ -169,7 +158,7 @@
             if(!name || !phone || !address) return alert("الرجاء إدخال الاسم، رقم الهاتف، والعنوان.");
             document.getElementById('btn-submit').innerText = "جاري التحويل..."; document.getElementById('btn-submit').disabled = true;
             fetch('/api/checkout/{{ user.store_slug }}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name, phone: phone, address: address, payment: payment, cart: cart, total: document.getElementById('modal-total').innerText}) })
-            .then(res => res.json()).then(data => { cart = []; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerText = "إرسال الطلب عبر الواتساب 💬"; document.getElementById('btn-submit').disabled = false; window.open(data.whatsapp_url, '_blank'); });
+            .then(res => res.json()).then(data => { cart = []; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب"; document.getElementById('btn-submit').disabled = false; window.open(data.whatsapp_url, '_blank'); });
         }
     </script>
 </body>

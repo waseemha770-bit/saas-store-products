@@ -19,24 +19,12 @@ def checkout(slug):
     if not user: return jsonify({"error": "Store not found"}), 404
     data = request.json
     settings = database.get_settings(user.get('id'))
-    
     address = data.get('address', 'غير مسجل')
     payment = data.get('payment', 'غير مسجل')
-    
     order_id = database.create_order(user.get('id'), data['name'], data['phone'], address, payment, data['cart'], data['total'])
-    
-    # تنسيق رسالة الواتساب الاحترافية
-    msg = f"مرحباً، لدي طلب جديد 🛒\n\n"
-    msg += f"🧾 *رقم الطلب:* {order_id}\n"
-    msg += f"👤 *الاسم:* {data['name']}\n"
-    msg += f"📞 *الهاتف:* {data['phone']}\n"
-    msg += f"📍 *العنوان:* {address}\n"
-    msg += f"💳 *الدفع:* {payment}\n\n"
-    msg += f"🛍️ *المنتجات:*\n"
+    msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {address}\n💳 *الدفع:* {payment}\n\n🛍️ *المنتجات:*\n"
     for item in data['cart']: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
-    msg += f"\n💰 *الإجمالي:* {data['total']} {settings.get('currency', 'ريال')}\n"
-    msg += "\n*(الرجاء إرفاق صورة إشعار الحوالة هنا إذا كان الدفع مسبقاً)*"
-    
+    msg += f"\n💰 *الإجمالي:* {data['total']} {settings.get('currency', 'ريال')}\n\n*(الرجاء إرفاق صورة إشعار الحوالة هنا إذا كان الدفع مسبقاً)*"
     whatsapp_url = f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"
     return jsonify({"whatsapp_url": whatsapp_url})
 
@@ -54,7 +42,6 @@ def login():
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
     is_super_admin = (session['store_slug'] == 'admin-store')
-
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_product':
@@ -65,19 +52,24 @@ def dashboard():
             flash("تم تعديل تفاصيل المنتج بنجاح!", "success")
         elif action == 'delete_product':
             database.delete_product(request.form.get('product_id'), session['user_id'])
-            flash("تم حذف المنتج من المتجر", "danger")
+            flash("تم حذف المنتج", "danger")
         elif action == 'save_settings':
-            database.update_settings(session['user_id'], {'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'), 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'), 'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'), 'header_size': request.form.get('header_size')})
+            database.update_settings(session['user_id'], {
+                'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'),
+                'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'),
+                'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'),
+                'header_size': request.form.get('header_size'), 'facebook': request.form.get('facebook'),
+                'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok')
+            })
             flash("تم تحديث إعدادات المتجر", "success")
         elif action == 'add_merchant' and is_super_admin:
             if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash(f"تم إنشاء المتجر: {request.form.get('slug')}", "success")
-            else: flash("رابط المتجر محجوز مسبقاً", "danger")
+            else: flash("رابط المتجر محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin:
             database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
-            flash("تم تحديث حالة المتجر", "warning")
+            flash("تم التحديث", "warning")
         elif action == 'delete_merchant' and is_super_admin:
-            database.delete_user(request.form.get('user_id'))
-            flash("تم حذف المتجر نهائياً", "danger")
+            database.delete_user(request.form.get('user_id')); flash("تم الحذف", "danger")
         return redirect(url_for('dashboard'))
         
     return render_template('dashboard.html', products=database.get_products(session['user_id']), settings=database.get_settings(session['user_id']), orders=database.get_orders(session['user_id']), merchants=(database.get_all_users() if is_super_admin else []), store_slug=session['store_slug'], is_super_admin=is_super_admin)
