@@ -8,26 +8,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f4f6f9; }
-        
-        /* 1. الحل الجذري لصناديق الإدخال: حدود سميكة وواضحة جداً */
         .form-control, .form-select {
-            border: 2px solid #b3b3b3 !important; /* حد رمادي غامق وواضح */
-            border-radius: 8px;
-            padding: 10px 15px;
-            background-color: #fcfcfc;
-            font-weight: bold;
-            color: #333;
-            transition: all 0.3s ease;
+            border: 2px solid #b3b3b3 !important; 
+            border-radius: 8px; padding: 10px 15px; background-color: #fcfcfc;
+            font-weight: bold; color: #333; transition: all 0.3s ease;
         }
-        /* إضاءة الصندوق عند الكتابة فيه */
         .form-control:focus, .form-select:focus {
-            border-color: #0d6efd !important;
-            background-color: #fff;
-            box-shadow: 0 0 8px rgba(13, 110, 253, 0.3);
-            outline: none;
+            border-color: #0d6efd !important; background-color: #fff;
+            box-shadow: 0 0 8px rgba(13, 110, 253, 0.3); outline: none;
         }
-        
-        /* تحسين شكل الكروت */
         .card { border-radius: 12px; }
     </style>
 </head>
@@ -43,17 +32,7 @@
             {% if is_super_admin %}<li class="nav-item"><button class="nav-link fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#superadmin">👑 إدارة التجار</button></li>{% endif %}
         </ul>
 
-        <!-- 2. حل القائمة المنسدلة: دمج التصنيفات المحفوظة مع تصنيفات افتراضية جاهزة -->
         {% set cats = products | map(attribute='category') | unique | list %}
-        <datalist id="categoryList">
-            {% for c in cats %}<option value="{{ c }}"></option>{% endfor %}
-            <option value="إلكترونيات وجوالات"></option>
-            <option value="ملابس وأزياء"></option>
-            <option value="عطور ومستحضرات تجميل"></option>
-            <option value="أحذية وحقائب"></option>
-            <option value="أجهزة منزلية"></option>
-            <option value="ساعات ومجوهرات"></option>
-        </datalist>
 
         <div class="tab-content">
             <!-- الطلبات -->
@@ -70,22 +49,42 @@
                 </div>
             </div>
 
-            <!-- المنتجات -->
+            <!-- المنتجات (تحديث نظام إدخال التصنيفات) -->
             <div class="tab-pane fade" id="products">
                 <div class="card shadow-sm border-0 mb-4"><div class="card-body">
                     <h5 class="fw-bold mb-3">إضافة منتج جديد</h5>
-                    <form method="POST" class="row g-3">
+                    <form method="POST" class="row g-3" id="addProductForm">
                         <input type="hidden" name="action" value="add_product">
                         <div class="col-md-4"><label class="small fw-bold text-muted">اسم المنتج</label><input name="name" class="form-control" required></div>
                         <div class="col-md-4"><label class="small fw-bold text-muted">السعر</label><input name="price" type="number" class="form-control" required></div>
                         <div class="col-md-4"><label class="small fw-bold text-muted">الكمية بالمخزن</label><input name="stock" type="number" class="form-control" required></div>
                         
-                        <!-- الحقل المرتبط بالقائمة المنسدلة -->
-                        <div class="col-md-6"><label class="small fw-bold text-muted">التصنيف (اختر من القائمة أو اكتب)</label><input name="cat" list="categoryList" class="form-control" placeholder="انقر هنا لرؤية الخيارات..." required></div>
+                        <!-- نظام التصنيفات المطور (قائمة منسدلة حقيقية تظهر 100%) -->
+                        <div class="col-md-6">
+                            <label class="small fw-bold text-muted">التصنيف</label>
+                            <!-- حقل مخفي يرسل القيمة النهائية للقاعدة -->
+                            <input type="hidden" name="cat" id="finalCategory" required>
+                            
+                            <!-- القائمة المنسدلة المرئية -->
+                            <select class="form-select" id="categorySelect" onchange="handleCategoryChange(this)" required>
+                                <option value="" disabled selected>-- اختر تصنيفاً --</option>
+                                {% for c in cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+                                <option value="إلكترونيات وجوالات">إلكترونيات وجوالات</option>
+                                <option value="ملابس وأزياء">ملابس وأزياء</option>
+                                <option value="عطور ومستحضرات تجميل">عطور ومستحضرات تجميل</option>
+                                <option value="أحذية وحقائب">أحذية وحقائب</option>
+                                <option value="أجهزة منزلية">أجهزة منزلية</option>
+                                <option value="ساعات ومجوهرات">ساعات ومجوهرات</option>
+                                <option value="NEW_CATEGORY" class="fw-bold text-primary">➕ إضافة تصنيف جديد...</option>
+                            </select>
+                            
+                            <!-- حقل يظهر فقط عند اختيار "إضافة تصنيف جديد" -->
+                            <input type="text" id="newCategoryInput" class="form-control mt-2" placeholder="اكتب التصنيف الجديد هنا" style="display: none;" oninput="updateFinalCategory()">
+                        </div>
                         
                         <div class="col-md-6"><label class="small fw-bold text-muted">رابط الصورة (اختياري)</label><input name="img" class="form-control"></div>
                         <div class="col-12"><label class="small fw-bold text-muted">وصف المنتج</label><input name="desc" class="form-control"></div>
-                        <div class="col-12 mt-4"><button class="btn btn-success w-100 fw-bold fs-5 shadow-sm">حفظ المنتج</button></div>
+                        <div class="col-12 mt-4"><button class="btn btn-success w-100 fw-bold fs-5 shadow-sm" type="button" onclick="submitProductForm()">حفظ المنتج</button></div>
                     </form>
                 </div></div>
                 
@@ -93,13 +92,13 @@
                     <h5 class="fw-bold mb-3">المنتجات الحالية</h5>
                     <div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>الكمية</th><th>التصنيف</th><th>إجراءات</th></tr></thead><tbody>
                         {% for p in products %}<tr><td><img src="{{ p.image_url if p.image_url else 'https://via.placeholder.com/50' }}" width="50" height="50" style="object-fit:cover; border-radius:5px;"></td><td class="fw-bold">{{ p.name }}</td><td class="text-primary">{{ p.price }}</td><td>{{ p.stock }}</td><td><span class="badge bg-secondary">{{ p.category }}</span></td><td><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">تعديل</button> <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}"><button class="btn btn-sm btn-danger">حذف</button></form></td></tr>
-                        <div class="modal fade" id="editModal{{ p.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" class="row g-3"><input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}"><div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div><div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" value="{{ p.price }}" required></div><div class="col-6"><label class="small fw-bold">المخزون</label><input name="stock" type="number" class="form-control" value="{{ p.stock }}" required></div><div class="col-12"><label class="small fw-bold">التصنيف</label><input name="cat" list="categoryList" class="form-control" value="{{ p.category }}" required></div><div class="col-12"><label class="small fw-bold">الصورة</label><input name="img" class="form-control" value="{{ p.image_url }}"></div><div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control" value="{{ p.description }}"></div><div class="col-12 mt-3"><button class="btn btn-primary w-100 fw-bold">حفظ التعديلات</button></div></form></div></div></div></div>
+                        <div class="modal fade" id="editModal{{ p.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" class="row g-3"><input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}"><div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div><div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" value="{{ p.price }}" required></div><div class="col-6"><label class="small fw-bold">المخزون</label><input name="stock" type="number" class="form-control" value="{{ p.stock }}" required></div><div class="col-12"><label class="small fw-bold">التصنيف</label><input name="cat" class="form-control" value="{{ p.category }}" required></div><div class="col-12"><label class="small fw-bold">الصورة</label><input name="img" class="form-control" value="{{ p.image_url }}"></div><div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control" value="{{ p.description }}"></div><div class="col-12 mt-3"><button class="btn btn-primary w-100 fw-bold">حفظ التعديلات</button></div></form></div></div></div></div>
                         {% endfor %}
                     </tbody></table></div>
                 </div></div>
             </div>
 
-            <!-- الإعدادات -->
+            <!-- الإعدادات وإدارة التجار بقيت كما هي دون تغيير -->
             <div class="tab-pane fade" id="settings">
                 <div class="card shadow-sm border-0"><div class="card-body">
                     <form method="POST" class="row g-3">
@@ -123,7 +122,6 @@
                 </div></div>
             </div>
 
-            <!-- السوبر أدمن -->
             {% if is_super_admin %}
             <div class="tab-pane fade" id="superadmin">
                 <div class="row"><div class="col-md-4 mb-4"><div class="card bg-dark text-white border-warning shadow-lg"><div class="card-body"><h5 class="fw-bold text-warning mb-3">➕ إضافة تاجر</h5><form method="POST"><input type="hidden" name="action" value="add_merchant"><input type="text" name="name" class="form-control mb-3" placeholder="اسم التاجر" required><input type="text" name="slug" class="form-control mb-3" placeholder="رابط المتجر" required><input type="text" name="password" class="form-control mb-4" placeholder="كلمة المرور" required><button class="btn btn-warning w-100 fw-bold text-dark shadow">إنشاء المتجر</button></form></div></div></div><div class="col-md-8"><div class="card border-danger shadow-sm"><div class="card-body"><h5 class="fw-bold text-danger mb-3">🏢 المتاجر المشتركة</h5><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>التاجر</th><th>الرابط</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>{% for m in merchants %}<tr><td>{{ m.username }}<br><small class="text-muted">{{ m.password }}</small></td><td><a href="/store/{{ m.store_slug }}" target="_blank" class="fw-bold">{{ m.store_slug }}</a></td><td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td><td><form method="POST" class="d-inline"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button></form>{% if m.store_slug != 'admin-store' %}<form method="POST" class="d-inline" onsubmit="return confirm('حذف نهائي؟');"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div></div></div></div></div>
@@ -131,8 +129,43 @@
             {% endif %}
         </div>
     </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // سكريبت للتحكم بالقائمة المنسدلة للتصنيفات
+        function handleCategoryChange(selectObj) {
+            let inputField = document.getElementById('newCategoryInput');
+            if (selectObj.value === 'NEW_CATEGORY') {
+                inputField.style.display = 'block';
+                inputField.required = true;
+                document.getElementById('finalCategory').value = inputField.value;
+            } else {
+                inputField.style.display = 'none';
+                inputField.required = false;
+                document.getElementById('finalCategory').value = selectObj.value;
+            }
+        }
+
+        function updateFinalCategory() {
+            if (document.getElementById('categorySelect').value === 'NEW_CATEGORY') {
+                document.getElementById('finalCategory').value = document.getElementById('newCategoryInput').value;
+            }
+        }
+
+        function submitProductForm() {
+            let select = document.getElementById('categorySelect');
+            if(select.value === "") {
+                alert("الرجاء اختيار تصنيف للمنتج!");
+                return;
+            }
+            if(select.value === 'NEW_CATEGORY' && document.getElementById('newCategoryInput').value.trim() === "") {
+                alert("الرجاء كتابة التصنيف الجديد!");
+                return;
+            }
+            document.getElementById('addProductForm').submit();
+        }
+
+        // تشغيل الرسم البياني
         document.addEventListener("DOMContentLoaded", function() {
             var ctx = document.getElementById('orderChart').getContext('2d');
             new Chart(ctx, {
