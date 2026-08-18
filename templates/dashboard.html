@@ -113,7 +113,12 @@
                     <h5 class="fw-bold mb-3">تقارير المبيعات والطلبات</h5>
                     <table class="table table-bordered table-striped text-center">
                         <thead class="table-light"><tr><th>الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>التاريخ</th></tr></thead>
-                        <tbody>{% for o in orders %}<tr><td>{{ o.order_id }}</td><td>{{ o.customer_name }}<br><span class="text-primary">{{ o.customer_phone }}</span></td><td class="text-start">{% for i in o.cart_items %} - {{ i.name }} (x{{ i.qty }})<br> {% endfor %}</td><td class="fw-bold text-success">{{ o.total }}</td><td dir="ltr"><small>{{ o.date.strftime('%Y-%m-%d %H:%M') }}</small></td></tr>{% else %}<tr><td colspan="5">لا توجد طلبات</td></tr>{% endfor %}</tbody>
+                        <tbody>{% for o in orders %}<tr><td>{{ o.order_id }}</td><td class="text-start">
+    👤 {{ o.customer_name }}<br>
+    📞 <span class="text-primary fw-bold">{{ o.customer_phone }}</span><br>
+    📍 <small class="text-muted">العنوان: {{ o.get('customer_address', 'غير مسجل') }}</small><br>
+    💳 <small class="text-success">الدفع: {{ o.get('payment_info', 'غير مسجل') }}</small>
+</td><td class="text-start">{% for i in o.cart_items %} - {{ i.name }} (x{{ i.qty }})<br> {% endfor %}</td><td class="fw-bold text-success">{{ o.total }}</td><td dir="ltr"><small>{{ o.date.strftime('%Y-%m-%d %H:%M') }}</small></td></tr>{% else %}<tr><td colspan="5">لا توجد طلبات</td></tr>{% endfor %}</tbody>
                     </table>
                 </div></div>
             </div>

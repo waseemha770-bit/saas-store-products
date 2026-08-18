@@ -35,29 +35,27 @@ def edit_product(product_id, user_id, name, desc, price, cat, img, stock):
         return True
     except: return False
 
-def delete_product(product_id, user_id):
-    products_col.delete_one({"id": product_id, "u_id": user_id})
-
+def delete_product(product_id, user_id): products_col.delete_one({"id": product_id, "u_id": user_id})
 def get_products(user_id): return list(products_col.find({"u_id": user_id}))
-
 def get_all_users(): return list(users_col.find({}))
+
 def create_new_merchant(name, slug, password):
     if users_col.find_one({"store_slug": slug}): return False
-    user_id = f"U-{uuid.uuid4().hex[:6]}"
-    users_col.insert_one({"id": user_id, "username": name, "store_slug": slug, "password": password, "active": "TRUE"})
+    users_col.insert_one({"id": f"U-{uuid.uuid4().hex[:6]}", "username": name, "store_slug": slug, "password": password, "active": "TRUE"})
     return True
-def toggle_user_status(user_id, current_status):
-    new_status = "FALSE" if current_status == "TRUE" else "TRUE"
-    users_col.update_one({"id": user_id}, {"$set": {"active": new_status}})
-def delete_user(user_id):
-    users_col.delete_one({"id": user_id})
-    products_col.delete_many({"u_id": user_id})
-    settings_col.delete_one({"u_id": user_id})
-    orders_col.delete_many({"store_id": user_id})
 
-def create_order(store_id, customer_name, customer_phone, cart_items, total):
+def toggle_user_status(user_id, current_status): users_col.update_one({"id": user_id}, {"$set": {"active": "FALSE" if current_status == "TRUE" else "TRUE"}})
+def delete_user(user_id):
+    users_col.delete_one({"id": user_id}); products_col.delete_many({"u_id": user_id})
+    settings_col.delete_one({"u_id": user_id}); orders_col.delete_many({"store_id": user_id})
+
+# إضافة العنوان وطريقة الدفع إلى الفاتورة
+def create_order(store_id, customer_name, customer_phone, customer_address, payment_info, cart_items, total):
     order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
-    orders_col.insert_one({"order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone, "cart_items": cart_items, "total": total, "date": datetime.now()})
+    orders_col.insert_one({
+        "order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone,
+        "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, "total": total, "date": datetime.now()
+    })
     return order_id
 
 def get_orders(store_id): return list(orders_col.find({"store_id": store_id}).sort("date", -1))
