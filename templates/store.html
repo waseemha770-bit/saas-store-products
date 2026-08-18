@@ -19,7 +19,9 @@
         .product-img { height: 200px; object-fit: cover; width: 100%; border-top-left-radius: 15px; border-top-right-radius: 15px;}
         .btn-custom { background-color: var(--main-color); color: white; font-weight: bold; }
         #floating-cart { position: fixed; bottom: 20px; left: 20px; background-color: var(--main-color); color: white; border-radius: 50px; padding: 15px 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); cursor: pointer; z-index: 1000; font-weight: bold; font-size: 1.1rem; display: none; transition: transform 0.2s;}
-        #floating-cart:hover { transform: scale(1.05); }
+        
+        /* تصميم عنوان التصنيف */
+        .category-title { border-right: 5px solid var(--main-color); padding-right: 15px; color: #2b2b2b; }
     </style>
 </head>
 <body>
@@ -31,29 +33,41 @@
     </div>
 
     <div class="container pb-5">
-        <div class="row">
-            {% for p in products %}
-            <div class="col-md-3 col-6 mb-4">
-                <div class="card product-card h-100">
-                    <img src="{{ p.image_url if p.image_url else 'https://via.placeholder.com/400x300?text=بدون+صورة' }}" class="product-img">
-                    <div class="card-body p-3 d-flex flex-column">
-                        <span class="badge bg-light text-dark border mb-2 align-self-start">{{ p.category }}</span>
-                        <h6 class="fw-bold">{{ p.name }}</h6>
-                        <h5 class="text-primary fw-bold mt-auto mb-3">{{ p.price }} <small class="text-muted fs-6">{{ settings.currency }}</small></h5>
-                        <button class="btn btn-custom w-100 btn-sm mt-auto" onclick="addToCart('{{ p.name }}', {{ p.price }})">🛒 أضف للسلة</button>
+        <!-- تجميع المنتجات حسب التصنيف -->
+        {% set grouped_products = products | groupby('category') %}
+        
+        {% for category, items in grouped_products %}
+        <div class="mb-5">
+            <h3 class="fw-bold mb-4 category-title">{{ category if category else 'منتجات عامة' }}</h3>
+            <div class="row">
+                {% for p in items %}
+                <div class="col-md-3 col-6 mb-4">
+                    <div class="card product-card h-100">
+                        <img src="{{ p.image_url if p.image_url else 'https://via.placeholder.com/400x300?text=بدون+صورة' }}" class="product-img">
+                        <div class="card-body p-3 d-flex flex-column">
+                            <h6 class="fw-bold">{{ p.name }}</h6>
+                            <small class="text-muted mb-2" style="height:40px; overflow:hidden;">{{ p.description }}</small>
+                            <h5 class="text-primary fw-bold mt-auto mb-3">{{ p.price }} <small class="text-muted fs-6">{{ settings.currency }}</small></h5>
+                            
+                            {% if p.stock > 0 %}
+                                <button class="btn btn-custom w-100 btn-sm mt-auto" onclick="addToCart('{{ p.name }}', {{ p.price }})">🛒 أضف للسلة</button>
+                            {% else %}
+                                <button class="btn btn-secondary w-100 btn-sm mt-auto" disabled>نفذت الكمية</button>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
+        {% else %}
+        <div class="text-center py-5"><h4 class="text-muted">لا توجد منتجات معروضة حالياً</h4></div>
+        {% endfor %}
     </div>
 
-    <!-- السلة العائمة -->
-    <div id="floating-cart" onclick="openCartModal()">
-        🛒 السلة (<span id="cart-count">0</span>) | الإجمالي: <span id="cart-total">0</span>
-    </div>
+    <!-- السلة العائمة والنافذة (تعمل بنفس النظام الذكي السابق) -->
+    <div id="floating-cart" onclick="openCartModal()">🛒 السلة (<span id="cart-count">0</span>) | الإجمالي: <span id="cart-total">0</span></div>
 
-    <!-- نافذة الدفع وتعديل السلة -->
     <div class="modal fade" id="cartModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
@@ -64,12 +78,10 @@
                 <div class="modal-body p-4">
                     <ul id="cart-items" class="list-group mb-4"></ul>
                     <div class="d-flex justify-content-between align-items-center mb-4 bg-light p-3 rounded">
-                        <h5 class="fw-bold mb-0">المبلغ الإجمالي:</h5>
-                        <h4 class="fw-bold text-primary mb-0"><span id="modal-total">0</span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h4>
+                        <h5 class="fw-bold mb-0">الإجمالي:</h5><h4 class="fw-bold text-primary mb-0"><span id="modal-total">0</span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h4>
                     </div>
-                    <h6 class="fw-bold mb-3">بيانات التوصيل والتواصل:</h6>
                     <input type="text" id="customer-name" class="form-control form-control-lg mb-3" placeholder="الاسم الكامل" required>
-                    <input type="tel" id="customer-phone" class="form-control form-control-lg mb-4" placeholder="رقم الهاتف (للاتصال بك)" required>
+                    <input type="tel" id="customer-phone" class="form-control form-control-lg mb-4" placeholder="رقم الهاتف" required>
                     <button id="btn-submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" onclick="checkout()">تأكيد وإرسال الطلب 💬</button>
                 </div>
             </div>
@@ -80,91 +92,38 @@
     <script>
         let cart = [];
         let cartModalInstance = null;
-
-        document.addEventListener("DOMContentLoaded", function(){
-            cartModalInstance = new bootstrap.Modal(document.getElementById('cartModal'));
-        });
+        document.addEventListener("DOMContentLoaded", function(){ cartModalInstance = new bootstrap.Modal(document.getElementById('cartModal')); });
         
         function addToCart(name, price) {
             let item = cart.find(i => i.name === name);
             if(item) { item.qty++; } else { cart.push({name: name, price: price, qty: 1}); }
             updateCartUI();
-            
-            // تأثير حركي خفيف على السلة
-            let fCart = document.getElementById('floating-cart');
-            fCart.style.transform = 'scale(1.1)';
-            setTimeout(() => fCart.style.transform = 'scale(1)', 200);
         }
-
-        // دالة جديدة للتحكم بالكمية (+ و -)
         function changeQty(name, delta) {
             let item = cart.find(i => i.name === name);
-            if(item) {
-                item.qty += delta;
-                if(item.qty <= 0) {
-                    cart = cart.filter(i => i.name !== name); // حذف المنتج إذا أصبحت الكمية 0
-                }
-            }
-            updateCartUI();
-            renderModalItems(); // تحديث النافذة المفتوحة
+            if(item) { item.qty += delta; if(item.qty <= 0) { cart = cart.filter(i => i.name !== name); } }
+            updateCartUI(); renderModalItems();
         }
-
         function updateCartUI() {
             let count = 0; let total = 0;
             cart.forEach(item => { count += item.qty; total += (item.price * item.qty); });
-            document.getElementById('cart-count').innerText = count;
-            document.getElementById('cart-total').innerText = total;
-            document.getElementById('modal-total').innerText = total;
+            document.getElementById('cart-count').innerText = count; document.getElementById('cart-total').innerText = total; document.getElementById('modal-total').innerText = total;
             document.getElementById('floating-cart').style.display = count > 0 ? 'block' : 'none';
             if(count === 0 && cartModalInstance) cartModalInstance.hide();
         }
-
         function renderModalItems() {
-            let list = document.getElementById('cart-items');
-            list.innerHTML = '';
+            let list = document.getElementById('cart-items'); list.innerHTML = '';
             cart.forEach((item) => {
-                list.innerHTML += `
-                <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom pb-3 mb-2">
-                    <div>
-                        <h6 class="mb-1 fw-bold">${item.name}</h6>
-                        <small class="text-muted">${item.price} {{ settings.currency }}</small>
-                    </div>
-                    <div class="d-flex align-items-center bg-light rounded p-1">
-                        <button class="btn btn-sm btn-outline-danger border-0 px-2 py-0 fs-5" onclick="changeQty('${item.name}', -1)">−</button>
-                        <span class="mx-3 fw-bold fs-6">${item.qty}</span>
-                        <button class="btn btn-sm btn-outline-success border-0 px-2 py-0 fs-5" onclick="changeQty('${item.name}', 1)">+</button>
-                    </div>
-                </li>`;
+                list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center mb-2 border-bottom pb-2"><div><h6 class="mb-1 fw-bold">${item.name}</h6><small class="text-muted">${item.price} {{ settings.currency }}</small></div><div class="d-flex align-items-center bg-light rounded p-1"><button class="btn btn-sm btn-outline-danger px-2 py-0" onclick="changeQty('${item.name}', -1)">−</button><span class="mx-3 fw-bold">${item.qty}</span><button class="btn btn-sm btn-outline-success px-2 py-0" onclick="changeQty('${item.name}', 1)">+</button></div></li>`;
             });
         }
-
-        function openCartModal() {
-            renderModalItems();
-            cartModalInstance.show();
-        }
-
+        function openCartModal() { renderModalItems(); cartModalInstance.show(); }
         function checkout() {
-            let name = document.getElementById('customer-name').value;
-            let phone = document.getElementById('customer-phone').value;
-            if(!name || !phone) return alert("يرجى إدخال الاسم ورقم الهاتف لضمان توصيل طلبك.");
-            
-            let btn = document.getElementById('btn-submit');
-            btn.innerText = "جاري تحويلك للواتساب..."; btn.disabled = true;
-            
-            let total = document.getElementById('modal-total').innerText;
-            
-            fetch('/api/checkout/{{ user.store_slug }}', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({name: name, phone: phone, cart: cart, total: total})
-            })
-            .then(res => res.json())
-            .then(data => {
-                cart = []; updateCartUI();
-                btn.innerText = "تأكيد وإرسال الطلب 💬"; btn.disabled = false;
-                cartModalInstance.hide();
-                window.open(data.whatsapp_url, '_blank');
-            });
+            let name = document.getElementById('customer-name').value; let phone = document.getElementById('customer-phone').value;
+            if(!name || !phone) return alert("يرجى إدخال الاسم ورقم الهاتف.");
+            document.getElementById('btn-submit').innerText = "جاري التحويل..."; document.getElementById('btn-submit').disabled = true;
+            fetch('/api/checkout/{{ user.store_slug }}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name, phone: phone, cart: cart, total: document.getElementById('modal-total').innerText}) })
+            .then(res => res.json()).then(data => { cart = []; updateCartUI(); cartModalInstance.hide(); window.open(data.whatsapp_url, '_blank'); });
         }
     </script>
 </body>

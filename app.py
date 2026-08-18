@@ -3,7 +3,6 @@ import database
 import os
 
 app = Flask(__name__)
-# الحل الهندسي: استخدام or لضمان عدم قبول أي قيمة فارغة من Vercel
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 
 @app.route('/')
@@ -53,6 +52,12 @@ def dashboard():
         if action == 'add_product':
             database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock'))
             flash("تم إضافة المنتج بنجاح!", "success")
+        elif action == 'edit_product':
+            database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock'))
+            flash("تم تعديل تفاصيل المنتج بنجاح!", "success")
+        elif action == 'delete_product':
+            database.delete_product(request.form.get('product_id'), session['user_id'])
+            flash("تم حذف المنتج من المتجر", "danger")
         elif action == 'save_settings':
             settings_data = {'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'), 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'), 'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'), 'header_size': request.form.get('header_size')}
             database.update_settings(session['user_id'], settings_data)
