@@ -2,8 +2,11 @@ from pymongo import MongoClient
 import uuid, os
 from datetime import datetime
 
-# قراءة الرابط من متغيرات البيئة بأمان تام
-MONGO_URI = os.getenv("MONGO_URI")
+# جلب رابط الاتصال من متغيرات البيئة في Vercel، وإذا لم يوجد يستخدم قيمة افتراضية فارغة لمنع الانهيار
+MONGO_URI = os.getenv("MONGO_URI", "")
+
+if not MONGO_URI:
+    raise ValueError("❌ خطأ حرج: متغير البيئة MONGO_URI غير معرف في السيرفر!")
 
 client = MongoClient(MONGO_URI)
 db = client['tajergo_db']
