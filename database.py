@@ -15,15 +15,19 @@ def get_user_by_slug(slug): return users_col.find_one({"store_slug": slug, "acti
 
 def get_settings(user_id):
     setting = settings_col.find_one({"u_id": user_id})
-    if not setting: return {'store_name': 'متجري', 'store_desc': 'وصف المتجر', 'whatsapp': '', 'currency': 'ريال', 'theme_color': '#0d6efd', 'font_family': 'Cairo', 'header_size': 'medium', 'facebook': '', 'instagram': '', 'tiktok': ''}
+    if not setting: return {
+        'store_name': 'متجري', 'store_desc': 'وصف المتجر', 'whatsapp': '', 'currency': 'ريال', 
+        'theme_color': '#0d6efd', 'font_family': 'Cairo', 'header_size': 'medium', 
+        'facebook': '', 'instagram': '', 'tiktok': '', 'custom_domain': '',
+        'img_provider': 'imgbb', 'img_api_key': '', 'cloudinary_name': '', 'cloudinary_preset': '',
+        'logo_url': '' # حقل شعار المتجر الجديد
+    }
     return setting
 
 def update_settings(user_id, data): settings_col.update_one({"u_id": user_id}, {"$set": data}, upsert=True)
 
 def change_user_password(user_id, old_password, new_password):
-    user = users_col.find_one({"id": user_id, "password": old_password})
-    if not user:
-        return False
+    if not users_col.find_one({"id": user_id, "password": old_password}): return False
     users_col.update_one({"id": user_id}, {"$set": {"password": new_password}})
     return True
 
@@ -54,11 +58,6 @@ def delete_user(user_id):
 
 def create_order(store_id, customer_name, customer_phone, customer_address, payment_info, cart_items, total):
     order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
-    orders_col.insert_one({
-        "order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone, 
-        "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, 
-        "total": total, "date": datetime.now(), "status": "جديد 🟡"
-    })
+    orders_col.insert_one({"order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone, "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, "total": total, "date": datetime.now(), "status": "جديد 🟡"})
     return order_id
-
 def get_orders(store_id): return list(orders_col.find({"store_id": store_id}).sort("date", -1))

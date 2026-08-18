@@ -62,7 +62,25 @@
                         <form method="POST" class="row g-3">
                             <input type="hidden" name="action" value="save_settings">
                             <!-- الإعدادات الأساسية -->
-                            <div class="col-md-6"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
+                            
+<div class="col-md-12 mb-2">
+    <label class="small fw-bold text-primary"><i class="fas fa-image"></i> شعار المتجر (Logo)</label>
+    <div class="d-flex align-items-center gap-3">
+        {% if settings.get('logo_url') %}
+        <img src="{{ settings.logo_url }}" width="60" height="60" style="object-fit:cover; border-radius:50%; border:2px solid #ccc;">
+        {% endif %}
+        <div class="flex-grow-1">
+            <div class="upload-btn-wrapper">
+                <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold border-2"><i class="fas fa-cloud-upload-alt"></i> رفع شعار جديد من الاستوديو</button>
+                <input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'storeLogoInput', 'logoStatus', 'settingsSaveBtn')">
+            </div>
+            <small id="logoStatus" class="fw-bold d-block text-secondary"></small>
+            <input type="text" name="logo_url" id="storeLogoInput" class="form-control form-control-sm mt-1" value="{{ settings.get('logo_url', '') }}" placeholder="أو الصق رابط الشعار المباشر هنا">
+        </div>
+    </div>
+</div>
+<div class="col-md-6"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
+
                             <div class="col-md-6"><label class="small fw-bold">اللون الأساسي</label><input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}"></div>
                             <div class="col-md-4"><label class="small fw-bold">رقم الواتساب</label><input name="whatsapp" class="form-control" value="{{ settings.whatsapp }}"></div>
                             <div class="col-md-4"><label class="small fw-bold">العملة</label><input name="currency" class="form-control" value="{{ settings.currency }}"></div>
