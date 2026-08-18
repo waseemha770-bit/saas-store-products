@@ -17,7 +17,7 @@
             </div>
         </div>
     </nav>
-    <div class="container">
+    <div class="container pb-5">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}
         {% endwith %}
@@ -32,7 +32,7 @@
         </ul>
 
         <div class="tab-content">
-            <!-- المنتجات -->
+            <!-- قسم المنتجات -->
             <div class="tab-pane fade show active" id="products" role="tabpanel">
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body">
@@ -50,7 +50,6 @@
                     </div>
                 </div>
 
-                <!-- جدول المنتجات الحالية -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-body">
                         <h5 class="fw-bold mb-3">المنتجات الحالية</h5>
@@ -74,8 +73,6 @@
                                             </form>
                                         </td>
                                     </tr>
-
-                                    <!-- نافذة التعديل (Modal) -->
                                     <div class="modal fade" id="editModal{{ p.id }}" tabindex="-1">
                                         <div class="modal-dialog">
                                             <div class="modal-content">
@@ -107,24 +104,36 @@
                 </div>
             </div>
 
-            <!-- سجل الطلبات والإعدادات وإدارة التجار بقيت كما هي وتعمل 100% -->
+            <!-- الطلبات -->
             <div class="tab-pane fade" id="orders" role="tabpanel">
                 <div class="card shadow-sm border-0"><div class="card-body">
                     <h5 class="fw-bold mb-3">تقارير المبيعات والطلبات</h5>
+                    <div class="table-responsive">
                     <table class="table table-bordered table-striped text-center">
                         <thead class="table-light"><tr><th>الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>التاريخ</th></tr></thead>
-                        <tbody>{% for o in orders %}<tr><td>{{ o.order_id }}</td><td class="text-start">
-    👤 {{ o.customer_name }}<br>
-    📞 <span class="text-primary fw-bold">{{ o.customer_phone }}</span><br>
-    📍 <small class="text-muted">العنوان: {{ o.get('customer_address', 'غير مسجل') }}</small><br>
-    💳 <small class="text-success">الدفع: {{ o.get('payment_info', 'غير مسجل') }}</small>
-</td><td class="text-start">{% for i in o.cart_items %} - {{ i.name }} (x{{ i.qty }})<br> {% endfor %}</td><td class="fw-bold text-success">{{ o.total }}</td><td dir="ltr"><small>{{ o.date.strftime('%Y-%m-%d %H:%M') }}</small></td></tr>{% else %}<tr><td colspan="5">لا توجد طلبات</td></tr>{% endfor %}</tbody>
+                        <tbody>
+                            {% for o in orders %}
+                            <tr>
+                                <td>{{ o.order_id }}</td>
+                                <td class="text-start">
+                                    👤 {{ o.customer_name }}<br>
+                                    📞 <span class="text-primary fw-bold">{{ o.customer_phone }}</span><br>
+                                    📍 <small class="text-muted">العنوان: {{ o.get('customer_address', 'غير مسجل') }}</small><br>
+                                    💳 <small class="text-success">الدفع: {{ o.get('payment_info', 'غير مسجل') }}</small>
+                                </td>
+                                <td class="text-start">{% for i in o.cart_items %} - {{ i.name }} (x{{ i.qty }})<br> {% endfor %}</td>
+                                <td class="fw-bold text-success">{{ o.total }}</td>
+                                <td dir="ltr"><small>{{ o.date.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                            </tr>
+                            {% else %}<tr><td colspan="5">لا توجد طلبات</td></tr>{% endfor %}
+                        </tbody>
                     </table>
+                    </div>
                 </div></div>
             </div>
 
+            <!-- الإعدادات -->
             <div class="tab-pane fade" id="settings" role="tabpanel">
-                <!-- إعدادات المظهر والواتساب (نفس الكود السابق للتبسيط) -->
                 <div class="card shadow-sm border-0"><div class="card-body">
                     <form method="POST" class="row g-3">
                         <input type="hidden" name="action" value="save_settings">
@@ -141,20 +150,59 @@
                 </div></div>
             </div>
 
+            <!-- قسم السوبر أدمن المستعاد -->
             {% if is_super_admin %}
             <div class="tab-pane fade" id="superadmin" role="tabpanel">
-                <div class="card border-danger"><div class="card-body">
-                    <h5 class="fw-bold text-danger mb-3">المتاجر المشتركة في منصتك</h5>
-                    <table class="table table-hover align-middle">
-                        <thead><tr><th>التاجر</th><th>الرابط</th><th>الحالة</th><th>إجراءات</th></tr></thead>
-                        <tbody>{% for m in merchants %}<tr><td>{{ m.username }}<br><small class="text-muted">{{ m.password }}</small></td><td>{{ m.store_slug }}</td><td>{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</td><td>
-                            <form method="POST" class="d-inline"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button></form>
-                            {% if m.store_slug != 'admin-store' %}
-                            <form method="POST" class="d-inline" onsubmit="return confirm('حذف نهائي؟');"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>
-                            {% endif %}
-                        </td></tr>{% endfor %}</tbody>
-                    </table>
-                </div></div>
+                <div class="row">
+                    <!-- النافذة المفقودة (إضافة التاجر) تم استعادتها هنا -->
+                    <div class="col-md-4 mb-4">
+                        <div class="card bg-dark text-white border-warning shadow-lg">
+                            <div class="card-body">
+                                <h5 class="fw-bold text-warning mb-3">➕ إضافة تاجر جديد</h5>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="add_merchant">
+                                    <input type="text" name="name" class="form-control mb-3" placeholder="اسم التاجر (مثال: متجر الأمل)" required>
+                                    <input type="text" name="slug" class="form-control mb-3" placeholder="رابط المتجر (انجليزي، بدون مسافات)" required>
+                                    <input type="text" name="password" class="form-control mb-4" placeholder="كلمة المرور للتاجر" required>
+                                    <button class="btn btn-warning w-100 fw-bold text-dark">إنشاء وبناء المتجر</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- جدول إدارة التجار الحاليين -->
+                    <div class="col-md-8">
+                        <div class="card border-danger shadow-sm"><div class="card-body">
+                            <h5 class="fw-bold text-danger mb-3">🏢 المتاجر المشتركة في منصتك</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead><tr><th>التاجر</th><th>الرابط</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                                    <tbody>
+                                        {% for m in merchants %}
+                                        <tr>
+                                            <td>{{ m.username }}<br><small class="text-muted">Pass: {{ m.password }}</small></td>
+                                            <td><a href="/store/{{ m.store_slug }}" target="_blank" class="text-decoration-none fw-bold">{{ m.store_slug }}</a></td>
+                                            <td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td>
+                                            <td>
+                                                <form method="POST" class="d-inline">
+                                                    <input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}">
+                                                    <button class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button>
+                                                </form>
+                                                {% if m.store_slug != 'admin-store' %}
+                                                <form method="POST" class="d-inline" onsubmit="return confirm('حذف نهائي؟ ستحذف منتجاته وطلباته للأبد!');">
+                                                    <input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}">
+                                                    <button class="btn btn-sm btn-danger">حذف</button>
+                                                </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div></div>
+                    </div>
+                </div>
             </div>
             {% endif %}
         </div>
