@@ -11,10 +11,14 @@
         .form-control, .form-select { border: 2px solid #b3b3b3 !important; border-radius: 8px; padding: 10px 15px; background-color: #fcfcfc; font-weight: bold; color: #333; transition: all 0.3s ease; }
         .form-control:focus, .form-select:focus { border-color: #0d6efd !important; background-color: #fff; box-shadow: 0 0 8px rgba(13, 110, 253, 0.3); outline: none; }
         .card { border-radius: 12px; }
-        .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; margin-bottom: 5px; }
         .upload-btn-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
         .guide-step { background: #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px; font-weight: bold;}
         .guide-step span { background: var(--bs-primary); color: white; border-radius: 50%; width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; margin-left: 10px; }
+        .divider-text { display: flex; align-items: center; text-align: center; color: #888; font-weight: bold; margin: 8px 0; }
+        .divider-text::before, .divider-text::after { content: ''; flex: 1; border-bottom: 1px dashed #ccc; }
+        .divider-text:not(:empty)::before { margin-left: .5em; }
+        .divider-text:not(:empty)::after { margin-right: .5em; }
     </style>
 </head>
 <body>
@@ -47,78 +51,105 @@
                         <div class="col-md-4"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" required></div>
                         <div class="col-md-4"><label class="small fw-bold">الكمية</label><input name="stock" type="number" class="form-control" required></div>
                         <div class="col-md-6"><label class="small fw-bold">التصنيف</label><input type="hidden" name="cat" id="finalCategory" required><select class="form-select" id="categorySelect" onchange="handleCategoryChange(this)" required><option value="" disabled selected>-- اختر تصنيفاً --</option>{% for c in cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}<option value="NEW_CATEGORY" class="fw-bold text-primary">➕ تصنيف جديد...</option></select><input type="text" id="newCategoryInput" class="form-control mt-2" placeholder="التصنيف الجديد" style="display: none;" oninput="updateFinalCategory()"></div>
-                        <div class="col-md-6"><label class="small fw-bold">صورة المنتج</label><div class="upload-btn-wrapper"><button class="btn btn-outline-primary w-100 fw-bold border-2" style="padding:10px;"><i class="fas fa-camera"></i> رفع صورة من الاستوديو</button><input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'newProductImg', 'newProductStatus', 'submitProductBtn')"></div><input type="text" name="img" id="newProductImg" class="form-control mt-1 d-none"><small id="newProductStatus" class="fw-bold mt-1 d-block text-secondary">لم يتم اختيار صورة.</small></div>
+                        
+                        <!-- قسم صورة المنتج يتيح الرفع السحابي أو إدخال الرابط يدوياً -->
+                        <div class="col-md-6">
+                            <label class="small fw-bold">صورة المنتج</label>
+                            <div class="upload-btn-wrapper">
+                                <button type="button" class="btn btn-outline-primary w-100 fw-bold border-2" style="padding:8px;"><i class="fas fa-cloud-upload-alt"></i> رفع من الاستوديو (للسحابة)</button>
+                                <input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'newProductImg', 'newProductStatus', 'submitProductBtn')">
+                            </div>
+                            <small id="newProductStatus" class="fw-bold d-block text-secondary text-center mb-1" style="font-size:0.8rem;"></small>
+                            <div class="divider-text" style="margin:4px 0; font-size:0.8rem;">أو أدخل الرابط يدوياً</div>
+                            <input type="text" name="img" id="newProductImg" class="form-control" placeholder="https://example.com/image.jpg">
+                        </div>
+
                         <div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control"></div>
                         <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm" type="button" id="submitProductBtn" onclick="submitProductForm()">حفظ ونشر المنتج</button></div>
                     </form>
                 </div></div>
+
+                <!-- جدول المنتجات الحالية -->
+                <div class="card shadow-sm border-0 mb-4"><div class="card-body">
+                    <h5 class="fw-bold mb-3">المنتجات الحالية</h5>
+                    <div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>الكمية</th><th>إجراءات</th></tr></thead><tbody>
+                        {% for p in products %}<tr><td><img src="{{ p.image_url }}" width="50" height="50" style="object-fit:cover; border-radius:5px;"></td><td class="fw-bold">{{ p.name }}</td><td class="text-primary">{{ p.price }}</td><td>{{ p.stock }}</td><td>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">تعديل</button>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>
+                        </td></tr>
+                        
+                        <div class="modal fade" id="editModal{{ p.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" class="row g-3"><input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}"><div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div><div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" value="{{ p.price }}" required></div><div class="col-6"><label class="small fw-bold">المخزون</label><input name="stock" type="number" class="form-control" value="{{ p.stock }}" required></div><div class="col-12"><label class="small fw-bold">التصنيف</label><input name="cat" class="form-control" value="{{ p.category }}" required></div>
+                        <div class="col-12">
+                            <label class="small fw-bold">رابط أو صورة المنتج</label>
+                            <input type="file" class="form-control mb-1" accept="image/*" onchange="uploadImageToCloud(this, 'editImgUrl{{ p.id }}', 'editImgStatus{{ p.id }}', 'editSaveBtn{{ p.id }}')">
+                            <small id="editImgStatus{{ p.id }}" class="fw-bold d-block text-secondary mb-1" style="font-size:0.8rem;"></small>
+                            <input type="text" name="img" id="editImgUrl{{ p.id }}" class="form-control" value="{{ p.image_url }}">
+                        </div>
+                        <div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control" value="{{ p.description }}"></div><div class="col-12 mt-3"><button class="btn btn-primary w-100 fw-bold" id="editSaveBtn{{ p.id }}">حفظ التعديلات</button></div></form></div></div></div></div>
+                        {% endfor %}
+                    </tbody></table></div>
+                </div></div>
             </div>
 
-            <!-- الإعدادات وإضافة منصة Postimages للخيارات -->
+            <!-- الإعدادات -->
             <div class="tab-pane fade" id="settings">
                 <div class="row">
                     <div class="col-lg-8 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body">
-                        <h5 class="fw-bold mb-3 border-bottom pb-2">⚙️ إعدادات المتجر والتخزين السحابي</h5>
+                        <h5 class="fw-bold mb-3 border-bottom pb-2">⚙️ إعدادات المتجر والهوية والتخزين</h5>
                         <form method="POST" class="row g-3">
                             <input type="hidden" name="action" value="save_settings">
-                            <!-- الإعدادات الأساسية -->
                             
-<div class="col-md-12 mb-2">
-    <label class="small fw-bold text-primary"><i class="fas fa-image"></i> شعار المتجر (Logo)</label>
-    <div class="d-flex align-items-center gap-3">
-        {% if settings.get('logo_url') %}
-        <img src="{{ settings.logo_url }}" width="60" height="60" style="object-fit:cover; border-radius:50%; border:2px solid #ccc;">
-        {% endif %}
-        <div class="flex-grow-1">
-            <div class="upload-btn-wrapper">
-                <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold border-2"><i class="fas fa-cloud-upload-alt"></i> رفع شعار جديد من الاستوديو</button>
-                <input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'storeLogoInput', 'logoStatus', 'settingsSaveBtn')">
-            </div>
-            <small id="logoStatus" class="fw-bold d-block text-secondary"></small>
-            <input type="text" name="logo_url" id="storeLogoInput" class="form-control form-control-sm mt-1" value="{{ settings.get('logo_url', '') }}" placeholder="أو الصق رابط الشعار المباشر هنا">
-        </div>
-    </div>
-</div>
-<div class="col-md-6"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
+                            <!-- شعار المتجر -->
+                            <div class="col-md-12 mb-2">
+                                <label class="small fw-bold text-primary"><i class="fas fa-image"></i> شعار المتجر (Logo)</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    {% if settings.get('logo_url') %}<img src="{{ settings.logo_url }}" width="50" height="50" style="object-fit:cover; border-radius:50%; border:2px solid #ccc;">{% endif %}
+                                    <div class="flex-grow-1">
+                                        <div class="upload-btn-wrapper">
+                                            <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold border-2"><i class="fas fa-cloud-upload-alt"></i> رفع شعار جديد من الاستوديو</button>
+                                            <input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'storeLogoInput', 'logoStatus', 'settingsSaveBtn')">
+                                        </div>
+                                        <small id="logoStatus" class="fw-bold d-block text-secondary" style="font-size:0.8rem;"></small>
+                                        <input type="text" name="logo_url" id="storeLogoInput" class="form-control form-control-sm mt-1" value="{{ settings.get('logo_url', '') }}" placeholder="أو الصق رابط الشعار المباشر">
+                                    </div>
+                                </div>
+                            </div>
 
+                            <div class="col-md-6"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
                             <div class="col-md-6"><label class="small fw-bold">اللون الأساسي</label><input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}"></div>
                             <div class="col-md-4"><label class="small fw-bold">رقم الواتساب</label><input name="whatsapp" class="form-control" value="{{ settings.whatsapp }}"></div>
                             <div class="col-md-4"><label class="small fw-bold">العملة</label><input name="currency" class="form-control" value="{{ settings.currency }}"></div>
                             <div class="col-md-4"><label class="small fw-bold">نص زر الشراء</label><input name="btn_text" class="form-control" value="{{ settings.btn_text }}"></div>
+                            <div class="col-12"><label class="small fw-bold">وصف المتجر</label><input name="store_desc" class="form-control" value="{{ settings.store_desc }}"></div>
                             
-                            <!-- إعدادات التخزين السحابي للصور (مع 4 منصات) -->
-                            <div class="col-12 mt-4 border-bottom pb-2 d-flex justify-content-between align-items-center">
+                            <!-- السحابة -->
+                            <div class="col-12 mt-3 border-bottom pb-2 d-flex justify-content-between align-items-center">
                                 <h6 class="fw-bold text-primary mb-0"><i class="fas fa-cloud"></i> إعدادات رفع الصور سحابياً</h6>
                                 <button type="button" class="btn btn-sm btn-outline-info fw-bold" data-bs-toggle="modal" data-bs-target="#guideModal"><i class="fas fa-question-circle"></i> كيف أحصل على المفتاح؟</button>
                             </div>
-                            
-                            <div class="col-md-12 mb-3">
-                                <label class="small fw-bold">مزود الخدمة (المنصة المضيفة للصور)</label>
+                            <div class="col-md-12 mb-2">
+                                <label class="small fw-bold">مزود الخدمة</label>
                                 <select name="img_provider" class="form-select" id="providerSelect" onchange="toggleProviderFields()">
-                                    <option value="imgbb" {% if settings.get('img_provider') == 'imgbb' %}selected{% endif %}>ImgBB (سهل ومجاني 100%)</option>
-                                    <option value="imgur" {% if settings.get('img_provider') == 'imgur' %}selected{% endif %}>Imgur (عالمي ومشهور)</option>
-                                    <option value="postimages" {% if settings.get('img_provider') == 'postimages' %}selected{% endif %}>Postimages.org (عريق ومستقر)</option>
-                                    <option value="cloudinary" {% if settings.get('img_provider') == 'cloudinary' %}selected{% endif %}>Cloudinary (احترافي - CDN سريع)</option>
+                                    <option value="imgbb" {% if settings.get('img_provider') == 'imgbb' %}selected{% endif %}>ImgBB (مجاني)</option>
+                                    <option value="imgur" {% if settings.get('img_provider') == 'imgur' %}selected{% endif %}>Imgur</option>
+                                    <option value="postimages" {% if settings.get('img_provider') == 'postimages' %}selected{% endif %}>Postimages</option>
+                                    <option value="cloudinary" {% if settings.get('img_provider') == 'cloudinary' %}selected{% endif %}>Cloudinary (احترافي)</option>
                                 </select>
                             </div>
-
-                            <!-- حقول ImgBB / Imgur / Postimages -->
                             <div class="col-md-12" id="basicProviderField" style="{% if settings.get('img_provider') == 'cloudinary' %}display:none;{% endif %}">
-                                <label class="small fw-bold">مفتاح الربط السري (API Key / Client ID)</label>
-                                <input name="img_api_key" type="password" class="form-control" value="{{ settings.get('img_api_key', '') }}" placeholder="الصق المفتاح الخاص بك هنا">
-                            </div>
-
-                            <!-- حقول Cloudinary المخصصة -->
-                            <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider') != 'cloudinary' %}display:none;{% endif %}">
-                                <label class="small fw-bold text-info">اسم السحابة (Cloud Name)</label>
-                                <input name="cloudinary_name" type="text" class="form-control" value="{{ settings.get('cloudinary_name', '') }}" placeholder="مثال: dz7q...">
+                                <label class="small fw-bold">مفتاح الربط (API Key / Client ID)</label>
+                                <input name="img_api_key" type="password" class="form-control" value="{{ settings.get('img_api_key', '') }}" placeholder="الصق المفتاح هنا">
                             </div>
                             <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider') != 'cloudinary' %}display:none;{% endif %}">
-                                <label class="small fw-bold text-info">إعداد الرفع (Upload Preset)</label>
-                                <input name="cloudinary_preset" type="password" class="form-control" value="{{ settings.get('cloudinary_preset', '') }}" placeholder="مثال: unsigned_preset">
+                                <label class="small fw-bold text-info">Cloud Name</label>
+                                <input name="cloudinary_name" type="text" class="form-control" value="{{ settings.get('cloudinary_name', '') }}">
+                            </div>
+                            <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider') != 'cloudinary' %}display:none;{% endif %}">
+                                <label class="small fw-bold text-info">Upload Preset</label>
+                                <input name="cloudinary_preset" type="password" class="form-control" value="{{ settings.get('cloudinary_preset', '') }}">
                             </div>
 
-                            <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm">حفظ التحديثات</button></div>
+                            <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm" id="settingsSaveBtn">حفظ التحديثات</button></div>
                         </form>
                     </div></div></div>
                     
@@ -126,61 +157,64 @@
                 </div>
             </div>
 
-            <!-- إدارة التجار (لم يتغير) -->
+            <!-- تبويب إدارة التجار المستعاد (لصلاحيات السوبر أدمن) -->
             {% if is_super_admin %}
-            <div class="tab-pane fade" id="superadmin">...</div>
+            <div class="tab-pane fade" id="superadmin" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <div class="card bg-dark text-white border-warning shadow-lg">
+                            <div class="card-body">
+                                <h5 class="fw-bold text-warning mb-3">➕ إضافة تاجر جديد</h5>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="add_merchant">
+                                    <input type="text" name="name" class="form-control mb-3" placeholder="اسم التاجر" required>
+                                    <input type="text" name="slug" class="form-control mb-3" placeholder="رابط المتجر (بالإنجليزية)" required>
+                                    <input type="text" name="password" class="form-control mb-4" placeholder="كلمة المرور للتاجر" required>
+                                    <button class="btn btn-warning w-100 fw-bold text-dark">إنشاء وبناء المتجر</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card border-danger shadow-sm"><div class="card-body">
+                            <h5 class="fw-bold text-danger mb-3">🏢 المتاجر المشتركة في منصتك</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead><tr><th>التاجر</th><th>الرابط</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                                    <tbody>
+                                        {% for m in merchants %}
+                                        <tr>
+                                            <td>{{ m.username }}<br><small class="text-muted">Pass: {{ m.password }}</small></td>
+                                            <td><a href="/store/{{ m.store_slug }}" target="_blank" class="fw-bold">{{ m.store_slug }}</a></td>
+                                            <td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td>
+                                            <td>
+                                                <form method="POST" class="d-inline">
+                                                    <input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}">
+                                                    <button class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button>
+                                                </form>
+                                                {% if m.store_slug != 'admin-store' %}
+                                                <form method="POST" class="d-inline" onsubmit="return confirm('حذف نهائي؟');">
+                                                    <input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}">
+                                                    <button class="btn btn-sm btn-danger">حذف</button>
+                                                </form>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div></div>
+                    </div>
+                </div>
+            </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- النافذة المنبثقة: تحديث دليل التاجر لخدمات التخزين السحابي -->
+    <!-- نافذة الدليل السحابي -->
     <div class="modal fade" id="guideModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold"><i class="fas fa-book-open"></i> دليل الربط السحابي للصور</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-                <div class="modal-body p-4">
-                    <ul class="nav nav-pills mb-3" id="guideTabs">
-                        <li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#imgbbGuide">ImgBB</button></li>
-                        <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#imgurGuide">Imgur</button></li>
-                        <li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#postimgGuide">Postimages</button></li>
-                        <li class="nav-item"><button class="nav-link fw-bold text-info" data-bs-toggle="pill" data-bs-target="#cloudinaryGuide">Cloudinary</button></li>
-                    </ul>
-
-                    <div class="tab-content border rounded p-3 bg-white shadow-sm">
-                        <!-- ImgBB -->
-                        <div class="tab-pane fade show active" id="imgbbGuide">
-                            <h5 class="fw-bold text-primary mb-3">الحصول على مفتاح ImgBB (موصى به ⭐)</h5>
-                            <div class="guide-step"><span>1</span> افتح موقع: <a href="https://api.imgbb.com/" target="_blank">api.imgbb.com</a> وأنشئ حساباً.</div>
-                            <div class="guide-step"><span>2</span> اضغط على <b>Add API Key</b> والصق الرمز الطويل في إعدادات متجرك.</div>
-                        </div>
-                        
-                        <!-- Imgur -->
-                        <div class="tab-pane fade" id="imgurGuide">
-                            <h5 class="fw-bold text-success mb-3">الحصول على مفتاح Imgur</h5>
-                            <div class="guide-step"><span>1</span> أنشئ حساباً مجانياً في: <a href="https://imgur.com/register" target="_blank">imgur.com</a></div>
-                            <div class="guide-step"><span>2</span> سجل تطبيقاً: <a href="https://api.imgur.com/oauth2/addclient" target="_blank">api.imgur.com/addclient</a> للحصول على Client ID والصقه.</div>
-                        </div>
-
-                        <!-- Postimages -->
-                        <div class="tab-pane fade" id="postimgGuide">
-                            <h5 class="fw-bold text-danger mb-3">الحصول على مفتاح Postimages.org</h5>
-                            <div class="guide-step"><span>1</span> افتح الموقع وقم بتسجيل الدخول: <a href="https://postimages.org/" target="_blank">postimages.org</a></div>
-                            <div class="guide-step"><span>2</span> توفر المنصة ميزة الـ API للحسابات المتميزة (Premium) أو عبر طلب مفتاح مطور من الدعم.</div>
-                            <div class="guide-step"><span>3</span> بمجرد حصولك على الـ API Endpoint أو الـ Key، قم بلصقه في الإعدادات.</div>
-                            <p class="text-muted small mt-2">ملاحظة: لسهولة البدء المجاني 100% بدون تعقيدات، ننصحك باستخدام منصة ImgBB.</p>
-                        </div>
-
-                        <!-- Cloudinary -->
-                        <div class="tab-pane fade" id="cloudinaryGuide">
-                            <h5 class="fw-bold text-info mb-3">ربط Cloudinary (المنصة الاحترافية 🚀)</h5>
-                            <div class="guide-step"><span>1</span> أنشئ حساباً في <a href="https://cloudinary.com/" target="_blank">Cloudinary.com</a> وانسخ <b>Cloud Name</b>.</div>
-                            <div class="guide-step"><span>2</span> من الإعدادات (Settings -> Upload) أضف <b>Upload Preset</b> واجعله <b>Unsigned</b>.</div>
-                            <div class="guide-step"><span>3</span> انسخ الكلمتين وضعهما في إعدادات المتجر!</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-primary text-white"><h5 class="modal-title fw-bold">دليل الربط السحابي</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul class="nav nav-pills mb-3"><li class="nav-item"><button class="nav-link active fw-bold" data-bs-toggle="pill" data-bs-target="#imgbbGuide">ImgBB</button></li><li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#imgurGuide">Imgur</button></li><li class="nav-item"><button class="nav-link fw-bold" data-bs-toggle="pill" data-bs-target="#postimgGuide">Postimages</button></li><li class="nav-item"><button class="nav-link fw-bold text-info" data-bs-toggle="pill" data-bs-target="#cloudinaryGuide">Cloudinary</button></li></ul><div class="tab-content border rounded p-3 bg-white shadow-sm"><div class="tab-pane fade show active" id="imgbbGuide"><div class="guide-step"><span>1</span> افتح موقع <a href="https://api.imgbb.com/" target="_blank">api.imgbb.com</a> وأنشئ حساباً.</div><div class="guide-step"><span>2</span> اضغط <b>Add API Key</b> والصق الرمز.</div></div><div class="tab-pane fade" id="imgurGuide"><div class="guide-step"><span>1</span> سجل في <a href="https://imgur.com/register" target="_blank">imgur.com</a></div><div class="guide-step"><span>2</span> احصل على Client ID من <a href="https://api.imgur.com/oauth2/addclient" target="_blank">api.imgur.com/addclient</a></div></div><div class="tab-pane fade" id="postimgGuide"><div class="guide-step"><span>1</span> افتح <a href="https://postimages.org/" target="_blank">postimages.org</a></div><div class="guide-step"><span>2</span> اطلب مفتاح API من الدعم أو استخدم الرابط اليدوي المباشر كبديل.</div></div><div class="tab-pane fade" id="cloudinaryGuide"><div class="guide-step"><span>1</span> سجل في <a href="https://cloudinary.com/" target="_blank">Cloudinary.com</a> وانسخ Cloud Name.</div><div class="guide-step"><span>2</span> أنشئ Upload Preset واجعله Unsigned وادخله في الإعدادات.</div></div></div></div></div></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -201,7 +235,6 @@
         const CLOUD_NAME = '{{ settings.get("cloudinary_name", "") }}';
         const CLOUD_PRESET = '{{ settings.get("cloudinary_preset", "") }}';
 
-        // دالة الرفع الخارقة تدعم 4 منصات
         async function uploadImageToCloud(fileInput, hiddenUrlId, statusId, btnId) {
             let file = fileInput.files[0];
             if (!file) return;
@@ -212,57 +245,49 @@
 
             if (PROVIDER === 'cloudinary') {
                 if (!CLOUD_NAME || !CLOUD_PRESET) {
-                    statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> يرجى إدخال Cloud Name و Preset في الإعدادات.';
+                    statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> أدخل Cloud Name و Preset.';
                     statusText.className = "fw-bold mt-1 d-block text-danger"; return;
                 }
             } else {
                 if (!USER_API_KEY) {
-                    statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> يرجى إدخال مفتاح الـ API في الإعدادات.';
+                    statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> أدخل مفتاح الـ API أولاً.';
                     statusText.className = "fw-bold mt-1 d-block text-danger"; return;
                 }
             }
 
-            statusText.innerHTML = `<i class="fas fa-spinner fa-spin text-primary"></i> جاري الرفع إلى ${PROVIDER}...`;
+            statusText.innerHTML = `<i class="fas fa-spinner fa-spin text-primary"></i> جاري الرفع...`;
             statusText.className = "fw-bold mt-1 d-block text-primary";
             submitBtn.disabled = true;
 
             let formData = new FormData();
-            
             try {
                 let response, data;
-                
                 if (PROVIDER === 'cloudinary') {
-                    formData.append("file", file);
-                    formData.append("upload_preset", CLOUD_PRESET);
+                    formData.append("file", file); formData.append("upload_preset", CLOUD_PRESET);
                     response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
                     data = await response.json();
                     if (data.secure_url) { urlInput.value = data.secure_url; } else { throw new Error(); }
-
                 } else if (PROVIDER === 'imgur') {
                     formData.append("image", file);
                     response = await fetch('https://api.imgur.com/3/image', { method: 'POST', headers: { 'Authorization': 'Client-ID ' + USER_API_KEY }, body: formData });
                     data = await response.json();
                     if (data.success) { urlInput.value = data.data.link; } else { throw new Error(); }
-
                 } else if (PROVIDER === 'postimages') {
-                    // برمجة متوافقة مع الـ API الخاص بـ Postimages
                     formData.append("file", file);
                     response = await fetch('https://postimages.org/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + USER_API_KEY }, body: formData });
                     data = await response.json();
                     if (data.url) { urlInput.value = data.url; } else { throw new Error(); }
                 } else {
-                    // ImgBB
                     formData.append("image", file);
                     response = await fetch('https://api.imgbb.com/1/upload?key=' + USER_API_KEY, { method: 'POST', body: formData });
                     data = await response.json();
                     if (data.success) { urlInput.value = data.data.url; } else { throw new Error(); }
                 }
-
                 statusText.innerHTML = '<i class="fas fa-check-circle"></i> تم الرفع بنجاح!';
                 statusText.className = "fw-bold mt-1 d-block text-success";
                 submitBtn.disabled = false;
             } catch (error) {
-                statusText.innerHTML = '<i class="fas fa-times-circle"></i> فشل الرفع! راجع إعداداتك والمفتاح.';
+                statusText.innerHTML = '<i class="fas fa-times-circle"></i> فشل الرفع!';
                 statusText.className = "fw-bold mt-1 d-block text-danger";
                 submitBtn.disabled = false;
             }
@@ -270,12 +295,11 @@
         
         function handleCategoryChange(selectObj) { let inputField = document.getElementById('newCategoryInput'); if (selectObj.value === 'NEW_CATEGORY') { inputField.style.display = 'block'; inputField.required = true; document.getElementById('finalCategory').value = inputField.value; } else { inputField.style.display = 'none'; inputField.required = false; document.getElementById('finalCategory').value = selectObj.value; } }
         function updateFinalCategory() { if (document.getElementById('categorySelect').value === 'NEW_CATEGORY') { document.getElementById('finalCategory').value = document.getElementById('newCategoryInput').value; } }
-        function submitProductForm() { let select = document.getElementById('categorySelect'); if(select.value === "") { alert("الرجاء اختيار تصنيف!"); return; } if(select.value === 'NEW_CATEGORY' && document.getElementById('newCategoryInput').value.trim() === "") { alert("الرجاء كتابة التصنيف الجديد!"); return; } document.getElementById('addProductForm').submit(); }
+        function submitProductForm() { let select = document.getElementById('categorySelect'); if(select.value === "") { alert("اختر تصنيفاً!"); return; } if(select.value === 'NEW_CATEGORY' && document.getElementById('newCategoryInput').value.trim() === "") { alert("اكتب التصنيف الجديد!"); return; } document.getElementById('addProductForm').submit(); }
 
-        // تشغيل الرسم البياني
         document.addEventListener("DOMContentLoaded", function() {
             var ctx = document.getElementById('orderChart').getContext('2d');
-            if(ctx) { new Chart(ctx, { type: 'doughnut', data: { labels: ['جديد', 'قيد التجهيز', 'تم التوصيل', 'ملغي'], datasets: [{ data: [{{ stats.status_counts['جديد 🟡'] }}, {{ stats.status_counts['قيد التجهيز 🔵'] }}, {{ stats.status_counts['تم التوصيل 🟢'] }}, {{ stats.status_counts['ملغي 🔴'] }}], backgroundColor: ['#ffc107', '#0dcaf0', '#198754', '#dc3545'], borderWidth: 2, hoverOffset: 4 }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: {font: {family: 'Cairo', size: 12}} } } } }); }
+            if(ctx) { new Chart(ctx, { type: 'doughnut', data: { labels: ['جديد', 'تجهيز', 'توصيل', 'ملغي'], datasets: [{ data: [{{ stats.status_counts['جديد 🟡'] }}, {{ stats.status_counts['قيد التجهيز 🔵'] }}, {{ stats.status_counts['تم التوصيل 🟢'] }}, {{ stats.status_counts['ملغي 🔴'] }}], backgroundColor: ['#ffc107', '#0dcaf0', '#198754', '#dc3545'], borderWidth: 2 }] }, options: { responsive: true, plugins: { legend: { position: 'bottom', labels: {font: {family: 'Cairo', size: 12}} } } } }); }
         });
     </script>
 </body>
