@@ -15,13 +15,16 @@
         {% else %} .hero-section { padding: 80px 0; border-bottom-left-radius: 50px; border-bottom-right-radius: 50px; margin-bottom: 50px; } .hero-title { font-size: 3rem; } {% endif %}
 
         .hero-section { background: linear-gradient(135deg, var(--main-color), #2b2b2b); color: white; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-        .product-card { border: none; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-        .product-img { height: 200px; object-fit: cover; width: 100%; border-top-left-radius: 15px; border-top-right-radius: 15px;}
+        
+        /* تحسين حدود صور وكروت المنتجات لتكون واضحة */
+        .product-card { border: 1px solid #dcdcdc; border-radius: 15px; box-shadow: 0 6px 12px rgba(0,0,0,0.06); }
+        .product-img { height: 200px; object-fit: cover; width: 100%; border-top-left-radius: 15px; border-top-right-radius: 15px; border-bottom: 1px solid #eee; }
+        
         .btn-custom { background-color: var(--main-color); color: white; font-weight: bold; transition: all 0.3s;}
         
         #floating-cart { position: fixed; bottom: 20px; left: 20px; background-color: var(--main-color); color: white; border-radius: 50px; padding: 15px 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); cursor: pointer; z-index: 1000; font-weight: bold; font-size: 1.1rem; display: none; transition: transform 0.2s;}
         
-        /* تصميم تبويبات التصنيفات (للهواتف والكمبيوتر) */
+        /* تحسين حدود تبويبات التصنيفات لتظهر كأزرار واضحة */
         .category-tabs {
             flex-wrap: nowrap;
             overflow-x: auto;
@@ -30,17 +33,17 @@
             padding-bottom: 15px;
             margin-bottom: 25px;
             gap: 10px;
-            scrollbar-width: none; /* إخفاء شريط التمرير في فايرفوكس */
+            scrollbar-width: none; 
         }
-        .category-tabs::-webkit-scrollbar { display: none; /* إخفاء شريط التمرير في كروم وسفاري */ }
+        .category-tabs::-webkit-scrollbar { display: none; }
         .category-tabs .nav-link {
             border-radius: 30px;
             white-space: nowrap;
-            color: #444;
+            color: #333;
             font-weight: bold;
             background-color: #fff;
-            border: 1px solid #eaeaea;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            border: 2px solid #ccc; /* حدود سميكة وواضحة */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
         }
         .category-tabs .nav-link.active {
@@ -60,7 +63,7 @@
         </div>
     </div>
 
-    <div class="container pb-5">
+    <div class="container pb-2">
         {% set grouped_products = products | groupby('category') %}
         
         {% if grouped_products %}
@@ -106,6 +109,13 @@
         {% else %}
             <div class="text-center py-5"><h4 class="text-muted">لا توجد منتجات معروضة حالياً</h4></div>
         {% endif %}
+    </div>
+
+    <!-- بصمة المبرمج -->
+    <div class="container text-center mt-3 mb-5">
+        <p class="text-muted" style="font-size: 0.8rem; font-weight: bold; opacity: 0.6;">
+            برمجة المهندس / وسيم همدان (771954200)
+        </p>
     </div>
 
     <!-- السلة العائمة -->
