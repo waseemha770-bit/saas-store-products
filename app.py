@@ -1,17 +1,51 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
 import database, os, urllib.parse, io, csv
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 
-@app.route('/')
-def home(): return redirect(url_for('login'))
+# النطاق الأساسي لمنصتك (ضع الدومين الأساسي هنا لمنع تداخله مع النطاقات المخصصة)
+MAIN_DOMAIN = "saas-store-products.vercel.app"
 
-@app.route('/store/<slug>')
-def view_store(slug):
+# === دالة استشعار النطاق المخصص ===
+@app.before_request
+def handle_custom_domains():
+    host = request.host.lower()
+    
+    # استثناء المسارات الثابتة (مثل لوحة التحكم، وتسجيل الدخول، ومسارات API) لتعمل فقط على الدومين الرئيسي
+    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/system-admin']
+    is_excluded = any(request.path.startswith(path) for path in excluded_paths)
+
+    # إذا كان الزائر لا يستخدم الدومين الأساسي، والمكان ليس لوحة تحكم
+    if MAIN_DOMAIN not in host and not is_excluded and host != '127.0.0.1:5000' and host != 'localhost:5000':
+        # البحث عن التاجر الذي ربط هذا الدومين
+        merchant_settings = database.settings_col.find_one({"custom_domain": host})
+        
+        if merchant_settings:
+            # إذا وجدنا التاجر، نعرض متجره مباشرة على مسار الجذر '/'
+            user = database.users_col.find_one({"id": merchant_settings['u_id']})
+            if user and user.get('active') == 'TRUE':
+                # استدعاء دالة عرض المتجر مع تمرير الرابط الخاص بالتاجر
+                return view_store_logic(user['store_slug'])
+            else:
+                return "المتجر متوقف أو محذوف.", 403
+        else:
+            return "هذا النطاق غير مسجل في منصتنا.", 404
+
+# فصل منطق عرض المتجر ليستخدم مع الدومين الأساسي والمخصص
+def view_store_logic(slug):
     user = database.get_user_by_slug(slug)
     if not user: return "المتجر غير موجود أو تم إيقافه", 404
     return render_template('store.html', user=user, settings=database.get_settings(user.get('id')), products=database.get_products(user.get('id')))
+
+@app.route('/')
+def home():
+    # إذا كان الدخول من الدومين الأساسي، اذهب للوحة التحكم
+    return redirect(url_for('login'))
+
+@app.route('/store/<slug>')
+def view_store(slug):
+    return view_store_logic(slug)
 
 @app.route('/api/checkout/<slug>', methods=['POST'])
 def checkout(slug):
@@ -69,12 +103,17 @@ def dashboard():
             database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}})
             flash("تم تحديث حالة الطلب بنجاح", "success")
         elif action == 'save_settings':
+            # تنظيف الدومين (إزالة http:// أو https:// والشرطة المائلة المقلوبة /)
+            raw_domain = request.form.get('custom_domain', '').strip()
+            clean_domain = raw_domain.replace('https://', '').replace('http://', '').strip('/')
+            
             database.update_settings(session['user_id'], {
                 'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'),
                 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'),
                 'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'),
                 'header_size': request.form.get('header_size'), 'facebook': request.form.get('facebook'),
-                'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok')
+                'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'),
+                'custom_domain': clean_domain # إضافة الدومين المخصص
             })
             flash("تم الحفظ", "success")
         elif action == 'add_merchant' and is_super_admin:
@@ -85,7 +124,6 @@ def dashboard():
             database.delete_user(request.form.get('user_id'))
         return redirect(url_for('dashboard'))
     
-    # حساب الإحصائيات بذكاء
     orders = database.get_orders(session['user_id'])
     total_revenue = 0
     status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}

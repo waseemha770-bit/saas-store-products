@@ -123,7 +123,15 @@
                         <div class="col-md-4"><label class="small fw-bold">فيسبوك</label><input name="facebook" class="form-control" value="{{ settings.get('facebook', '') }}"></div>
                         <div class="col-md-4"><label class="small fw-bold">إنستجرام</label><input name="instagram" class="form-control" value="{{ settings.get('instagram', '') }}"></div>
                         <div class="col-md-4"><label class="small fw-bold">تيك توك</label><input name="tiktok" class="form-control" value="{{ settings.get('tiktok', '') }}"></div>
-                        <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold">حفظ التحديثات</button></div>
+                        
+<h6 class="fw-bold mt-4 mb-2 border-bottom pb-2 text-primary"><i class="fas fa-globe"></i> النطاق المخصص (Custom Domain)</h6>
+<div class="col-12 mb-3">
+    <label class="small fw-bold">اربط متجرك بدومين خاص (مثال: www.mystore.com)</label>
+    <input name="custom_domain" class="form-control bg-light" value="{{ settings.get('custom_domain', '') }}" placeholder="بدون http://">
+    <small class="text-muted">ملاحظة: يجب توجيه الدومين (CNAME) إلى saas-store-products.vercel.app من إعدادات مزود الدومين الخاص بك.</small>
+</div>
+<div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold">حفظ التحديثات</button></div>
+
                     </form>
                 </div></div>
             </div>
