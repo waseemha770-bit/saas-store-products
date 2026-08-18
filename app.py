@@ -1,5 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
-import database, os, urllib.parse
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
+import database, os, urllib.parse, io, csv
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
@@ -28,6 +28,18 @@ def checkout(slug):
     whatsapp_url = f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"
     return jsonify({"whatsapp_url": whatsapp_url})
 
+@app.route('/export/orders')
+def export_orders():
+    if 'user_id' not in session: return redirect(url_for('login'))
+    orders = database.get_orders(session['user_id'])
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['رقم الطلب', 'التاريخ', 'العميل', 'الهاتف', 'العنوان', 'طريقة الدفع', 'المنتجات', 'الإجمالي', 'حالة الطلب'])
+    for o in orders:
+        items_str = " | ".join([f"{i['name']} (x{i['qty']})" for i in o.get('cart_items', [])])
+        writer.writerow([o['order_id'], o['date'].strftime('%Y-%m-%d %H:%M'), o['customer_name'], o['customer_phone'], o.get('customer_address', ''), o.get('payment_info', ''), items_str, o['total'], o.get('status', 'جديد 🟡')])
+    return Response(output.getvalue().encode('utf-8-sig'), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=TajerGo_Orders_Report.csv"})
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -49,10 +61,13 @@ def dashboard():
             flash("تم إضافة المنتج بنجاح!", "success")
         elif action == 'edit_product':
             database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock'))
-            flash("تم تعديل تفاصيل المنتج بنجاح!", "success")
+            flash("تم التعديل!", "success")
         elif action == 'delete_product':
             database.delete_product(request.form.get('product_id'), session['user_id'])
-            flash("تم حذف المنتج", "danger")
+            flash("تم الحذف", "danger")
+        elif action == 'update_order_status':
+            database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}})
+            flash("تم تحديث حالة الطلب بنجاح", "success")
         elif action == 'save_settings':
             database.update_settings(session['user_id'], {
                 'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'),
@@ -61,18 +76,29 @@ def dashboard():
                 'header_size': request.form.get('header_size'), 'facebook': request.form.get('facebook'),
                 'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok')
             })
-            flash("تم تحديث إعدادات المتجر", "success")
+            flash("تم الحفظ", "success")
         elif action == 'add_merchant' and is_super_admin:
-            if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash(f"تم إنشاء المتجر: {request.form.get('slug')}", "success")
-            else: flash("رابط المتجر محجوز", "danger")
+            database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password'))
         elif action == 'toggle_status' and is_super_admin:
             database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
-            flash("تم التحديث", "warning")
         elif action == 'delete_merchant' and is_super_admin:
-            database.delete_user(request.form.get('user_id')); flash("تم الحذف", "danger")
+            database.delete_user(request.form.get('user_id'))
         return redirect(url_for('dashboard'))
-        
-    return render_template('dashboard.html', products=database.get_products(session['user_id']), settings=database.get_settings(session['user_id']), orders=database.get_orders(session['user_id']), merchants=(database.get_all_users() if is_super_admin else []), store_slug=session['store_slug'], is_super_admin=is_super_admin)
+    
+    # حساب الإحصائيات بذكاء
+    orders = database.get_orders(session['user_id'])
+    total_revenue = 0
+    status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
+    for o in orders:
+        st = o.get('status', 'جديد 🟡')
+        if st not in status_counts: status_counts[st] = 0
+        status_counts[st] += 1
+        if st == 'تم التوصيل 🟢':
+            try: total_revenue += float(str(o['total']).replace(',','').strip())
+            except: pass
+    stats = {"total_orders": len(orders), "total_revenue": total_revenue, "status_counts": status_counts}
+
+    return render_template('dashboard.html', products=database.get_products(session['user_id']), settings=database.get_settings(session['user_id']), orders=orders, stats=stats, merchants=(database.get_all_users() if is_super_admin else []), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))

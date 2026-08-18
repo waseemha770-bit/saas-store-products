@@ -47,6 +47,11 @@ def delete_user(user_id):
 
 def create_order(store_id, customer_name, customer_phone, customer_address, payment_info, cart_items, total):
     order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
-    orders_col.insert_one({"order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone, "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, "total": total, "date": datetime.now()})
+    orders_col.insert_one({
+        "order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone, 
+        "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, 
+        "total": total, "date": datetime.now(), "status": "جديد 🟡"
+    })
     return order_id
+
 def get_orders(store_id): return list(orders_col.find({"store_id": store_id}).sort("date", -1))
