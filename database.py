@@ -20,6 +20,13 @@ def get_settings(user_id):
 
 def update_settings(user_id, data): settings_col.update_one({"u_id": user_id}, {"$set": data}, upsert=True)
 
+def change_user_password(user_id, old_password, new_password):
+    user = users_col.find_one({"id": user_id, "password": old_password})
+    if not user:
+        return False
+    users_col.update_one({"id": user_id}, {"$set": {"password": new_password}})
+    return True
+
 def add_product(user_id, name, desc, price, cat, img, stock):
     data = {"id": f"P-{uuid.uuid4().hex[:6]}", "u_id": user_id, "name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock), "created_at": datetime.now()}
     try: products_col.insert_one(data); return True

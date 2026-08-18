@@ -1,51 +1,34 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response
 import database, os, urllib.parse, io, csv
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 
-# النطاق الأساسي لمنصتك (ضع الدومين الأساسي هنا لمنع تداخله مع النطاقات المخصصة)
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
-# === دالة استشعار النطاق المخصص ===
 @app.before_request
 def handle_custom_domains():
     host = request.host.lower()
-    
-    # استثناء المسارات الثابتة (مثل لوحة التحكم، وتسجيل الدخول، ومسارات API) لتعمل فقط على الدومين الرئيسي
-    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/system-admin']
-    is_excluded = any(request.path.startswith(path) for path in excluded_paths)
-
-    # إذا كان الزائر لا يستخدم الدومين الأساسي، والمكان ليس لوحة تحكم
-    if MAIN_DOMAIN not in host and not is_excluded and host != '127.0.0.1:5000' and host != 'localhost:5000':
-        # البحث عن التاجر الذي ربط هذا الدومين
+    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export']
+    if MAIN_DOMAIN not in host and not any(request.path.startswith(p) for p in excluded_paths) and host not in ['127.0.0.1:5000', 'localhost:5000']:
         merchant_settings = database.settings_col.find_one({"custom_domain": host})
-        
         if merchant_settings:
-            # إذا وجدنا التاجر، نعرض متجره مباشرة على مسار الجذر '/'
             user = database.users_col.find_one({"id": merchant_settings['u_id']})
             if user and user.get('active') == 'TRUE':
-                # استدعاء دالة عرض المتجر مع تمرير الرابط الخاص بالتاجر
                 return view_store_logic(user['store_slug'])
-            else:
-                return "المتجر متوقف أو محذوف.", 403
-        else:
-            return "هذا النطاق غير مسجل في منصتنا.", 404
+            return "المتجر متوقف أو محذوف.", 403
+        return "هذا النطاق غير مسجل في منصتنا.", 404
 
-# فصل منطق عرض المتجر ليستخدم مع الدومين الأساسي والمخصص
 def view_store_logic(slug):
     user = database.get_user_by_slug(slug)
     if not user: return "المتجر غير موجود أو تم إيقافه", 404
     return render_template('store.html', user=user, settings=database.get_settings(user.get('id')), products=database.get_products(user.get('id')))
 
 @app.route('/')
-def home():
-    # إذا كان الدخول من الدومين الأساسي، اذهب للوحة التحكم
-    return redirect(url_for('login'))
+def home(): return redirect(url_for('login'))
 
 @app.route('/store/<slug>')
-def view_store(slug):
-    return view_store_logic(slug)
+def view_store(slug): return view_store_logic(slug)
 
 @app.route('/api/checkout/<slug>', methods=['POST'])
 def checkout(slug):
@@ -88,6 +71,7 @@ def login():
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
     is_super_admin = (session['store_slug'] == 'admin-store')
+    
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_product':
@@ -95,33 +79,51 @@ def dashboard():
             flash("تم إضافة المنتج بنجاح!", "success")
         elif action == 'edit_product':
             database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock'))
-            flash("تم التعديل!", "success")
+            flash("تم تعديل المنتج!", "success")
         elif action == 'delete_product':
             database.delete_product(request.form.get('product_id'), session['user_id'])
-            flash("تم الحذف", "danger")
+            flash("تم حذف المنتج", "danger")
         elif action == 'update_order_status':
             database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}})
             flash("تم تحديث حالة الطلب بنجاح", "success")
+        elif action == 'change_password':
+            old_p = request.form.get('old_password', '')
+            new_p = request.form.get('new_password', '')
+            confirm_p = request.form.get('confirm_password', '')
+            if not old_p or not new_p:
+                flash("يرجى ملء جميع حقول كلمة المرور", "danger")
+            elif new_p != confirm_p:
+                flash("كلمة المرور الجديدة وتأكيدها غير متطابقين!", "danger")
+            elif len(new_p) < 4:
+                flash("يجب أن تتكون كلمة المرور من 4 خانات على الأقل", "danger")
+            else:
+                if database.change_user_password(session['user_id'], old_p, new_p):
+                    flash("تم تغيير كلمة المرور بنجاح! استخدم كلمة المرور الجديدة عند الدخول القادم.", "success")
+                else:
+                    flash("كلمة المرور الحالية غير صحيحة!", "danger")
         elif action == 'save_settings':
-            # تنظيف الدومين (إزالة http:// أو https:// والشرطة المائلة المقلوبة /)
             raw_domain = request.form.get('custom_domain', '').strip()
             clean_domain = raw_domain.replace('https://', '').replace('http://', '').strip('/')
-            
             database.update_settings(session['user_id'], {
                 'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'),
                 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'),
                 'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'),
                 'header_size': request.form.get('header_size'), 'facebook': request.form.get('facebook'),
                 'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'),
-                'custom_domain': clean_domain # إضافة الدومين المخصص
+                'custom_domain': clean_domain
             })
-            flash("تم الحفظ", "success")
+            flash("تم حفظ التحديثات بنجاح", "success")
         elif action == 'add_merchant' and is_super_admin:
-            database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password'))
+            if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')):
+                flash(f"تم إنشاء المتجر: {request.form.get('slug')}", "success")
+            else:
+                flash("رابط المتجر محجوز مسبقاً", "danger")
         elif action == 'toggle_status' and is_super_admin:
             database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
+            flash("تم تحديث حالة المتجر", "warning")
         elif action == 'delete_merchant' and is_super_admin:
             database.delete_user(request.form.get('user_id'))
+            flash("تم حذف المتجر نهائياً", "danger")
         return redirect(url_for('dashboard'))
     
     orders = database.get_orders(session['user_id'])
