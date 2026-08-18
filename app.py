@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 import database
+import os
 
 app = Flask(__name__)
-import os
-app.secret_key = os.getenv('SECRET_KEY', 'default_fallback_key')
+# استخدام المتغير السري من Vercel، مع توفير مفتاح احتياطي لمنع انهيار النظام نهائياً
+app.secret_key = os.environ.get('SECRET_KEY', 'tajergo_super_secure_key_2026')
 
 @app.route('/')
 def home(): return redirect(url_for('login'))
