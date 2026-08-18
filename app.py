@@ -3,8 +3,8 @@ import database
 import os
 
 app = Flask(__name__)
-# استخدام المتغير السري من Vercel، مع توفير مفتاح احتياطي لمنع انهيار النظام نهائياً
-app.secret_key = os.environ.get('SECRET_KEY', 'tajergo_super_secure_key_2026')
+# الحل الهندسي: استخدام or لضمان عدم قبول أي قيمة فارغة من Vercel
+app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 
 @app.route('/')
 def home(): return redirect(url_for('login'))
