@@ -25,25 +25,34 @@ def change_user_password(user_id, old_password, new_password):
     users_col.update_one({"id": user_id}, {"$set": {"password": new_password}})
     return True
 
-# تحديث هيكل المنتج ليحتوي على التقييمات (ratings_sum, ratings_count)
 def add_product(user_id, name, desc, price, cat, img, stock):
     data = {"id": f"P-{uuid.uuid4().hex[:6]}", "u_id": user_id, "name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock), "created_at": datetime.now(), "ratings_sum": 0, "ratings_count": 0}
     try: products_col.insert_one(data); return True
     except: return False
-
 def edit_product(product_id, user_id, name, desc, price, cat, img, stock):
     try: products_col.update_one({"id": product_id, "u_id": user_id}, {"$set": {"name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock)}}); return True
     except: return False
 def delete_product(product_id, user_id): products_col.delete_one({"id": product_id, "u_id": user_id})
 def get_products(user_id): return list(products_col.find({"u_id": user_id}))
 
-# دالة التقييم الجديدة
 def rate_product(product_id, stars):
     try:
         stars = int(stars)
         if stars < 1 or stars > 5: return False
         products_col.update_one({"id": product_id}, {"$inc": {"ratings_sum": stars, "ratings_count": 1}})
         return True
+    except: return False
+
+# الدالة الجديدة: التراجع عن التقييم
+def undo_rate_product(product_id, stars):
+    try:
+        stars = int(stars)
+        if stars < 1 or stars > 5: return False
+        product = products_col.find_one({"id": product_id})
+        if product and product.get("ratings_count", 0) > 0:
+            products_col.update_one({"id": product_id}, {"$inc": {"ratings_sum": -stars, "ratings_count": -1}})
+            return True
+        return False
     except: return False
 
 def get_all_users(): return list(users_col.find({}))
@@ -54,7 +63,6 @@ def create_new_merchant(name, slug, password):
 def toggle_user_status(user_id, current_status): users_col.update_one({"id": user_id}, {"$set": {"active": "FALSE" if current_status == "TRUE" else "TRUE"}})
 def delete_user(user_id):
     users_col.delete_one({"id": user_id}); products_col.delete_many({"u_id": user_id}); settings_col.delete_one({"u_id": user_id}); orders_col.delete_many({"store_id": user_id}); coupons_col.delete_many({"u_id": user_id})
-
 def create_order(store_id, customer_name, customer_phone, customer_address, payment_info, cart_items, total, discount_info=""):
     order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
     orders_col.insert_one({"order_id": order_id, "store_id": store_id, "customer_name": customer_name, "customer_phone": customer_phone, "customer_address": customer_address, "payment_info": payment_info, "cart_items": cart_items, "total": total, "discount_info": discount_info, "date": datetime.now(), "status": "جديد 🟡"})

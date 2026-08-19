@@ -28,12 +28,14 @@
         .category-tabs .nav-link { border-radius: 30px; white-space: nowrap; color: #333; font-weight: bold; background-color: #fff; border: 2px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; }
         .category-tabs .nav-link.active { background-color: var(--main-color); color: white; border-color: var(--main-color); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transform: scale(1.05); }
         
-        /* تنسيق نظام النجوم (بدون تغييرات مفاجئة للنص) */
+        /* تنسيق نظام النجوم المُحدث لدعم التراجع */
         .rating-wrapper { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 8px; gap: 5px; }
         .stars-container { direction: ltr; display: inline-flex; gap: 3px; }
         .star { color: #ccc; cursor: pointer; font-size: 1.15rem; transition: all 0.2s; text-shadow: 0px 0px 1px rgba(0,0,0,0.1); }
         .star:hover, .star.hovered, .star.filled { color: #ffc107; text-shadow: 0px 1px 2px rgba(255, 193, 7, 0.4); }
-        .rating-text { font-size: 0.75rem; color: #777; font-weight: 700; background: #f1f1f1; padding: 2px 6px; border-radius: 10px; transition: all 0.3s;}
+        .rating-text { font-size: 0.75rem; color: #777; font-weight: 700; background: #f1f1f1; padding: 2px 6px; border-radius: 10px;}
+        .undo-btn { transition: transform 0.2s; }
+        .undo-btn:hover { transform: scale(1.2); }
     </style>
 </head>
 <body>
@@ -67,7 +69,9 @@
                                             {% else %} <i class="far fa-star star" data-val="{{ i }}"></i> {% endif %}
                                         {% endfor %}
                                     </div>
-                                    <span class="rating-text" id="rt-{{ p.id }}">({{ p.rating }} من {{ p.rating_count }})</span>
+                                    <span class="rating-text">({{ p.rating }} من {{ p.rating_count }})</span>
+                                    <!-- زر التراجع يظهر فقط إذا قيّم المستخدم هذا المنتج -->
+                                    <i class="fas fa-undo text-danger ms-1 undo-btn" id="undo-rt-{{ p.id }}" style="display:none; cursor:pointer; font-size:0.9rem;" title="تراجع عن التقييم" onclick="undoRating('{{ p.id }}')"></i>
                                 </div>
                                 
                                 <small class="text-muted mb-2" style="height:40px; overflow:hidden;">{{ p.description }}</small>
@@ -102,13 +106,30 @@
         function openCartModal() { renderModalItems(); cartModalInstance.show(); }
         function checkout() { let name = document.getElementById('customer-name').value; let phone = document.getElementById('customer-phone').value; let address = document.getElementById('customer-address').value; let payment = document.getElementById('customer-payment').value || "لم يتم التحديد"; if(!name || !phone || !address) return alert("يرجى ملء البيانات"); document.getElementById('btn-submit').innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحويل...'; document.getElementById('btn-submit').disabled = true; fetch('/api/checkout/{{ user.store_slug }}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name, phone: phone, address: address, payment: payment, cart: cart, final_total: document.getElementById('modal-total').innerText, discount_info: currentDiscountInfo}) }).then(res => res.json()).then(data => { cart = []; currentDiscountPercent = 0; currentDiscountInfo = ''; document.getElementById('coupon-code').value = ''; document.getElementById('coupon-msg').innerText = ''; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب"; document.getElementById('btn-submit').disabled = false; window.open(data.whatsapp_url, '_blank'); }); }
 
-        // تفاعل نظام النجوم المُعدل (بدون إظهار نص)
+        // --- نظام النجوم الذكي مع دعم التراجع عبر LocalStorage ---
+        document.querySelectorAll('.stars-container').forEach(container => {
+            let pid = container.getAttribute('data-pid');
+            let savedRating = localStorage.getItem('tajergo_rating_' + pid);
+            let undoBtn = document.getElementById('undo-rt-' + pid);
+            
+            // عند فتح الصفحة، إذا كان العميل قد قيّم مسبقاً: نقفل النجوم ونظهر زر التراجع
+            if(savedRating) {
+                container.style.pointerEvents = 'none';
+                container.querySelectorAll('.star').forEach(s => {
+                    s.classList.remove('far', 'filled', 'fa-star-half-alt'); s.classList.add('fas');
+                    if(parseInt(s.getAttribute('data-val')) <= parseInt(savedRating)) { s.classList.add('filled'); s.style.color = '#ffc107'; }
+                    else { s.style.color = '#dcdcdc'; s.classList.remove('filled'); }
+                });
+                if(undoBtn) undoBtn.style.display = 'inline-block';
+            }
+        });
+
         document.querySelectorAll('.stars-container .star').forEach(star => {
             star.addEventListener('mouseover', function() {
                 let val = parseInt(this.getAttribute('data-val'));
                 let container = this.parentElement;
                 container.querySelectorAll('.star').forEach(s => {
-                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('hovered'); s.classList.remove('far'); s.classList.add('fas'); }
+                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('hovered'); s.classList.remove('far', 'fa-star-half-alt'); s.classList.add('fas'); }
                     else { s.classList.remove('hovered'); }
                 });
             });
@@ -116,7 +137,7 @@
                 let container = this.parentElement;
                 container.querySelectorAll('.star').forEach(s => {
                     s.classList.remove('hovered');
-                    if(!s.classList.contains('filled')) { s.classList.remove('fas'); s.classList.add('far'); }
+                    if(!s.classList.contains('filled')) { s.classList.remove('fas', 'fa-star-half-alt'); s.classList.add('far'); }
                 });
             });
             star.addEventListener('click', function() {
@@ -124,22 +145,46 @@
                 let container = this.parentElement;
                 let pid = container.getAttribute('data-pid');
                 
+                // قفل النجوم بصرياً
                 container.querySelectorAll('.star').forEach(s => {
-                    s.classList.remove('far', 'filled'); s.classList.add('fas');
-                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('filled'); }
+                    s.classList.remove('far', 'filled', 'fa-star-half-alt'); s.classList.add('fas');
+                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('filled'); s.style.color = '#ffc107';}
+                    else { s.style.color = '#dcdcdc'; }
                 });
 
+                // إرسال التقييم للباك إند
                 fetch('/api/rate_product', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({product_id: pid, stars: val})
                 }).then(res => res.json()).then(data => {
                     if(data.success) {
-                        // فقط نقوم بمنع التقييم مرة أخرى لتثبيت النجوم دون تغيير النص تماماً
-                        container.style.pointerEvents = 'none'; 
+                        localStorage.setItem('tajergo_rating_' + pid, val); // حفظ التقييم في الهاتف
+                        document.getElementById('undo-rt-' + pid).style.display = 'inline-block'; // إظهار زر التراجع
+                        container.style.pointerEvents = 'none'; // منع التقييم مرة أخرى
                     }
                 });
             });
         });
+
+        // دالة التراجع عن التقييم
+        window.undoRating = function(pid) {
+            let savedRating = localStorage.getItem('tajergo_rating_' + pid);
+            if(!savedRating) return;
+            
+            let undoBtn = document.getElementById('undo-rt-' + pid);
+            undoBtn.classList.remove('fa-undo');
+            undoBtn.classList.add('fa-spinner', 'fa-spin'); // تأثير التحميل
+            
+            fetch('/api/undo_rate_product', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({product_id: pid, stars: savedRating})
+            }).then(res => res.json()).then(data => {
+                if(data.success) {
+                    localStorage.removeItem('tajergo_rating_' + pid); // مسح الذاكرة
+                    location.reload(); // تحديث الصفحة لإعادة النجوم لطبيعتها وجلب المتوسط الصحيح
+                }
+            });
+        };
     </script>
 </body>
 </html>
