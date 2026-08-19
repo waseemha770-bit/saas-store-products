@@ -13,8 +13,7 @@
         .platform-logo { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; margin-bottom: 20px; border: 3px solid #0d6efd; padding: 3px; box-shadow: 0 5px 15px rgba(13, 110, 253, 0.2); }
         .form-control { border-radius: 12px; padding: 12px 15px; border: 2px solid #e9ecef; font-weight: bold; background-color: #f8f9fa; transition: all 0.3s; }
         .form-control:focus { border-color: #0d6efd; background-color: #fff; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1); }
-        .btn-login { border-radius: 12px; padding: 12px; font-weight: bold; font-size: 1.1rem; letter-spacing: 0.5px; transition: all 0.3s; }
-        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3); }
+        .btn-login { border-radius: 12px; padding: 12px; font-weight: bold; font-size: 1.1rem; transition: all 0.3s; }
         .input-group-text { border: 2px solid #e9ecef; border-left: none; background-color: #f8f9fa; border-radius: 0 12px 12px 0; }
         .form-control { border-right: none; border-radius: 12px 0 0 12px !important; }
     </style>
@@ -29,17 +28,10 @@
                 {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} small fw-bold py-2 rounded-3">{{ message }}</div>{% endfor %}{% endif %}
             {% endwith %}
             <form method="POST">
-                <div class="mb-3 text-start">
-                    <label class="small fw-bold text-muted ms-1 mb-1">رابط المتجر (Slug)</label>
-                    <div class="input-group"><span class="input-group-text"><i class="fas fa-store text-muted"></i></span><input type="text" name="slug" class="form-control" placeholder="مثال: admin-store" required></div>
-                </div>
-                <div class="mb-4 text-start">
-                    <label class="small fw-bold text-muted ms-1 mb-1">كلمة المرور</label>
-                    <div class="input-group"><span class="input-group-text"><i class="fas fa-lock text-muted"></i></span><input type="password" name="pass" class="form-control" placeholder="••••••••" required></div>
-                </div>
+                <div class="mb-3 text-start"><label class="small fw-bold text-muted ms-1 mb-1">رابط المتجر</label><div class="input-group"><span class="input-group-text"><i class="fas fa-store text-muted"></i></span><input type="text" name="slug" class="form-control" placeholder="مثال: admin-store" required></div></div>
+                <div class="mb-4 text-start"><label class="small fw-bold text-muted ms-1 mb-1">كلمة المرور</label><div class="input-group"><span class="input-group-text"><i class="fas fa-lock text-muted"></i></span><input type="password" name="pass" class="form-control" placeholder="••••••••" required></div></div>
                 <button type="submit" class="btn btn-primary w-100 btn-login"><i class="fas fa-sign-in-alt ms-1"></i> دخول للوحة التحكم</button>
             </form>
-            <div class="mt-4 pt-3 border-top" style="border-style: dashed !important;"><p class="mb-0 text-muted small fw-bold" style="opacity: 0.7;">برمجة وتطوير المهندس / وسيم همدان</p></div>
         </div>
     </div>
 </body>

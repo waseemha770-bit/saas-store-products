@@ -5,7 +5,7 @@
     <title>{{ settings.store_name }}</title>
     <link rel="manifest" href="/manifest/{{ user.store_slug }}.json">
     <meta name="theme-color" content="{{ settings.theme_color|default('#0d6efd') }}">
-    <link rel="apple-touch-icon" href="{{ proxy_img(settings.logo_url) if settings.logo_url else 'https://via.placeholder.com/192x192.png?text=App' }}">
+    <link rel="apple-touch-icon" href="{{ settings.logo_url if settings.logo_url else 'https://via.placeholder.com/192x192.png?text=App' }}">
     <link href="https://fonts.googleapis.com/css2?family={{ settings.font_family|default('Cairo') }}:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -46,7 +46,7 @@
     </style>
 </head>
 <body>
-    <div class="hero-section"><div class="container d-flex flex-column align-items-center justify-content-center">{% if settings.get('logo_url') %}<img src="{{ proxy_img(settings.logo_url) }}" class="store-logo" alt="شعار المتجر">{% endif %}<h1 class="fw-bold hero-title">{{ settings.store_name }}</h1><p class="lead mb-0" style="opacity: 0.9;">{{ settings.store_desc }}</p></div></div>
+    <div class="hero-section"><div class="container d-flex flex-column align-items-center justify-content-center">{% if settings.get('logo_url') %}<img src="{{ settings.logo_url }}" class="store-logo" alt="شعار المتجر">{% endif %}<h1 class="fw-bold hero-title">{{ settings.store_name }}</h1><p class="lead mb-0" style="opacity: 0.9;">{{ settings.store_desc }}</p></div></div>
     
     <div class="container mb-4 d-flex gap-2">
         <div class="input-group shadow-sm border-0" style="border-radius: 10px; overflow:hidden;"><span class="input-group-text bg-white border-0 text-muted"><i class="fas fa-search"></i></span><input type="text" id="searchInput" class="form-control border-0" placeholder="ابحث عن منتجك هنا..." onkeyup="filterProducts()"></div>
@@ -64,8 +64,9 @@
                 <div class="tab-pane fade {% if loop.first %}show active{% endif %} category-section" id="tab-pane-{{ loop.index }}" role="tabpanel"><div class="row">
                         {% for p in items %}
                         <div class="col-md-3 col-6 mb-4 product-wrapper" data-name="{{ p.name }}"><div class="card product-card h-100">
-                            <div class="img-wrapper" onclick="openDetailsModal('{{ p.id }}', '{{ proxy_img(p.image_url) }}', {{ p.price }})" title="عرض التفاصيل">
-                                <img src="{{ proxy_img(p.image_url) if p.image_url else 'https://via.placeholder.com/400x300?text=بدون+صورة' }}" class="product-img" loading="lazy">
+                            <!-- عرض مباشر لصور المنتجات -->
+                            <div class="img-wrapper" onclick="openDetailsModal('{{ p.id }}', '{{ p.image_url }}', {{ p.price }})" title="عرض التفاصيل">
+                                <img src="{{ p.image_url if p.image_url else 'https://via.placeholder.com/400x300?text=بدون+صورة' }}" class="product-img" loading="lazy">
                             </div>
                             <div class="card-body p-3 d-flex flex-column">
                                 <h6 class="fw-bold mb-1">{{ p.name }}</h6>
@@ -83,7 +84,7 @@
                                 <textarea id="raw-name-{{ p.id }}" style="display:none;">{{ p.name }}</textarea>
                                 <textarea id="raw-desc-{{ p.id }}" style="display:none;">{{ p.description }}</textarea>
                                 <div class="product-desc-clamped">{{ p.description }}</div>
-                                {% if p.description %}<a class="read-more-btn d-inline-block" onclick="openDetailsModal('{{ p.id }}', '{{ proxy_img(p.image_url) }}', {{ p.price }})">التفاصيل...</a>{% else %}<div class="mb-2"></div>{% endif %}
+                                {% if p.description %}<a class="read-more-btn d-inline-block" onclick="openDetailsModal('{{ p.id }}', '{{ p.image_url }}', {{ p.price }})">التفاصيل...</a>{% else %}<div class="mb-2"></div>{% endif %}
                                 <h5 class="text-primary fw-bold mt-auto mb-3">{{ p.price }} <small class="text-muted fs-6">{{ settings.currency }}</small></h5>
                                 {% set current_stock = p.get('stock', 1) %}{% if current_stock > 0 %}<button class="btn btn-custom w-100 btn-sm mt-auto" onclick="addToCart('{{ p.name }}', {{ p.price }})"><i class="fas fa-cart-plus"></i> {{ settings.get('btn_text', 'إضافة للسلة') }}</button>{% else %}<button class="btn btn-secondary w-100 btn-sm mt-auto" disabled>نفذت الكمية</button>{% endif %}
                             </div>

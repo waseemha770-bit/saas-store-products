@@ -5,7 +5,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
-# دالة ذكية لتجاوز حظر الصور (CDN Proxy) وعرض شعار المنصة
+# حقن الشعار الرئيسي فقط، بدون دالة فك حظر العرض
 @app.context_processor
 def inject_global_vars():
     admin = database.users_col.find_one({"store_slug": "admin-store"})
@@ -13,14 +13,7 @@ def inject_global_vars():
     if admin:
         sett = database.settings_col.find_one({"u_id": admin['id']})
         if sett and sett.get('platform_logo'): logo = sett.get('platform_logo')
-    
-    # دالة بروكسي فك الحظر وتسريع الصور
-    def proxy_img(url):
-        if not url: return "https://via.placeholder.com/400x300?text=بدون+صورة"
-        if url.startswith('http'): return f"https://wsrv.nl/?url={urllib.parse.quote(url)}"
-        return url
-        
-    return dict(platform_logo=logo, proxy_img=proxy_img)
+    return dict(platform_logo=logo)
 
 @app.before_request
 def handle_custom_domains():
@@ -58,9 +51,7 @@ def pwa_manifest(slug):
 @app.route('/sw.js')
 def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
 
-# ==========================================
-# مسار تجاوز حظر الرفع (Upload Proxy via Vercel)
-# ==========================================
+# دالة كسر الحظر لـ "رفع الصور" فقط (تعمل عبر Vercel)
 @app.route('/api/proxy_upload', methods=['POST'])
 def proxy_upload():
     if 'user_id' not in session: return jsonify({"success": False, "error": "غير مصرح"}), 401
