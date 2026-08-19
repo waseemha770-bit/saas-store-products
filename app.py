@@ -5,6 +5,16 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
+# دالة ذكية تمرر شعار المنصة لجميع الصفحات تلقائياً (بما فيها صفحة تسجيل الدخول)
+@app.context_processor
+def inject_global_vars():
+    admin = database.users_col.find_one({"store_slug": "admin-store"})
+    logo = "https://via.placeholder.com/150/0d6efd/ffffff?text=TajerGo"
+    if admin:
+        sett = database.settings_col.find_one({"u_id": admin['id']})
+        if sett and sett.get('platform_logo'): logo = sett.get('platform_logo')
+    return dict(platform_logo=logo)
+
 @app.before_request
 def handle_custom_domains():
     host = request.host.lower()
@@ -106,11 +116,17 @@ def dashboard():
             if new_p != confirm_p: flash("كلمة المرور غير متطابقة", "danger")
             else: flash("تم التغيير" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
         elif action == 'save_settings':
-            database.update_settings(session['user_id'], {
+            settings_data = {
                 'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'), 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'), 'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'), 'header_size': request.form.get('header_size'), 
-                'facebook': request.form.get('facebook'), 'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'), 'telegram': request.form.get('telegram', '').strip(), # الحقل الجديد
+                'facebook': request.form.get('facebook'), 'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'), 'telegram': request.form.get('telegram', '').strip(), 
                 'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'), 'logo_url': request.form.get('logo_url', '').strip(), 'img_provider': request.form.get('img_provider', 'imgbb'), 'img_api_key': request.form.get('img_api_key', '').strip(), 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip()
-            }); flash("تم الحفظ", "success")
+            }
+            # حفظ شعار المنصة فقط إذا كان المستخدم هو السوبر أدمن
+            if is_super_admin:
+                settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
+            
+            database.update_settings(session['user_id'], settings_data)
+            flash("تم الحفظ", "success")
         elif action == 'add_merchant' and is_super_admin:
             if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم الإنشاء", "success")
             else: flash("الرابط محجوز", "danger")
