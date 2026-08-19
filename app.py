@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
-import database, os, urllib.parse, io, csv
+import database, os, urllib.parse, io, csv, json, urllib.request
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
-# دالة ذكية تمرر شعار المنصة لجميع الصفحات تلقائياً (بما فيها صفحة تسجيل الدخول)
+# دالة ذكية لتجاوز حظر الصور (CDN Proxy) وعرض شعار المنصة
 @app.context_processor
 def inject_global_vars():
     admin = database.users_col.find_one({"store_slug": "admin-store"})
@@ -13,7 +13,14 @@ def inject_global_vars():
     if admin:
         sett = database.settings_col.find_one({"u_id": admin['id']})
         if sett and sett.get('platform_logo'): logo = sett.get('platform_logo')
-    return dict(platform_logo=logo)
+    
+    # دالة بروكسي فك الحظر وتسريع الصور
+    def proxy_img(url):
+        if not url: return "https://via.placeholder.com/400x300?text=بدون+صورة"
+        if url.startswith('http'): return f"https://wsrv.nl/?url={urllib.parse.quote(url)}"
+        return url
+        
+    return dict(platform_logo=logo, proxy_img=proxy_img)
 
 @app.before_request
 def handle_custom_domains():
@@ -50,6 +57,40 @@ def pwa_manifest(slug):
 
 @app.route('/sw.js')
 def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
+
+# ==========================================
+# مسار تجاوز حظر الرفع (Upload Proxy via Vercel)
+# ==========================================
+@app.route('/api/proxy_upload', methods=['POST'])
+def proxy_upload():
+    if 'user_id' not in session: return jsonify({"success": False, "error": "غير مصرح"}), 401
+    data = request.json
+    provider = data.get('provider'); api_key = data.get('api_key'); b64_data = data.get('image_base64')
+    try:
+        raw_b64 = b64_data.split(',')[1] if ',' in b64_data else b64_data
+        if provider == 'imgbb':
+            payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
+            req = urllib.request.Request(f"https://api.imgbb.com/1/upload?key={api_key}", data=payload, method='POST')
+            res = json.loads(urllib.request.urlopen(req).read().decode())
+            return jsonify({"success": True, "url": res['data']['url']})
+        elif provider == 'imgur':
+            payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
+            req = urllib.request.Request("https://api.imgur.com/3/image", data=payload, headers={'Authorization': f'Client-ID {api_key}'}, method='POST')
+            res = json.loads(urllib.request.urlopen(req).read().decode())
+            return jsonify({"success": True, "url": res['data']['link']})
+        elif provider == 'cloudinary':
+            cloud_name = data.get('cloud_name'); preset = data.get('preset')
+            payload = urllib.parse.urlencode({'file': b64_data, 'upload_preset': preset}).encode('utf-8')
+            req = urllib.request.Request(f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload", data=payload, method='POST')
+            res = json.loads(urllib.request.urlopen(req).read().decode())
+            return jsonify({"success": True, "url": res['secure_url']})
+        elif provider == 'postimages':
+            payload = urllib.parse.urlencode({'file': raw_b64}).encode('utf-8')
+            req = urllib.request.Request('https://postimages.org/api/upload', data=payload, headers={'Authorization': f'Bearer {api_key}'}, method='POST')
+            res = json.loads(urllib.request.urlopen(req).read().decode())
+            return jsonify({"success": True, "url": res['url']})
+    except Exception as e: return jsonify({"success": False, "error": str(e)})
+    return jsonify({"success": False})
 
 @app.route('/api/rate_product', methods=['POST'])
 def rate_product_api():
@@ -121,12 +162,8 @@ def dashboard():
                 'facebook': request.form.get('facebook'), 'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'), 'telegram': request.form.get('telegram', '').strip(), 
                 'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'), 'logo_url': request.form.get('logo_url', '').strip(), 'img_provider': request.form.get('img_provider', 'imgbb'), 'img_api_key': request.form.get('img_api_key', '').strip(), 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip()
             }
-            # حفظ شعار المنصة فقط إذا كان المستخدم هو السوبر أدمن
-            if is_super_admin:
-                settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
-            
-            database.update_settings(session['user_id'], settings_data)
-            flash("تم الحفظ", "success")
+            if is_super_admin: settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
+            database.update_settings(session['user_id'], settings_data); flash("تم الحفظ", "success")
         elif action == 'add_merchant' and is_super_admin:
             if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم الإنشاء", "success")
             else: flash("الرابط محجوز", "danger")
