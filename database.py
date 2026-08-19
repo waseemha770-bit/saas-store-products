@@ -20,7 +20,7 @@ def get_settings(user_id):
         'theme_color': '#0d6efd', 'font_family': 'Cairo', 'header_size': 'medium', 
         'facebook': '', 'instagram': '', 'tiktok': '', 'custom_domain': '',
         'img_provider': 'imgbb', 'img_api_key': '', 'cloudinary_name': '', 'cloudinary_preset': '',
-        'logo_url': '' # حقل شعار المتجر الجديد
+        'logo_url': ''
     }
     return setting
 

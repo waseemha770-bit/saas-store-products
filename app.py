@@ -64,15 +64,15 @@ def dashboard():
     is_super_admin = (session['store_slug'] == 'admin-store')
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'add_product': database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة!", "success")
-        elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل!", "success")
-        elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
+        if action == 'add_product': database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة بنجاح!", "success")
+        elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل بنجاح!", "success")
+        elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف بنجاح", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم تحديث الحالة", "success")
         elif action == 'change_password':
             old_p, new_p, confirm_p = request.form.get('old_password', ''), request.form.get('new_password', ''), request.form.get('confirm_password', '')
-            if not old_p or not new_p: flash("املأ جميع الحقول", "danger")
+            if not old_p or not new_p: flash("املأ جميع حقول كلمة المرور", "danger")
             elif new_p != confirm_p: flash("كلمة المرور غير متطابقة", "danger")
-            else: flash("تم التغيير بنجاح" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
+            else: flash("تم تغيير كلمة المرور بنجاح" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
         elif action == 'save_settings':
             database.update_settings(session['user_id'], {
                 'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'),
@@ -81,16 +81,16 @@ def dashboard():
                 'header_size': request.form.get('header_size'), 'facebook': request.form.get('facebook'),
                 'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'),
                 'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'),
-                'logo_url': request.form.get('logo_url', '').strip(), # حفظ شعار المتجر
+                'logo_url': request.form.get('logo_url', '').strip(),
                 'img_provider': request.form.get('img_provider', 'imgbb'),
                 'img_api_key': request.form.get('img_api_key', '').strip(),
                 'cloudinary_name': request.form.get('cloudinary_name', '').strip(),
                 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip()
             })
-            flash("تم حفظ التحديثات", "success")
+            flash("تم حفظ الإعدادات بنجاح", "success")
         elif action == 'add_merchant' and is_super_admin:
-            if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم إنشاء المتجر", "success")
-            else: flash("الرابط محجوز", "danger")
+            if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم إنشاء المتجر بنجاح", "success")
+            else: flash("رابط المتجر محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
         return redirect(url_for('dashboard'))

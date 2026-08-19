@@ -35,13 +35,13 @@
         {% set cats = products | map(attribute='category') | unique | list %}
 
         <div class="tab-content">
-            <!-- 1. قسم الطلبات والمبيعات -->
+            <!-- 1. الطلبات والمبيعات -->
             <div class="tab-pane fade show active" id="orders">
                 <div class="row mb-4"><div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الطلبات</h6><h3 class="mb-0">{{ stats.total_orders }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الأرباح</h6><h3 class="mb-0">{{ stats.total_revenue }} <small>{{ settings.currency }}</small></h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">جديدة</h6><h3 class="mb-0">{{ stats.status_counts['جديد 🟡'] }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-info text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">تجهيز</h6><h3 class="mb-0">{{ stats.status_counts['قيد التجهيز 🔵'] }}</h3></div></div></div></div>
                 <div class="row"><div class="col-md-4 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><canvas id="orderChart" style="max-height: 250px;"></canvas></div></div></div><div class="col-md-8 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a><div class="table-responsive" style="max-height: 400px;"><table class="table table-bordered table-striped text-center align-middle" style="font-size:0.9rem;"><thead class="table-light"><tr><th>الطلب</th><th>العميل</th><th>المنتجات</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody>{% for o in orders %}<tr><td>{{ o.order_id }}</td><td class="text-start">👤 {{ o.customer_name }}<br>📞 {{ o.customer_phone }}</td><td class="text-start">{% for i in o.cart_items %} ▪️ {{ i.name }} (x{{ i.qty }})<br> {% endfor %}</td><td>{{ o.total }}</td><td><form method="POST"><input type="hidden" name="action" value="update_order_status"><input type="hidden" name="order_id" value="{{ o.order_id }}"><select name="new_status" class="form-select form-select-sm fw-bold" onchange="this.form.submit()"><option value="جديد 🟡" {% if o.get('status') == 'جديد 🟡' %}selected{% endif %}>جديد 🟡</option><option value="قيد التجهيز 🔵" {% if o.get('status') == 'قيد التجهيز 🔵' %}selected{% endif %}>تجهيز 🔵</option><option value="تم التوصيل 🟢" {% if o.get('status') == 'تم التوصيل 🟢' %}selected{% endif %}>توصيل 🟢</option><option value="ملغي 🔴" {% if o.get('status') == 'ملغي 🔴' %}selected{% endif %}>ملغي 🔴</option></select></form></td></tr>{% endfor %}</tbody></table></div></div></div></div></div>
             </div>
 
-            <!-- 2. قسم المنتجات والمخزون -->
+            <!-- 2. المنتجات -->
             <div class="tab-pane fade" id="products">
                 <div class="card shadow-sm border-0 mb-4 border-top border-4 border-primary"><div class="card-body">
                     <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle text-primary"></i> إضافة منتج جديد</h5>
@@ -51,7 +51,6 @@
                         <div class="col-md-4"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" required></div>
                         <div class="col-md-4"><label class="small fw-bold">الكمية</label><input name="stock" type="number" class="form-control" required></div>
                         <div class="col-md-6"><label class="small fw-bold">التصنيف</label><input type="hidden" name="cat" id="finalCategory" required><select class="form-select" id="categorySelect" onchange="handleCategoryChange(this)" required><option value="" disabled selected>-- اختر تصنيفاً --</option>{% for c in cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}<option value="إلكترونيات وجوالات">إلكترونيات وجوالات</option><option value="ملابس وأزياء">ملابس وأزياء</option><option value="عطور ومستحضرات تجميل">عطور ومستحضرات تجميل</option><option value="NEW_CATEGORY" class="fw-bold text-primary">➕ تصنيف جديد...</option></select><input type="text" id="newCategoryInput" class="form-control mt-2" placeholder="التصنيف الجديد" style="display: none;" oninput="updateFinalCategory()"></div>
-                        
                         <div class="col-md-6">
                             <label class="small fw-bold">صورة المنتج</label>
                             <div class="upload-btn-wrapper">
@@ -62,7 +61,6 @@
                             <div class="divider-text" style="font-size:0.8rem;">أو أدخل الرابط يدوياً</div>
                             <input type="text" name="img" id="newProductImg" class="form-control" placeholder="https://example.com/image.jpg">
                         </div>
-
                         <div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control"></div>
                         <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm" type="button" id="submitProductBtn" onclick="submitProductForm()">حفظ ونشر المنتج</button></div>
                     </form>
@@ -75,10 +73,9 @@
                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">تعديل</button>
                             <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>
                         </td></tr>
-                        
                         <div class="modal fade" id="editModal{{ p.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" class="row g-3"><input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}"><div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div><div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" value="{{ p.price }}" required></div><div class="col-6"><label class="small fw-bold">المخزون</label><input name="stock" type="number" class="form-control" value="{{ p.stock }}" required></div><div class="col-12"><label class="small fw-bold">التصنيف</label><input name="cat" class="form-control" value="{{ p.category }}" required></div>
                         <div class="col-12">
-                            <label class="small fw-bold">رابط أو صورة المنتج</label>
+                            <label class="small fw-bold">صورة المنتج</label>
                             <input type="file" class="form-control mb-1" accept="image/*" onchange="uploadImageToCloud(this, 'editImgUrl{{ p.id }}', 'editImgStatus{{ p.id }}', 'editSaveBtn{{ p.id }}')">
                             <small id="editImgStatus{{ p.id }}" class="fw-bold d-block text-secondary mb-1" style="font-size:0.8rem;"></small>
                             <input type="text" name="img" id="editImgUrl{{ p.id }}" class="form-control" value="{{ p.image_url }}">
@@ -89,7 +86,7 @@
                 </div></div>
             </div>
 
-            <!-- 3. قسم الإعدادات الشامل -->
+            <!-- 3. الإعدادات الشاملة (الهوية، الشعار، السوشيال، السحابة، كلمة المرور) -->
             <div class="tab-pane fade" id="settings">
                 <div class="row">
                     <div class="col-lg-8 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body">
@@ -97,7 +94,6 @@
                         <form method="POST" class="row g-3">
                             <input type="hidden" name="action" value="save_settings">
                             
-                            <!-- شعار المتجر -->
                             <div class="col-md-12 mb-2">
                                 <label class="small fw-bold text-primary"><i class="fas fa-image"></i> شعار المتجر (Logo)</label>
                                 <div class="d-flex align-items-center gap-3">
@@ -113,7 +109,6 @@
                                 </div>
                             </div>
 
-                            <!-- الإعدادات الأساسية المستعادة بالكامل -->
                             <div class="col-md-6"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
                             <div class="col-md-6"><label class="small fw-bold">اللون الأساسي</label><input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}"></div>
                             <div class="col-md-6"><label class="small fw-bold">الخط (Font)</label><select name="font_family" class="form-select"><option value="Cairo" {% if settings.font_family=='Cairo' %}selected{% endif %}>Cairo</option><option value="Tajawal" {% if settings.font_family=='Tajawal' %}selected{% endif %}>Tajawal</option><option value="Almarai" {% if settings.font_family=='Almarai' %}selected{% endif %}>Almarai</option><option value="Changa" {% if settings.font_family=='Changa' %}selected{% endif %}>Changa</option></select></div>
@@ -123,14 +118,12 @@
                             <div class="col-md-4"><label class="small fw-bold">نص زر الشراء</label><input name="btn_text" class="form-control" value="{{ settings.btn_text }}"></div>
                             <div class="col-12"><label class="small fw-bold">وصف المتجر</label><input name="store_desc" class="form-control" value="{{ settings.store_desc }}"></div>
                             
-                            <!-- السوشيال ميديا المستعادة -->
                             <h6 class="fw-bold mt-3 mb-1 border-bottom pb-2">روابط التواصل والنطاق المخصص</h6>
                             <div class="col-md-4"><label class="small fw-bold">فيسبوك</label><input name="facebook" class="form-control" value="{{ settings.get('facebook', '') }}"></div>
                             <div class="col-md-4"><label class="small fw-bold">إنستجرام</label><input name="instagram" class="form-control" value="{{ settings.get('instagram', '') }}"></div>
                             <div class="col-md-4"><label class="small fw-bold">تيك توك</label><input name="tiktok" class="form-control" value="{{ settings.get('tiktok', '') }}"></div>
                             <div class="col-12 mt-2"><label class="small fw-bold">رابط الدومين المخصص (اختياري)</label><input name="custom_domain" class="form-control" value="{{ settings.get('custom_domain', '') }}" placeholder="مثال: www.your-shop.com"></div>
 
-                            <!-- السحابة -->
                             <div class="col-12 mt-4 border-bottom pb-2 d-flex justify-content-between align-items-center">
                                 <h6 class="fw-bold text-primary mb-0"><i class="fas fa-cloud"></i> إعدادات رفع الصور سحابياً</h6>
                                 <button type="button" class="btn btn-sm btn-outline-info fw-bold" data-bs-toggle="modal" data-bs-target="#guideModal"><i class="fas fa-question-circle"></i> كيف أحصل على المفتاح؟</button>
@@ -165,7 +158,7 @@
                 </div>
             </div>
 
-            <!-- 4. تبويب السوبر أدمن المستعاد -->
+            <!-- 4. السوبر أدمن -->
             {% if is_super_admin %}
             <div class="tab-pane fade" id="superadmin" role="tabpanel">
                 <div class="row">
@@ -256,7 +249,7 @@
                 }
             } else {
                 if (!USER_API_KEY) {
-                    statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> أدخل مفتاح الـ API في الإعدادات أولاً.';
+                    statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> أدخل مفتاح الـ API أولاً.';
                     statusText.className = "small fw-bold mt-1 d-block text-danger"; return;
                 }
             }
