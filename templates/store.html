@@ -28,14 +28,17 @@
         .category-tabs .nav-link { border-radius: 30px; white-space: nowrap; color: #333; font-weight: bold; background-color: #fff; border: 2px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; }
         .category-tabs .nav-link.active { background-color: var(--main-color); color: white; border-color: var(--main-color); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transform: scale(1.05); }
         
-        /* تنسيق نظام النجوم المُحدث لدعم التراجع */
-        .rating-wrapper { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 8px; gap: 5px; }
-        .stars-container { direction: ltr; display: inline-flex; gap: 3px; }
-        .star { color: #ccc; cursor: pointer; font-size: 1.15rem; transition: all 0.2s; text-shadow: 0px 0px 1px rgba(0,0,0,0.1); }
-        .star:hover, .star.hovered, .star.filled { color: #ffc107; text-shadow: 0px 1px 2px rgba(255, 193, 7, 0.4); }
-        .rating-text { font-size: 0.75rem; color: #777; font-weight: 700; background: #f1f1f1; padding: 2px 6px; border-radius: 10px;}
-        .undo-btn { transition: transform 0.2s; }
-        .undo-btn:hover { transform: scale(1.2); }
+        /* 1. تصميم عرض التقييم الرسمي (كما في أمازون) */
+        .average-rating { cursor: pointer; display: inline-flex; align-items: center; background: #fffdf5; padding: 4px 10px; border-radius: 8px; border: 1px solid #ffe499; transition: all 0.2s; margin-bottom: 8px; }
+        .average-rating:hover { background: #ffecb3; transform: scale(1.02); }
+        .stars-display { direction: ltr; display: inline-flex; color: #ffc107; font-size: 0.85rem; margin-left: 5px; gap: 2px;}
+        .rating-number { font-weight: 800; color: #333; font-size: 0.9rem; margin-left: 4px; }
+        .rating-count { font-size: 0.75rem; color: #888; font-weight: bold; }
+        
+        /* 2. تصميم نجوم التقييم داخل النافذة المنبثقة (تفاعلية) */
+        .interactive-stars { direction: ltr; display: flex; justify-content: center; gap: 8px; font-size: 2.2rem; color: #e0e0e0; cursor: pointer; }
+        .modal-star { transition: all 0.2s; }
+        .modal-star.hovered, .modal-star.filled { color: #ffc107; text-shadow: 0 0 10px rgba(255, 193, 7, 0.4); transform: scale(1.1); }
     </style>
 </head>
 <body>
@@ -61,17 +64,17 @@
                             <div class="card-body p-3 d-flex flex-column">
                                 <h6 class="fw-bold mb-1">{{ p.name }}</h6>
                                 
-                                <div class="rating-wrapper">
-                                    <div class="stars-container" data-pid="{{ p.id }}">
+                                <!-- العرض الرسمي للتقييم (ثابت ويفتح نافذة التقييم عند الضغط) -->
+                                <div class="average-rating" onclick="openRatingModal('{{ p.id }}', this.getAttribute('data-name'))" data-name="{{ p.name }}" title="اضغط لتقييم المنتج">
+                                    <div class="stars-display">
                                         {% for i in range(1, 6) %}
-                                            {% if p.rating >= i %} <i class="fas fa-star star filled" data-val="{{ i }}"></i>
-                                            {% elif p.rating >= (i - 0.5) %} <i class="fas fa-star-half-alt star filled" data-val="{{ i }}"></i>
-                                            {% else %} <i class="far fa-star star" data-val="{{ i }}"></i> {% endif %}
+                                            {% if p.rating >= i %} <i class="fas fa-star"></i>
+                                            {% elif p.rating >= (i - 0.5) %} <i class="fas fa-star-half-alt"></i>
+                                            {% else %} <i class="far fa-star text-warning"></i> {% endif %}
                                         {% endfor %}
                                     </div>
-                                    <span class="rating-text">({{ p.rating }} من {{ p.rating_count }})</span>
-                                    <!-- زر التراجع يظهر فقط إذا قيّم المستخدم هذا المنتج -->
-                                    <i class="fas fa-undo text-danger ms-1 undo-btn" id="undo-rt-{{ p.id }}" style="display:none; cursor:pointer; font-size:0.9rem;" title="تراجع عن التقييم" onclick="undoRating('{{ p.id }}')"></i>
+                                    <span class="rating-number">{{ p.rating }}</span>
+                                    <span class="rating-count">({{ p.rating_count }})</span>
                                 </div>
                                 
                                 <small class="text-muted mb-2" style="height:40px; overflow:hidden;">{{ p.description }}</small>
@@ -89,10 +92,40 @@
     <div class="container text-center mt-5 mb-4"><div class="d-flex justify-content-center gap-4 mb-3">{% if settings.get('facebook') %}<a href="{{ settings.facebook }}" target="_blank" class="text-primary fs-3"><i class="fab fa-facebook"></i></a>{% endif %}{% if settings.get('instagram') %}<a href="{{ settings.instagram }}" target="_blank" class="text-danger fs-3"><i class="fab fa-instagram"></i></a>{% endif %}{% if settings.get('tiktok') %}<a href="{{ settings.tiktok }}" target="_blank" class="text-dark fs-3"><i class="fab fa-tiktok"></i></a>{% endif %}</div><p class="text-muted" style="font-size: 0.8rem; font-weight: bold; opacity: 0.6;">برمجة المهندس / وسيم همدان (771954200)</p></div>
     <div id="floating-cart" onclick="openCartModal()">🛒 السلة (<span id="cart-count">0</span>) | <span id="cart-total">0</span></div>
     
+    <!-- نافذة إتمام الطلب -->
     <div class="modal fade" id="cartModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-light"><h5 class="modal-title fw-bold text-dark">إتمام الطلب 🚀</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul id="cart-items" class="list-group mb-3"></ul><div class="mb-3 p-3 bg-light rounded" style="border: 1px dashed #ccc;"><label class="form-label small fw-bold text-primary"><i class="fas fa-ticket-alt"></i> لديك كود خصم؟</label><div class="input-group"><input type="text" id="coupon-code" class="form-control" placeholder="أدخل الكوبون هنا" style="text-transform: uppercase;"><button class="btn btn-primary fw-bold" type="button" onclick="applyCoupon()">تطبيق</button></div><small id="coupon-msg" class="fw-bold mt-1 d-block"></small></div><div class="d-flex justify-content-between align-items-center mb-4 bg-light p-3 rounded border-bottom border-4 border-success"><h5 class="fw-bold mb-0">الإجمالي النهائي:</h5><h3 class="fw-bold text-success mb-0"><span id="modal-total">0</span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h3></div><h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">بيانات التوصيل والدفع:</h6><div class="mb-3"><label class="form-label small fw-bold">الاسم الكامل *</label><input type="text" id="customer-name" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">رقم الهاتف *</label><input type="tel" id="customer-phone" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">العنوان الدقيق *</label><input type="text" id="customer-address" class="form-control bg-light" required></div><div class="mb-4"><label class="form-label small fw-bold">إثبات الدفع</label><input type="text" id="customer-payment" class="form-control bg-light" placeholder="الدفع عند الاستلام أو رقم الحوالة"></div><button id="btn-submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" onclick="checkout()"><i class="fab fa-whatsapp"></i> إرسال الطلب</button></div></div></div></div>
+
+    <!-- نافذة تقييم المنتج الجديدة (المعيار العالمي) -->
+    <div class="modal fade" id="ratingModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light border-0 pb-0">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center p-4 pt-0">
+                    <h5 class="fw-bold text-dark mb-1">تقييم المنتج</h5>
+                    <h6 id="ratingProductName" class="text-muted small fw-bold mb-4"></h6>
+                    
+                    <div class="interactive-stars mb-2" id="modalStarsContainer">
+                        <i class="far fa-star modal-star" data-val="1"></i>
+                        <i class="far fa-star modal-star" data-val="2"></i>
+                        <i class="far fa-star modal-star" data-val="3"></i>
+                        <i class="far fa-star modal-star" data-val="4"></i>
+                        <i class="far fa-star modal-star" data-val="5"></i>
+                    </div>
+                    
+                    <p id="ratingFeedback" class="small fw-bold text-primary mb-4">اضغط على النجوم لتقييم المنتج</p>
+                    
+                    <button id="btnSubmitRating" class="btn btn-warning w-100 fw-bold mb-2 shadow-sm" onclick="submitRating()">إرسال التقييم</button>
+                    <button id="btnDeleteRating" class="btn btn-outline-danger btn-sm w-100 fw-bold" onclick="deleteRating()" style="display:none;"><i class="fas fa-trash"></i> حذف تقييمي</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // دوال المتجر الأساسية (بحث، مشاركة، سلة، خصم)
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
         function filterProducts() { let term = document.getElementById('searchInput').value.toLowerCase(); let allProducts = document.querySelectorAll('.product-wrapper'); if(term.length > 0) { document.querySelectorAll('.tab-pane').forEach(t => { t.classList.add('show', 'active'); }); document.querySelectorAll('.category-tabs').forEach(t => { t.style.display = 'none'; }); } else { document.querySelectorAll('.category-tabs').forEach(t => { t.style.display = 'flex'; }); let first = true; document.querySelectorAll('.tab-pane').forEach(t => { if(first) { t.classList.add('show', 'active'); first = false; } else { t.classList.remove('show', 'active'); } }); } allProducts.forEach(card => { let name = card.getAttribute('data-name').toLowerCase(); if(name.includes(term)) { card.style.display = 'block'; } else { card.style.display = 'none'; } }); }
         function shareStore() { if (navigator.share) { navigator.share({ title: '{{ settings.store_name }}', text: 'تسوق أفضل المنتجات!', url: window.location.href }); } else { navigator.clipboard.writeText(window.location.href); alert("تم النسخ!"); } }
@@ -106,85 +139,115 @@
         function openCartModal() { renderModalItems(); cartModalInstance.show(); }
         function checkout() { let name = document.getElementById('customer-name').value; let phone = document.getElementById('customer-phone').value; let address = document.getElementById('customer-address').value; let payment = document.getElementById('customer-payment').value || "لم يتم التحديد"; if(!name || !phone || !address) return alert("يرجى ملء البيانات"); document.getElementById('btn-submit').innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحويل...'; document.getElementById('btn-submit').disabled = true; fetch('/api/checkout/{{ user.store_slug }}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name, phone: phone, address: address, payment: payment, cart: cart, final_total: document.getElementById('modal-total').innerText, discount_info: currentDiscountInfo}) }).then(res => res.json()).then(data => { cart = []; currentDiscountPercent = 0; currentDiscountInfo = ''; document.getElementById('coupon-code').value = ''; document.getElementById('coupon-msg').innerText = ''; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب"; document.getElementById('btn-submit').disabled = false; window.open(data.whatsapp_url, '_blank'); }); }
 
-        // --- نظام النجوم الذكي مع دعم التراجع عبر LocalStorage ---
-        document.querySelectorAll('.stars-container').forEach(container => {
-            let pid = container.getAttribute('data-pid');
-            let savedRating = localStorage.getItem('tajergo_rating_' + pid);
-            let undoBtn = document.getElementById('undo-rt-' + pid);
-            
-            // عند فتح الصفحة، إذا كان العميل قد قيّم مسبقاً: نقفل النجوم ونظهر زر التراجع
-            if(savedRating) {
-                container.style.pointerEvents = 'none';
-                container.querySelectorAll('.star').forEach(s => {
-                    s.classList.remove('far', 'filled', 'fa-star-half-alt'); s.classList.add('fas');
-                    if(parseInt(s.getAttribute('data-val')) <= parseInt(savedRating)) { s.classList.add('filled'); s.style.color = '#ffc107'; }
-                    else { s.style.color = '#dcdcdc'; s.classList.remove('filled'); }
-                });
-                if(undoBtn) undoBtn.style.display = 'inline-block';
-            }
+        // --- نظام التقييم الاحترافي ---
+        let currentRatingPid = null;
+        let selectedStars = 0;
+        let ratingModalInstance = null;
+
+        document.addEventListener("DOMContentLoaded", function(){ 
+            ratingModalInstance = new bootstrap.Modal(document.getElementById('ratingModal')); 
         });
 
-        document.querySelectorAll('.stars-container .star').forEach(star => {
+        // 1. فتح النافذة
+        function openRatingModal(pid, pname) {
+            currentRatingPid = pid;
+            document.getElementById('ratingProductName').innerText = pname;
+            
+            // التحقق مما إذا كان العميل قد قيم المنتج مسبقاً
+            let savedRating = localStorage.getItem('tajergo_rating_' + pid);
+            selectedStars = savedRating ? parseInt(savedRating) : 0;
+            
+            updateModalStarsUI(selectedStars);
+            
+            if(savedRating) {
+                document.getElementById('btnSubmitRating').innerText = "تحديث تقييمي";
+                document.getElementById('btnDeleteRating').style.display = 'block';
+                document.getElementById('ratingFeedback').innerText = "لقد قمت بتقييم هذا المنتج مسبقاً ⭐";
+                document.getElementById('ratingFeedback').className = "small fw-bold text-success mb-4";
+            } else {
+                document.getElementById('btnSubmitRating').innerText = "إرسال التقييم";
+                document.getElementById('btnDeleteRating').style.display = 'none';
+                document.getElementById('ratingFeedback').innerText = "اضغط على النجوم لتقييم المنتج";
+                document.getElementById('ratingFeedback').className = "small fw-bold text-primary mb-4";
+            }
+            
+            ratingModalInstance.show();
+        }
+
+        // 2. تحديث شكل النجوم في النافذة
+        function updateModalStarsUI(val) {
+            document.querySelectorAll('#modalStarsContainer .modal-star').forEach(s => {
+                s.classList.remove('fas', 'far');
+                if(parseInt(s.getAttribute('data-val')) <= val) {
+                    s.classList.add('fas', 'filled');
+                } else {
+                    s.classList.add('far');
+                    s.classList.remove('filled');
+                }
+            });
+        }
+
+        // 3. تفاعل النجوم (التمرير والضغط)
+        document.querySelectorAll('#modalStarsContainer .modal-star').forEach(star => {
             star.addEventListener('mouseover', function() {
                 let val = parseInt(this.getAttribute('data-val'));
-                let container = this.parentElement;
-                container.querySelectorAll('.star').forEach(s => {
-                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('hovered'); s.classList.remove('far', 'fa-star-half-alt'); s.classList.add('fas'); }
-                    else { s.classList.remove('hovered'); }
+                document.querySelectorAll('#modalStarsContainer .modal-star').forEach(s => {
+                    s.classList.remove('fas', 'far');
+                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('fas', 'hovered'); }
+                    else { s.classList.add('far'); s.classList.remove('hovered'); }
                 });
             });
             star.addEventListener('mouseout', function() {
-                let container = this.parentElement;
-                container.querySelectorAll('.star').forEach(s => {
-                    s.classList.remove('hovered');
-                    if(!s.classList.contains('filled')) { s.classList.remove('fas', 'fa-star-half-alt'); s.classList.add('far'); }
-                });
+                document.querySelectorAll('#modalStarsContainer .modal-star').forEach(s => s.classList.remove('hovered'));
+                updateModalStarsUI(selectedStars);
             });
             star.addEventListener('click', function() {
-                let val = parseInt(this.getAttribute('data-val'));
-                let container = this.parentElement;
-                let pid = container.getAttribute('data-pid');
-                
-                // قفل النجوم بصرياً
-                container.querySelectorAll('.star').forEach(s => {
-                    s.classList.remove('far', 'filled', 'fa-star-half-alt'); s.classList.add('fas');
-                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('filled'); s.style.color = '#ffc107';}
-                    else { s.style.color = '#dcdcdc'; }
-                });
-
-                // إرسال التقييم للباك إند
-                fetch('/api/rate_product', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({product_id: pid, stars: val})
-                }).then(res => res.json()).then(data => {
-                    if(data.success) {
-                        localStorage.setItem('tajergo_rating_' + pid, val); // حفظ التقييم في الهاتف
-                        document.getElementById('undo-rt-' + pid).style.display = 'inline-block'; // إظهار زر التراجع
-                        container.style.pointerEvents = 'none'; // منع التقييم مرة أخرى
-                    }
-                });
+                selectedStars = parseInt(this.getAttribute('data-val'));
+                updateModalStarsUI(selectedStars);
             });
         });
 
-        // دالة التراجع عن التقييم
-        window.undoRating = function(pid) {
-            let savedRating = localStorage.getItem('tajergo_rating_' + pid);
+        // 4. إرسال أو تحديث التقييم
+        async function submitRating() {
+            if(selectedStars === 0) {
+                alert("الرجاء تحديد عدد النجوم أولاً"); return;
+            }
+            let btn = document.getElementById('btnSubmitRating');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...'; btn.disabled = true;
+
+            let savedRating = localStorage.getItem('tajergo_rating_' + currentRatingPid);
+            
+            // إذا كان هناك تقييم سابق، نحذفه أولاً من السيرفر قبل وضع الجديد
+            if(savedRating) {
+                await fetch('/api/undo_rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({product_id: currentRatingPid, stars: savedRating}) });
+            }
+            
+            // إرسال التقييم الجديد
+            let res = await fetch('/api/rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({product_id: currentRatingPid, stars: selectedStars}) });
+            let data = await res.json();
+            
+            if(data.success) {
+                localStorage.setItem('tajergo_rating_' + currentRatingPid, selectedStars);
+                location.reload(); // تحديث الصفحة لتظهر النتيجة الجديدة للجميع
+            }
+        }
+
+        // 5. حذف التقييم
+        async function deleteRating() {
+            let savedRating = localStorage.getItem('tajergo_rating_' + currentRatingPid);
             if(!savedRating) return;
+
+            let btn = document.getElementById('btnDeleteRating');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحذف...'; btn.disabled = true;
+
+            let res = await fetch('/api/undo_rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({product_id: currentRatingPid, stars: savedRating}) });
+            let data = await res.json();
             
-            let undoBtn = document.getElementById('undo-rt-' + pid);
-            undoBtn.classList.remove('fa-undo');
-            undoBtn.classList.add('fa-spinner', 'fa-spin'); // تأثير التحميل
-            
-            fetch('/api/undo_rate_product', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({product_id: pid, stars: savedRating})
-            }).then(res => res.json()).then(data => {
-                if(data.success) {
-                    localStorage.removeItem('tajergo_rating_' + pid); // مسح الذاكرة
-                    location.reload(); // تحديث الصفحة لإعادة النجوم لطبيعتها وجلب المتوسط الصحيح
-                }
-            });
-        };
+            if(data.success) {
+                localStorage.removeItem('tajergo_rating_' + currentRatingPid);
+                location.reload(); // تحديث الصفحة ليعود المتوسط لحالته السابقة
+            }
+        }
     </script>
 </body>
 </html>
