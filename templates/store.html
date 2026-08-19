@@ -68,7 +68,7 @@
                         {% for p in items %}
                         <div class="col-md-3 col-6 mb-4 product-wrapper" data-name="{{ p.name }}"><div class="card product-card h-100">
                             
-                            <!-- حقول مخفية آمنة تماماً لتمرير البيانات والروابط دون انقطاع -->
+                            <!-- حقول مخفية -->
                             <textarea id="raw-name-{{ p.id }}" style="display:none;">{{ p.name }}</textarea>
                             <textarea id="raw-desc-{{ p.id }}" style="display:none;">{{ p.description }}</textarea>
                             <textarea id="raw-img-{{ p.id }}" style="display:none;">{{ p.image_url }}</textarea>
@@ -109,7 +109,7 @@
     <div class="modal fade" id="cartModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-light"><h5 class="modal-title fw-bold text-dark">إتمام الطلب 🚀</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul id="cart-items" class="list-group mb-3"></ul><div class="mb-3 p-3 bg-light rounded" style="border: 1px dashed #ccc;"><label class="form-label small fw-bold text-primary"><i class="fas fa-ticket-alt"></i> لديك كود خصم؟</label><div class="input-group"><input type="text" id="coupon-code" class="form-control" placeholder="أدخل الكوبون هنا" style="text-transform: uppercase;"><button class="btn btn-primary fw-bold" type="button" onclick="applyCoupon()">تطبيق</button></div><small id="coupon-msg" class="fw-bold mt-1 d-block"></small></div><div class="d-flex justify-content-between align-items-center mb-4 bg-light p-3 rounded border-bottom border-4 border-success"><h5 class="fw-bold mb-0">الإجمالي النهائي:</h5><h3 class="fw-bold text-success mb-0"><span id="modal-total">0</span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h3></div><h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">بيانات التوصيل والدفع:</h6><div class="mb-3"><label class="form-label small fw-bold">الاسم الكامل *</label><input type="text" id="customer-name" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">رقم الهاتف *</label><input type="tel" id="customer-phone" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">العنوان الدقيق *</label><input type="text" id="customer-address" class="form-control bg-light" required></div><div class="mb-4"><label class="form-label small fw-bold">إثبات الدفع</label><input type="text" id="customer-payment" class="form-control bg-light" placeholder="الدفع عند الاستلام أو رقم الحوالة"></div><button id="btn-submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm" onclick="checkout()"><i class="fab fa-whatsapp"></i> إرسال الطلب</button></div></div></div></div>
     <div class="modal fade" id="ratingModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-light border-0 pb-0"><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center p-4 pt-0"><h5 class="fw-bold text-dark mb-1">تقييم المنتج</h5><h6 id="ratingProductName" class="text-muted small fw-bold mb-4"></h6><div class="interactive-stars mb-2" id="modalStarsContainer"><i class="far fa-star modal-star" data-val="1"></i><i class="far fa-star modal-star" data-val="2"></i><i class="far fa-star modal-star" data-val="3"></i><i class="far fa-star modal-star" data-val="4"></i><i class="far fa-star modal-star" data-val="5"></i></div><p id="ratingFeedback" class="small fw-bold text-primary mb-4">اضغط على النجوم لتقييم المنتج</p><button id="btnSubmitRating" class="btn btn-warning w-100 fw-bold mb-2 shadow-sm" onclick="submitRating()">إرسال التقييم</button><button id="btnDeleteRating" class="btn btn-outline-danger btn-sm w-100 fw-bold" onclick="deleteRating()" style="display:none;"><i class="fas fa-trash"></i> حذف تقييمي</button></div></div></div></div>
     
-    <!-- نافذة التفاصيل (مع دعم دالة الطوارئ fixImg لتجنب حظر الصور) -->
+    <!-- نافذة التفاصيل مع دالة الطوارئ fixImg -->
     <div class="modal fade" id="detailsModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg overflow-hidden"><div class="modal-header bg-light border-0"><h5 class="modal-title fw-bold text-dark" id="detailsName">اسم المنتج</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0">
         <img id="detailsImg" src="" onerror="fixImg(this)" class="w-100" style="max-height:350px; object-fit:cover; background:#f8f9fa;">
         <div class="p-4"><div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2"><h4 class="text-primary fw-bold mb-0"><span id="detailsPrice"></span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h4></div><h6 class="fw-bold mb-2 text-dark"><i class="fas fa-info-circle text-primary"></i> وصف المنتج:</h6><p id="detailsDesc" class="text-muted" style="line-height: 1.7; font-size: 0.95rem; white-space: pre-wrap;"></p></div></div><div class="modal-footer bg-light border-0 p-3"><button id="detailsAddToCartBtn" class="btn btn-primary w-100 fw-bold py-2 fs-5"><i class="fas fa-cart-plus"></i> {{ settings.get('btn_text', 'إضافة للسلة') }}</button></div></div></div></div>
@@ -122,14 +122,19 @@
         let cart = []; let cartModalInstance = null; let detailsModalInstance = null; let currentDiscountPercent = 0; let currentDiscountInfo = '';
         document.addEventListener("DOMContentLoaded", function(){ cartModalInstance = new bootstrap.Modal(document.getElementById('cartModal')); detailsModalInstance = new bootstrap.Modal(document.getElementById('detailsModal')); });
         
-        // دالة تفاصيل المنتج المقروءة من الحقول المخفية بأمان تام
+        // دالة التفاصيل الذكية والمعدلة
         function openDetailsModal(id, price) { 
             let name = document.getElementById('raw-name-' + id).value.trim(); 
             let desc = document.getElementById('raw-desc-' + id).value.trim(); 
             let imgUrl = document.getElementById('raw-img-' + id).value.trim();
             
             document.getElementById('detailsName').innerText = name; 
-            document.getElementById('detailsImg').src = imgUrl || 'https://via.placeholder.com/800x600?text=بدون+صورة'; 
+            
+            // 🔥 مسح ذاكرة الصورة المحجوبة للنافذة لكي تتجاوب الدالة مع كل المنتجات 
+            let detailsImg = document.getElementById('detailsImg');
+            detailsImg.removeAttribute('data-proxied');
+            detailsImg.src = imgUrl || 'https://via.placeholder.com/800x600?text=بدون+صورة'; 
+            
             document.getElementById('detailsPrice').innerText = price; 
             document.getElementById('detailsDesc').innerText = desc || 'لا يوجد وصف متاح لهذا المنتج.'; 
             
