@@ -1,11 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
-import database, os, urllib.parse, io, csv, json, urllib.request
+import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
-# حقن الشعار الرئيسي فقط، بدون دالة فك حظر العرض
 @app.context_processor
 def inject_global_vars():
     admin = database.users_col.find_one({"store_slug": "admin-store"})
@@ -51,37 +50,72 @@ def pwa_manifest(slug):
 @app.route('/sw.js')
 def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
 
-# دالة كسر الحظر لـ "رفع الصور" فقط (تعمل عبر Vercel)
+# ==============================================================
+# بروكسي الرفع القوي والمموه لتجاوز حظر الاستضافات وحظر البوتات
+# ==============================================================
 @app.route('/api/proxy_upload', methods=['POST'])
 def proxy_upload():
-    if 'user_id' not in session: return jsonify({"success": False, "error": "غير مصرح"}), 401
+    if 'user_id' not in session: return jsonify({"success": False, "error": "جلسة غير مصرحة"}), 401
     data = request.json
-    provider = data.get('provider'); api_key = data.get('api_key'); b64_data = data.get('image_base64')
+    provider = data.get('provider')
+    api_key = data.get('api_key')
+    b64_data = data.get('image_base64')
+    
+    if not provider or not b64_data:
+        return jsonify({"success": False, "error": "بيانات غير مكتملة"})
+        
     try:
         raw_b64 = b64_data.split(',')[1] if ',' in b64_data else b64_data
+        
+        # التمويه بأن الطلب قادم من متصفح جوجل كروم حقيقي لمنع الحظر
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        
         if provider == 'imgbb':
+            if not api_key: return jsonify({"success": False, "error": "مفتاح ImgBB مفقود في الإعدادات"})
             payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
-            req = urllib.request.Request(f"https://api.imgbb.com/1/upload?key={api_key}", data=payload, method='POST')
-            res = json.loads(urllib.request.urlopen(req).read().decode())
-            return jsonify({"success": True, "url": res['data']['url']})
+            req = urllib.request.Request(f"https://api.imgbb.com/1/upload?key={api_key}", data=payload, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['data']['url']})
+                
         elif provider == 'imgur':
+            if not api_key: return jsonify({"success": False, "error": "مفتاح Imgur مفقود في الإعدادات"})
             payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
-            req = urllib.request.Request("https://api.imgur.com/3/image", data=payload, headers={'Authorization': f'Client-ID {api_key}'}, method='POST')
-            res = json.loads(urllib.request.urlopen(req).read().decode())
-            return jsonify({"success": True, "url": res['data']['link']})
+            headers['Authorization'] = f'Client-ID {api_key}'
+            req = urllib.request.Request("https://api.imgur.com/3/image", data=payload, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['data']['link']})
+                
         elif provider == 'cloudinary':
-            cloud_name = data.get('cloud_name'); preset = data.get('preset')
+            cloud_name = data.get('cloud_name')
+            preset = data.get('preset')
+            if not cloud_name or not preset: return jsonify({"success": False, "error": "إعدادات Cloudinary غير مكتملة"})
             payload = urllib.parse.urlencode({'file': b64_data, 'upload_preset': preset}).encode('utf-8')
-            req = urllib.request.Request(f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload", data=payload, method='POST')
-            res = json.loads(urllib.request.urlopen(req).read().decode())
-            return jsonify({"success": True, "url": res['secure_url']})
+            req = urllib.request.Request(f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload", data=payload, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['secure_url']})
+                
         elif provider == 'postimages':
+            if not api_key: return jsonify({"success": False, "error": "مفتاح Postimages مفقود"})
             payload = urllib.parse.urlencode({'file': raw_b64}).encode('utf-8')
-            req = urllib.request.Request('https://postimages.org/api/upload', data=payload, headers={'Authorization': f'Bearer {api_key}'}, method='POST')
-            res = json.loads(urllib.request.urlopen(req).read().decode())
-            return jsonify({"success": True, "url": res['url']})
-    except Exception as e: return jsonify({"success": False, "error": str(e)})
-    return jsonify({"success": False})
+            headers['Authorization'] = f'Bearer {api_key}'
+            req = urllib.request.Request('https://postimages.org/api/upload', data=payload, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['url']})
+                
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode()
+        return jsonify({"success": False, "error": f"رفض المزود الطلب (رمز الخطأ: {e.code}). تأكد من صحة المفتاح."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+        
+    return jsonify({"success": False, "error": "مزود خدمة غير مدعوم"})
 
 @app.route('/api/rate_product', methods=['POST'])
 def rate_product_api():
@@ -154,7 +188,7 @@ def dashboard():
                 'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'), 'logo_url': request.form.get('logo_url', '').strip(), 'img_provider': request.form.get('img_provider', 'imgbb'), 'img_api_key': request.form.get('img_api_key', '').strip(), 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip()
             }
             if is_super_admin: settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
-            database.update_settings(session['user_id'], settings_data); flash("تم الحفظ", "success")
+            database.update_settings(session['user_id'], settings_data); flash("تم الحفظ بنجاح", "success")
         elif action == 'add_merchant' and is_super_admin:
             if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم الإنشاء", "success")
             else: flash("الرابط محجوز", "danger")
