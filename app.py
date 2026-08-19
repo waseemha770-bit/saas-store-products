@@ -20,7 +20,12 @@ def handle_custom_domains():
 def view_store_logic(slug):
     user = database.get_user_by_slug(slug)
     if not user: return "المتجر غير موجود أو تم إيقافه", 404
-    return render_template('store.html', user=user, settings=database.get_settings(user.get('id')), products=database.get_products(user.get('id')))
+    products = database.get_products(user.get('id'))
+    # حساب المتوسط الحسابي للتقييم قبل إرساله للواجهة الأمامية
+    for p in products:
+        p['rating'] = round(p.get('ratings_sum', 0) / p.get('ratings_count', 1), 1) if p.get('ratings_count', 0) > 0 else 0
+        p['rating_count'] = p.get('ratings_count', 0)
+    return render_template('store.html', user=user, settings=database.get_settings(user.get('id')), products=products)
 
 @app.route('/')
 def home(): return redirect(url_for('login'))
@@ -28,7 +33,6 @@ def home(): return redirect(url_for('login'))
 @app.route('/store/<slug>')
 def view_store(slug): return view_store_logic(slug)
 
-# --- مسارات تطبيق الهاتف (PWA) الديناميكية ---
 @app.route('/manifest/<slug>.json')
 def pwa_manifest(slug):
     user = database.get_user_by_slug(slug)
@@ -36,31 +40,25 @@ def pwa_manifest(slug):
     settings = database.get_settings(user['id'])
     store_name = settings.get('store_name', 'TajerGo Store')
     logo = settings.get('logo_url') or "https://via.placeholder.com/192x192.png?text=App"
-    manifest_data = {
-        "name": store_name,
-        "short_name": store_name,
-        "start_url": f"/store/{slug}",
-        "display": "standalone",
-        "background_color": "#ffffff",
-        "theme_color": settings.get('theme_color', '#0d6efd'),
-        "icons": [{"src": logo, "sizes": "192x192", "type": "image/png"}, {"src": logo, "sizes": "512x512", "type": "image/png"}]
-    }
-    return jsonify(manifest_data)
+    return jsonify({"name": store_name, "short_name": store_name, "start_url": f"/store/{slug}", "display": "standalone", "background_color": "#ffffff", "theme_color": settings.get('theme_color', '#0d6efd'), "icons": [{"src": logo, "sizes": "192x192", "type": "image/png"}, {"src": logo, "sizes": "512x512", "type": "image/png"}]})
 
 @app.route('/sw.js')
-def service_worker():
-    js = "self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});"
-    return Response(js, mimetype="application/javascript")
+def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
 
-# --- مسارات واجهة برمجة التطبيقات (API) ---
+# مسار جديد لاستقبال تقييم العميل
+@app.route('/api/rate_product', methods=['POST'])
+def rate_product_api():
+    data = request.json
+    if database.rate_product(data.get('product_id'), data.get('stars')): return jsonify({"success": True})
+    return jsonify({"success": False}), 400
+
 @app.route('/api/apply_coupon/<slug>', methods=['POST'])
 def apply_coupon(slug):
     user = database.get_user_by_slug(slug)
     if not user: return jsonify({"error": "Store not found"}), 404
-    code = request.json.get('code', '')
-    coupon = database.validate_coupon(user['id'], code)
+    coupon = database.validate_coupon(user['id'], request.json.get('code', ''))
     if coupon: return jsonify({"success": True, "discount": coupon['discount']})
-    return jsonify({"success": False, "message": "الكوبون غير صالح أو منتهي"})
+    return jsonify({"success": False, "message": "الكوبون غير صالح"})
 
 @app.route('/api/checkout/<slug>', methods=['POST'])
 def checkout(slug):
@@ -68,12 +66,9 @@ def checkout(slug):
     if not user: return jsonify({"error": "Store not found"}), 404
     data = request.json; settings = database.get_settings(user.get('id'))
     address = data.get('address', 'غير مسجل'); payment = data.get('payment', 'غير مسجل')
-    
     order_id = database.create_order(user.get('id'), data['name'], data['phone'], address, payment, data['cart'], data['final_total'], data.get('discount_info', ''))
-    
     msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {address}\n💳 *الدفع:* {payment}\n\n🛍️ *المنتجات:*\n"
     for item in data['cart']: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
-    
     if data.get('discount_info'): msg += f"\n🎟️ *الخصم:* {data['discount_info']}"
     msg += f"\n💰 *الإجمالي النهائي:* {data['final_total']} {settings.get('currency', 'ريال')}\n\n*(الرجاء إرفاق صورة الحوالة إن وجدت)*"
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
@@ -100,37 +95,27 @@ def login():
 def dashboard():
     if 'user_id' not in session: return redirect(url_for('login'))
     is_super_admin = (session['store_slug'] == 'admin-store')
-    
     if request.method == 'POST':
         action = request.form.get('action')
-        # المنتجات
-        if action == 'add_product': database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة بنجاح!", "success")
-        elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل بنجاح!", "success")
+        if action == 'add_product': database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة", "success")
+        elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), request.form.get('price'), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
-        # الطلبات
-        elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم تحديث الحالة", "success")
-        # الكوبونات
+        elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
         elif action == 'add_coupon': database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
         elif action == 'delete_coupon': database.delete_coupon(request.form.get('coupon_id'), session['user_id']); flash("تم حذف الكوبون", "danger")
-        # الإعدادات
         elif action == 'change_password':
             old_p, new_p, confirm_p = request.form.get('old_password', ''), request.form.get('new_password', ''), request.form.get('confirm_password', '')
             if new_p != confirm_p: flash("كلمة المرور غير متطابقة", "danger")
-            else: flash("تم التغيير بنجاح" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
+            else: flash("تم التغيير" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
         elif action == 'save_settings':
             database.update_settings(session['user_id'], {
-                'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'),
-                'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'),
-                'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'),
-                'header_size': request.form.get('header_size'), 'facebook': request.form.get('facebook'),
-                'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'),
-                'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'),
-                'logo_url': request.form.get('logo_url', '').strip(), 'img_provider': request.form.get('img_provider', 'imgbb'),
-                'img_api_key': request.form.get('img_api_key', '').strip(), 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip()
-            }); flash("تم حفظ الإعدادات", "success")
-        # السوبر أدمن
+                'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'), 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'),
+                'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'), 'header_size': request.form.get('header_size'), 'facebook': request.form.get('facebook'),
+                'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'), 'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'),
+                'logo_url': request.form.get('logo_url', '').strip(), 'img_provider': request.form.get('img_provider', 'imgbb'), 'img_api_key': request.form.get('img_api_key', '').strip(), 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip()
+            }); flash("تم الحفظ", "success")
         elif action == 'add_merchant' and is_super_admin:
-            if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم إنشاء المتجر", "success")
+            if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم الإنشاء", "success")
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
@@ -140,7 +125,6 @@ def dashboard():
     total_rev = sum(float(str(o['total']).replace(',','').strip()) for o in orders if o.get('status') == 'تم التوصيل 🟢')
     status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
     for o in orders: status_counts[o.get('status', 'جديد 🟡')] += 1
-    
     return render_template('dashboard.html', products=database.get_products(session['user_id']), coupons=database.get_coupons(session['user_id']), settings=database.get_settings(session['user_id']), orders=orders, stats={"total_orders": len(orders), "total_revenue": total_rev, "status_counts": status_counts}, merchants=(database.get_all_users() if is_super_admin else []), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
 @app.route('/logout')
