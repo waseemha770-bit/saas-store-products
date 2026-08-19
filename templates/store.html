@@ -28,12 +28,19 @@
         .category-tabs .nav-link { border-radius: 30px; white-space: nowrap; color: #333; font-weight: bold; background-color: #fff; border: 2px solid #ccc; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.3s ease; }
         .category-tabs .nav-link.active { background-color: var(--main-color); color: white; border-color: var(--main-color); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transform: scale(1.05); }
         
-        /* تنسيق نظام النجوم التفاعلي */
-        .stars-container { direction: ltr; display: inline-flex; gap: 2px; margin-bottom: 5px; }
-        .star { color: #dcdcdc; cursor: pointer; font-size: 1.1rem; transition: color 0.2s; }
-        .star:hover, .star.hovered { color: #ffc107; }
-        .star.filled { color: #ffc107; }
-        .rating-text { font-size: 0.8rem; color: #888; font-weight: bold; margin-right: 5px; }
+        /* === تحديث نظام النجوم === */
+        /* التوسيط ومنع انقطاع النص */
+        .rating-wrapper { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 8px; gap: 5px; }
+        .stars-container { direction: ltr; display: inline-flex; gap: 3px; }
+        
+        /* النجمة الفارغة (لون أغمق وأوضح) */
+        .star { color: #ccc; cursor: pointer; font-size: 1.15rem; transition: all 0.2s; text-shadow: 0px 0px 1px rgba(0,0,0,0.1); }
+        
+        /* النجمة المليئة أو عند التمرير */
+        .star:hover, .star.hovered, .star.filled { color: #ffc107; text-shadow: 0px 1px 2px rgba(255, 193, 7, 0.4); }
+        
+        /* نص التقييم */
+        .rating-text { font-size: 0.75rem; color: #777; font-weight: 700; background: #f1f1f1; padding: 2px 6px; border-radius: 10px; transition: all 0.3s;}
     </style>
 </head>
 <body>
@@ -59,10 +66,9 @@
                             <div class="card-body p-3 d-flex flex-column">
                                 <h6 class="fw-bold mb-1">{{ p.name }}</h6>
                                 
-                                <!-- نظام النجوم التفاعلي -->
-                                <div class="d-flex align-items-center">
+                                <!-- تحديث حاوية النجوم لتكون أكثر مرونة ووضوحاً -->
+                                <div class="rating-wrapper">
                                     <div class="stars-container" data-pid="{{ p.id }}">
-                                        <!-- النجوم ترسم بناءً على متوسط التقييم الحالي -->
                                         {% for i in range(1, 6) %}
                                             {% if p.rating >= i %} <i class="fas fa-star star filled" data-val="{{ i }}"></i>
                                             {% elif p.rating >= (i - 0.5) %} <i class="fas fa-star-half-alt star filled" data-val="{{ i }}"></i>
@@ -104,9 +110,8 @@
         function openCartModal() { renderModalItems(); cartModalInstance.show(); }
         function checkout() { let name = document.getElementById('customer-name').value; let phone = document.getElementById('customer-phone').value; let address = document.getElementById('customer-address').value; let payment = document.getElementById('customer-payment').value || "لم يتم التحديد"; if(!name || !phone || !address) return alert("يرجى ملء البيانات"); document.getElementById('btn-submit').innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحويل...'; document.getElementById('btn-submit').disabled = true; fetch('/api/checkout/{{ user.store_slug }}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: name, phone: phone, address: address, payment: payment, cart: cart, final_total: document.getElementById('modal-total').innerText, discount_info: currentDiscountInfo}) }).then(res => res.json()).then(data => { cart = []; currentDiscountPercent = 0; currentDiscountInfo = ''; document.getElementById('coupon-code').value = ''; document.getElementById('coupon-msg').innerText = ''; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب"; document.getElementById('btn-submit').disabled = false; window.open(data.whatsapp_url, '_blank'); }); }
 
-        // تفاعل نظام النجوم
+        // تفاعل نظام النجوم الجديد والمحسن
         document.querySelectorAll('.stars-container .star').forEach(star => {
-            // تأثير التمرير
             star.addEventListener('mouseover', function() {
                 let val = parseInt(this.getAttribute('data-val'));
                 let container = this.parentElement;
@@ -122,30 +127,26 @@
                     if(!s.classList.contains('filled')) { s.classList.remove('fas'); s.classList.add('far'); }
                 });
             });
-            // إرسال التقييم
             star.addEventListener('click', function() {
                 let val = parseInt(this.getAttribute('data-val'));
                 let container = this.parentElement;
                 let pid = container.getAttribute('data-pid');
                 
-                // تلوين النجوم مؤقتاً
                 container.querySelectorAll('.star').forEach(s => {
                     s.classList.remove('far', 'filled'); s.classList.add('fas');
-                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('filled'); s.style.color = '#ffc107'; }
-                    else { s.style.color = '#dcdcdc'; }
+                    if(parseInt(s.getAttribute('data-val')) <= val) { s.classList.add('filled'); }
                 });
 
-                // إرسال للباك إند عبر API
                 fetch('/api/rate_product', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({product_id: pid, stars: val})
                 }).then(res => res.json()).then(data => {
                     if(data.success) {
                         let rt = document.getElementById('rt-'+pid);
-                        rt.innerText = "(شكراً لتقييمك!)";
+                        rt.innerText = "شكراً لتقييمك!";
+                        rt.style.backgroundColor = "#e8f5e9";
                         rt.style.color = "#28a745";
-                        // تعطيل التقييم مرة أخرى مؤقتاً
-                        container.style.pointerEvents = 'none';
+                        container.style.pointerEvents = 'none'; // منع التقييم المزدوج
                     }
                 });
             });
