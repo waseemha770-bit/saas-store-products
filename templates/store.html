@@ -186,12 +186,13 @@
 
 
 
+
 <!-- GLOBAL RATING MODAL -->
 <div class="modal fade" id="globalRatingModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-sm">
     <div class="modal-content border-0 shadow-lg">
       <div class="modal-header border-0 pb-0">
-        <h6 class="modal-title fw-bold text-primary"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6>
+        <h6 class="modal-title fw-bold text-primary" id="ratingModalHeaderTitle"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body text-center pt-2 pb-3">
@@ -221,23 +222,41 @@
 let currentRatingProductId = null;
 let ratingModal = null;
 let selectedRating = 0;
+let previousRating = null;
 
 function openRatingModal(pid, pname) {
-    if(localStorage.getItem('rated_' + pid)) {
-        alert('لقد قمت بتقييم هذا المنتج مسبقاً، شكراً لك!');
-        return;
-    }
     currentRatingProductId = pid;
-    selectedRating = 0;
     document.getElementById('ratingModalProductName').innerText = pname;
     document.getElementById('ratingModalMessage').classList.add('d-none');
-    document.getElementById('confirmRatingBtn').classList.remove('d-none');
-    document.getElementById('confirmRatingBtn').disabled = true;
-    document.getElementById('confirmRatingBtn').innerText = 'تأكيد التقييم';
+    let btn = document.getElementById('confirmRatingBtn');
+    btn.classList.remove('d-none');
     
+    // فحص ما إذا كان العميل قد قيم المنتج مسبقاً
+    let savedRating = localStorage.getItem('rated_val_' + pid);
+    if(savedRating) {
+        previousRating = parseInt(savedRating);
+        selectedRating = previousRating;
+        document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-edit text-warning"></i> تعديل تقييمك';
+        btn.innerText = 'تحديث التقييم';
+        btn.disabled = false;
+    } else {
+        previousRating = null;
+        selectedRating = 0;
+        document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-star text-warning"></i> تقييم المنتج';
+        btn.innerText = 'تأكيد التقييم';
+        btn.disabled = true;
+    }
+    
+    // رسم النجوم حسب الحالة (إذا كان هناك تقييم سابق يتم إضاءته)
     document.querySelectorAll('.modal-star').forEach(s => {
-        s.classList.remove('star-selected');
-        s.setAttribute('fill', '#e4e5e9');
+        let val = parseInt(s.getAttribute('data-val'));
+        if(val <= selectedRating) {
+            s.classList.add('star-selected');
+            s.setAttribute('fill', '#ffc107');
+        } else {
+            s.classList.remove('star-selected');
+            s.setAttribute('fill', '#e4e5e9');
+        }
     });
     
     if(!ratingModal) ratingModal = new bootstrap.Modal(document.getElementById('globalRatingModal'));
@@ -264,7 +283,13 @@ document.querySelectorAll('.modal-star').forEach(star => {
                 s.setAttribute('fill', '#e4e5e9');
             }
         });
-        document.getElementById('confirmRatingBtn').disabled = false;
+        
+        let btn = document.getElementById('confirmRatingBtn');
+        btn.disabled = false;
+        // إذا اختار نفس تقييمه القديم نعطل الزر
+        if(previousRating && selectedRating === previousRating) {
+            btn.disabled = true;
+        }
     });
 });
 
@@ -275,15 +300,19 @@ document.getElementById('confirmRatingBtn').addEventListener('click', function()
     btn.disabled = true;
     btn.innerHTML = 'جاري الحفظ...';
     
+    // إرسال التقييم القديم للسيرفر ليقوم بالمعادلة الرياضية الدقيقة
+    let payload = { product_id: pid, rating: selectedRating };
+    if (previousRating) { payload.old_rating = previousRating; }
+    
     fetch('/api/rate_product', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({product_id: pid, rating: selectedRating})
+        body: JSON.stringify(payload)
     }).then(r => r.json()).then(data => {
         if(data.success) {
-            localStorage.setItem('rated_' + pid, 'true');
+            localStorage.setItem('rated_val_' + pid, selectedRating);
             let msg = document.getElementById('ratingModalMessage');
-            msg.innerText = 'تم تسجيل تقييمك بنجاح!';
+            msg.innerText = previousRating ? 'تم تحديث تقييمك بنجاح!' : 'تم تسجيل تقييمك بنجاح!';
             msg.classList.remove('d-none');
             btn.classList.add('d-none');
             
@@ -309,6 +338,7 @@ document.getElementById('confirmRatingBtn').addEventListener('click', function()
 });
 </script>
 <!-- END GLOBAL RATING MODAL -->
+
 
 </body>
 </html>

@@ -137,15 +137,14 @@ def rate_product_api():
         data = request.get_json()
         pid = data.get('product_id')
         stars = int(data.get('rating', 0))
+        old_stars = data.get('old_rating')  # جلب التقييم القديم إن وجد
         
-        # أداة ذكية للبحث عن جدول المنتجات في قاعدة البيانات
         prod_col = None
         if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
         elif hasattr(database, 'products'): prod_col = database.products
         elif hasattr(database, 'products_col'): prod_col = database.products_col
         else: return jsonify({"success": False, "error": "db not found"})
 
-        # البحث عن المنتج بمعرف ID أو ObjectId
         product = prod_col.find_one({"id": pid})
         if not product:
             try:
@@ -156,10 +155,18 @@ def rate_product_api():
         if product:
             cr = int(product.get('reviews', 0))
             c_rating = float(product.get('rating', 0))
-            nr = cr + 1
-            n_rating = ((c_rating * cr) + stars) / nr
             
-            # تحديث قوي للقاعدة
+            # الخوارزمية الرياضية الذكية لتعديل التقييم
+            if old_stars and cr > 0:
+                # إزالة التقييم القديم من المجموع الكلي، وإضافة الجديد، دون زيادة عدد المقيمين
+                total_sum = (c_rating * cr) - int(old_stars) + stars
+                nr = cr
+                n_rating = total_sum / nr if nr > 0 else stars
+            else:
+                # تقييم جديد تماماً
+                nr = cr + 1
+                n_rating = ((c_rating * cr) + stars) / nr
+                
             update_query = {"_id": product["_id"]} if "_id" in product else {"id": pid}
             prod_col.update_one(update_query, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
             
