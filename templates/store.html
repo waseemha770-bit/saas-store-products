@@ -83,16 +83,17 @@
                                 <h6 class="fw-bold mb-1">{{ p.name }}
 </h6>
 <!-- STR_RATING -->
-    <div class="mt-2 mb-2 d-flex align-items-center" id="rating-box-{{ p.id }}" onclick="event.preventDefault(); event.stopPropagation();">
-        {% set current_rate = p.rating|default(0)|int %}
-        <span style="cursor:pointer; display:inline-flex; align-items:center;">
+    <div class="mt-2 mb-2 d-flex align-items-center" style="cursor:pointer;" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "\'")|replace('"', '\"') }}')" title="اضغط لتقييم المنتج">
+        <div class="d-inline-flex" id="display-stars-{{ p.id }}">
+            {% set avg = p.rating|default(0)|float|round %}
             {% for i in range(1, 6) %}
-                <svg onclick="submitRatingAjax('{{ p.id }}', {{ i }}, event)" width="18" height="18" viewBox="0 0 24 24" fill="{% if current_rate >= i %}#ffc107{% else %}#e4e5e9{% endif %}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; transition: transform 0.2s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="{% if avg >= i %}#ffc107{% else %}#e4e5e9{% endif %}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
             {% endfor %}
-        </span>
-        <small class="text-muted fw-bold ms-2" style="font-size:0.85em;">({% if p.reviews %}{{ p.reviews }}{% else %}0{% endif %} تقييم)</small>
+        </div>
+        <span class="badge bg-light text-dark border ms-2 shadow-sm" id="display-avg-{{ p.id }}">{{ p.rating|default(0)|float|round(1) }}</span>
+        <small class="text-muted ms-1 fw-bold" id="display-count-{{ p.id }}" style="font-size:0.8em;">({{ p.reviews|default(0) }} تقييم)</small>
     </div>
     <!-- END_RATING -->
 
@@ -183,33 +184,88 @@
         async function deleteRating() { let savedRating = localStorage.getItem('tajergo_rating_' + currentRatingPid); if(!savedRating) return; let btn = document.getElementById('btnDeleteRating'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> حذف...'; btn.disabled = true; let res = await fetch('/api/undo_rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({product_id: currentRatingPid, stars: savedRating}) }); let data = await res.json(); if(data.success) { localStorage.removeItem('tajergo_rating_' + currentRatingPid); location.reload(); } }
     </script>
 
-<script id="rating-script">
-    function submitRatingAjax(productId, stars, event) {
-        if(event) { event.preventDefault(); event.stopPropagation(); }
+
+<!-- GLOBAL RATING MODAL -->
+<div class="modal fade" id="globalRatingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold text-primary"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center pt-2 pb-4">
+        <p id="ratingModalProductName" class="text-secondary small fw-bold mb-3"></p>
+        <div class="d-flex justify-content-center flex-row-reverse mb-3" id="interactive-stars" onmouseleave="resetHover()">
+            <svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        </div>
+        <p id="ratingModalMessage" class="fw-bold text-success d-none mb-0"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* تأثيرات التمرير العالمية للنجوم */
+.modal-star:hover, .modal-star:hover ~ .modal-star { fill: #ffc107 !important; transform: scale(1.15); }
+</style>
+
+<script id="rating-script-pro">
+let currentRatingProductId = null;
+let ratingModal = null;
+
+function openRatingModal(pid, pname) {
+    if(localStorage.getItem('rated_' + pid)) {
+        alert('لقد قمت بتقييم هذا المنتج مسبقاً، شكراً لك!');
+        return;
+    }
+    currentRatingProductId = pid;
+    document.getElementById('ratingModalProductName').innerText = pname;
+    document.getElementById('ratingModalMessage').classList.add('d-none');
+    document.querySelectorAll('.modal-star').forEach(s => s.setAttribute('fill', '#e4e5e9'));
+    
+    if(!ratingModal) ratingModal = new bootstrap.Modal(document.getElementById('globalRatingModal'));
+    ratingModal.show();
+}
+
+function resetHover() { document.querySelectorAll('.modal-star').forEach(s => s.setAttribute('fill', '#e4e5e9')); }
+
+document.querySelectorAll('.modal-star').forEach(star => {
+    star.addEventListener('click', function() {
+        let val = parseInt(this.getAttribute('data-val'));
+        let pid = currentRatingProductId;
+        if(!pid || localStorage.getItem('rated_' + pid)) return;
+        
         fetch('/api/rate_product', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({product_id: productId, rating: stars})
-        })
-        .then(r => r.json())
-        .then(data => {
+            body: JSON.stringify({product_id: pid, rating: val})
+        }).then(r => r.json()).then(data => {
             if(data.success) {
-                let container = document.getElementById('rating-box-' + productId);
-                if(container) {
-                    let svgStars = '';
-                    let newRate = Math.round(data.new_rating);
-                    for(let i=1; i<=5; i++){
-                        let color = (newRate >= i) ? '#ffc107' : '#e4e5e9';
-                        svgStars += `<svg onclick="submitRatingAjax('${productId}', ${i}, event)" width="18" height="18" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; transition: transform 0.2s;">
-                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                     </svg>`;
-                    }
-                    container.innerHTML = `<span style="cursor:pointer; display:inline-flex; align-items:center;">${svgStars}</span> <small class="text-muted fw-bold ms-2" style="font-size:0.85em;">(${data.total_reviews} تقييم)</small>`;
+                localStorage.setItem('rated_' + pid, 'true');
+                let msg = document.getElementById('ratingModalMessage');
+                msg.innerText = 'تم تسجيل تقييمك بنجاح! (' + val + ' نجوم)';
+                msg.classList.remove('d-none');
+                
+                // تحديث النجوم في الصفحة الرئيسية فوراً
+                document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1);
+                document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ' تقييم)';
+                let svgStars = '';
+                let newRate = Math.round(data.new_rating);
+                for(let i=1; i<=5; i++){
+                    let color = (newRate >= i) ? '#ffc107' : '#e4e5e9';
+                    svgStars += `<svg width="16" height="16" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
                 }
+                document.getElementById('display-stars-' + pid).innerHTML = svgStars;
+                setTimeout(() => { ratingModal.hide(); }, 1800);
             }
-        }).catch(err => console.log('Rating error:', err));
-        return false;
-    }
-    </script>
+        });
+    });
+});
+</script>
+<!-- END GLOBAL RATING MODAL -->
 </body>
 </html>
