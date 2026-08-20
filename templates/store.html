@@ -92,8 +92,8 @@
                 </svg>
             {% endfor %}
         </div>
-        <span class="badge bg-light text-dark border ms-2 shadow-sm" id="display-avg-{{ p.id }}">{{ p.rating|default(0)|float|round(1) }}</span>
-        <small class="text-muted ms-1 fw-bold" id="display-count-{{ p.id }}" style="font-size:0.8em;">({{ p.reviews|default(0) }} تقييم)</small>
+        <span class="ms-1 fw-bold text-dark" style="font-size: 0.85em;" id="display-avg-{{ p.id }}">{{ p.rating|default(0)|float|round(1) }}</span>
+        <span class="text-secondary ms-1" style="font-size: 0.8em;" id="display-count-{{ p.id }}">({{ p.reviews|default(0) }})</span>
     </div>
     <!-- END_RATING -->
 
@@ -317,7 +317,7 @@ document.getElementById('confirmRatingBtn').addEventListener('click', function()
             btn.classList.add('d-none');
             
             document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1);
-            document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ' تقييم)';
+            document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ')';
             
             let svgStars = '';
             let newRate = Math.round(data.new_rating);
