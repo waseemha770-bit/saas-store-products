@@ -185,6 +185,7 @@
     </script>
 
 
+
 <!-- GLOBAL RATING MODAL -->
 <div class="modal fade" id="globalRatingModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -193,29 +194,33 @@
         <h6 class="modal-title fw-bold text-primary"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body text-center pt-2 pb-4">
+      <div class="modal-body text-center pt-2 pb-3">
         <p id="ratingModalProductName" class="text-secondary small fw-bold mb-3"></p>
         <div class="d-flex justify-content-center flex-row-reverse mb-3" id="interactive-stars" onmouseleave="resetHover()">
-            <svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: all 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </div>
-        <p id="ratingModalMessage" class="fw-bold text-success d-none mb-0"></p>
+        <div class="mb-2">
+            <button id="confirmRatingBtn" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill" disabled>تأكيد التقييم</button>
+        </div>
+        <p id="ratingModalMessage" class="fw-bold text-success d-none mb-0 small"></p>
       </div>
     </div>
   </div>
 </div>
 
 <style>
-/* تأثيرات التمرير العالمية للنجوم */
 .modal-star:hover, .modal-star:hover ~ .modal-star { fill: #ffc107 !important; transform: scale(1.15); }
+.star-selected { fill: #ffc107 !important; }
 </style>
 
 <script id="rating-script-pro">
 let currentRatingProductId = null;
 let ratingModal = null;
+let selectedRating = 0;
 
 function openRatingModal(pid, pname) {
     if(localStorage.getItem('rated_' + pid)) {
@@ -223,49 +228,87 @@ function openRatingModal(pid, pname) {
         return;
     }
     currentRatingProductId = pid;
+    selectedRating = 0;
     document.getElementById('ratingModalProductName').innerText = pname;
     document.getElementById('ratingModalMessage').classList.add('d-none');
-    document.querySelectorAll('.modal-star').forEach(s => s.setAttribute('fill', '#e4e5e9'));
+    document.getElementById('confirmRatingBtn').classList.remove('d-none');
+    document.getElementById('confirmRatingBtn').disabled = true;
+    document.getElementById('confirmRatingBtn').innerText = 'تأكيد التقييم';
+    
+    document.querySelectorAll('.modal-star').forEach(s => {
+        s.classList.remove('star-selected');
+        s.setAttribute('fill', '#e4e5e9');
+    });
     
     if(!ratingModal) ratingModal = new bootstrap.Modal(document.getElementById('globalRatingModal'));
     ratingModal.show();
 }
 
-function resetHover() { document.querySelectorAll('.modal-star').forEach(s => s.setAttribute('fill', '#e4e5e9')); }
+function resetHover() { 
+    document.querySelectorAll('.modal-star').forEach(s => {
+        let val = parseInt(s.getAttribute('data-val'));
+        if(val <= selectedRating) { s.setAttribute('fill', '#ffc107'); } 
+        else { s.setAttribute('fill', '#e4e5e9'); }
+    }); 
+}
 
 document.querySelectorAll('.modal-star').forEach(star => {
     star.addEventListener('click', function() {
-        let val = parseInt(this.getAttribute('data-val'));
-        let pid = currentRatingProductId;
-        if(!pid || localStorage.getItem('rated_' + pid)) return;
-        
-        fetch('/api/rate_product', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({product_id: pid, rating: val})
-        }).then(r => r.json()).then(data => {
-            if(data.success) {
-                localStorage.setItem('rated_' + pid, 'true');
-                let msg = document.getElementById('ratingModalMessage');
-                msg.innerText = 'تم تسجيل تقييمك بنجاح! (' + val + ' نجوم)';
-                msg.classList.remove('d-none');
-                
-                // تحديث النجوم في الصفحة الرئيسية فوراً
-                document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1);
-                document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ' تقييم)';
-                let svgStars = '';
-                let newRate = Math.round(data.new_rating);
-                for(let i=1; i<=5; i++){
-                    let color = (newRate >= i) ? '#ffc107' : '#e4e5e9';
-                    svgStars += `<svg width="16" height="16" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
-                }
-                document.getElementById('display-stars-' + pid).innerHTML = svgStars;
-                setTimeout(() => { ratingModal.hide(); }, 1800);
+        selectedRating = parseInt(this.getAttribute('data-val'));
+        document.querySelectorAll('.modal-star').forEach(s => {
+            if(parseInt(s.getAttribute('data-val')) <= selectedRating) {
+                s.classList.add('star-selected');
+                s.setAttribute('fill', '#ffc107');
+            } else {
+                s.classList.remove('star-selected');
+                s.setAttribute('fill', '#e4e5e9');
             }
         });
+        document.getElementById('confirmRatingBtn').disabled = false;
+    });
+});
+
+document.getElementById('confirmRatingBtn').addEventListener('click', function() {
+    if(selectedRating === 0 || !currentRatingProductId) return;
+    let pid = currentRatingProductId;
+    let btn = this;
+    btn.disabled = true;
+    btn.innerHTML = 'جاري الحفظ...';
+    
+    fetch('/api/rate_product', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({product_id: pid, rating: selectedRating})
+    }).then(r => r.json()).then(data => {
+        if(data.success) {
+            localStorage.setItem('rated_' + pid, 'true');
+            let msg = document.getElementById('ratingModalMessage');
+            msg.innerText = 'تم تسجيل تقييمك بنجاح!';
+            msg.classList.remove('d-none');
+            btn.classList.add('d-none');
+            
+            document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1);
+            document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ' تقييم)';
+            
+            let svgStars = '';
+            let newRate = Math.round(data.new_rating);
+            for(let i=1; i<=5; i++){
+                let color = (newRate >= i) ? '#ffc107' : '#e4e5e9';
+                svgStars += `<svg width="16" height="16" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+            }
+            document.getElementById('display-stars-' + pid).innerHTML = svgStars;
+            setTimeout(() => { ratingModal.hide(); }, 1800);
+        } else {
+            btn.innerText = 'حدث خطأ بالاتصال';
+            btn.disabled = false;
+        }
+    }).catch(err => {
+        btn.innerText = 'فشل الاتصال';
+        btn.disabled = false;
     });
 });
 </script>
 <!-- END GLOBAL RATING MODAL -->
+
 </body>
 </html>

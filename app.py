@@ -132,7 +132,40 @@ def proxy_upload():
 
 @app.route('/api/rate_product', methods=['POST'])
 def rate_product_api():
-    if database.rate_product(request.json.get('product_id'), request.json.get('stars')): return jsonify({"success": True})
+    from flask import request, jsonify
+    try:
+        data = request.get_json()
+        pid = data.get('product_id')
+        stars = int(data.get('rating', 0))
+        
+        # أداة ذكية للبحث عن جدول المنتجات في قاعدة البيانات
+        prod_col = None
+        if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
+        elif hasattr(database, 'products'): prod_col = database.products
+        elif hasattr(database, 'products_col'): prod_col = database.products_col
+        else: return jsonify({"success": False, "error": "db not found"})
+
+        # البحث عن المنتج بمعرف ID أو ObjectId
+        product = prod_col.find_one({"id": pid})
+        if not product:
+            try:
+                from bson.objectid import ObjectId
+                product = prod_col.find_one({"_id": ObjectId(pid)})
+            except: pass
+
+        if product:
+            cr = int(product.get('reviews', 0))
+            c_rating = float(product.get('rating', 0))
+            nr = cr + 1
+            n_rating = ((c_rating * cr) + stars) / nr
+            
+            # تحديث قوي للقاعدة
+            update_query = {"_id": product["_id"]} if "_id" in product else {"id": pid}
+            prod_col.update_one(update_query, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
+            
+            return jsonify({"success": True, "new_rating": round(n_rating, 1), "total_reviews": nr})
+    except Exception as e:
+        print("Rate API Error:", str(e))
     return jsonify({"success": False}), 400
 
 @app.route('/api/undo_rate_product', methods=['POST'])
