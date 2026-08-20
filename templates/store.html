@@ -66,7 +66,7 @@
                 {% for category, items in grouped_products %}
                 <div class="tab-pane fade {% if loop.first %}show active{% endif %} category-section" id="tab-pane-{{ loop.index }}" role="tabpanel"><div class="row">
                         {% for p in items %}
-                        <div class="col-md-3 col-6 mb-4 product-wrapper" data-name="{{ p.name }}"><div class="card product-card h-100">
+                        <div class="col-md-3 col-6 mb-4 product-item" data-subcat="{{ p.get("sub_cat", "")|replace(" ", "_") }}" product-wrapper" data-name="{{ p.name }}"><div class="card product-card h-100">
                             
                             <!-- حقول مخفية -->
                             <textarea id="raw-name-{{ p.id }}" style="display:none;">{{ p.name }}</textarea>
@@ -216,6 +216,45 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 </script>
+
+
+<!-- سكربت فلترة التصنيفات الفرعية -->
+<script>
+function filterSubCats(btn, catName) {
+    // إزالة اللون الأزرق الداكن (active) من كل الأزرار في نفس التبويب
+    let container = btn.closest('.subcat-filters');
+    container.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('btn-primary', 'active');
+        b.classList.add('btn-outline-primary');
+    });
+    // إضافة اللون الداكن للزر المضغوط
+    btn.classList.remove('btn-outline-primary');
+    btn.classList.add('btn-primary', 'active');
+
+    // إظهار وإخفاء المنتجات
+    let filterValue = btn.getAttribute('data-filter');
+    let tabPane = btn.closest('.tab-pane');
+    let products = tabPane.querySelectorAll('.product-item');
+
+    products.forEach(p => {
+        if (filterValue === 'all') {
+            p.style.display = 'block';
+            setTimeout(() => { p.style.opacity = '1'; }, 50);
+        } else {
+            if (p.getAttribute('data-subcat') === filterValue) {
+                p.style.display = 'block';
+                setTimeout(() => { p.style.opacity = '1'; }, 50);
+            } else {
+                p.style.opacity = '0';
+                setTimeout(() => { p.style.display = 'none'; }, 300); // حركة إخفاء ناعمة
+            }
+        }
+    });
+}
+</script>
+<style>
+.product-item { transition: opacity 0.3s ease-in-out; }
+</style>
 
 </body>
 </html>
