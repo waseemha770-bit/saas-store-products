@@ -193,18 +193,106 @@ def dashboard():
             slug = request.form.get('slug')
             if database.create_new_merchant(request.form.get('name'), slug, request.form.get('password')):
                 new_user = database.users_col.find_one({"store_slug": slug})
-                if new_user:
-                    database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي تمت إضافته لمتجرك لتتعرف على شكل عرض المنتجات. يمكنك تعديله أو حذفه من لوحة التحكم، والبدء بإضافة منتجاتك الحقيقية بكل سهولة.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
+                if new_user: database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
+                flash("تم إنشاء المتجر بنجاح!", "success")
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
         return redirect(url_for('dashboard'))
     
     orders = database.get_orders(session['user_id'])
-    total_rev = sum(float(str(o['total']).replace(',','').strip()) for o in orders if o.get('status') == 'تم التوصيل 🟢')
+    products = database.get_products(session['user_id'])
+    settings = database.get_settings(session['user_id'])
+    coupons = database.get_coupons(session['user_id'])
+    
+    # === خوارزمية الذكاء والإحصاء المتقدمة ===
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    def parse_date(d):
+        if isinstance(d, datetime): return d
+        try: return datetime.strptime(str(d), '%Y-%m-%d %H:%M:%S.%f')
+        except: return now
+        
+    def clean_total(t):
+        try: return float(str(t).replace(',', '').strip())
+        except: return 0.0
+
+    completed_orders = [o for o in orders if o.get('status') == 'تم التوصيل 🟢']
+    canceled_orders = [o for o in orders if o.get('status') == 'ملغي 🔴']
+    
+    total_sales = sum(clean_total(o.get('total')) for o in orders if o.get('status') != 'ملغي 🔴')
+    net_sales = sum(clean_total(o.get('total')) for o in completed_orders)
+    
+    avg_order_value = net_sales / len(completed_orders) if completed_orders else 0
+    completion_rate = (len(completed_orders) / len(orders) * 100) if orders else 0
+    
+    customers_map = {}
+    product_sales = {}
+    delivery_fees_total = 0.0 
+    
+    for o in completed_orders:
+        phone = o.get('customer_phone', 'غير معروف')
+        name = o.get('customer_name', 'عميل')
+        total = clean_total(o.get('total'))
+        if phone not in customers_map: customers_map[phone] = {'name': name, 'spent': 0, 'orders': 0}
+        customers_map[phone]['spent'] += total
+        customers_map[phone]['orders'] += 1
+        
+        for item in o.get('cart_items', []):
+            p_name = item.get('name')
+            qty = item.get('qty', 1)
+            if p_name not in product_sales: product_sales[p_name] = 0
+            product_sales[p_name] += qty
+            
+    top_customers = sorted(customers_map.values(), key=lambda x: x['spent'], reverse=True)[:5]
+    sorted_products = sorted(product_sales.items(), key=lambda x: x[1], reverse=True)
+    best_sellers = sorted_products[:5]
+    least_sellers = sorted_products[-5:] if len(sorted_products) > 0 else []
+    least_sellers.reverse()
+    
+    this_month_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).month == now.month and parse_date(o.get('date')).year == now.year)
+    last_month = now.replace(day=1) - timedelta(days=1)
+    last_month_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).month == last_month.month and parse_date(o.get('date')).year == last_month.year)
+    growth_rate = ((this_month_sales - last_month_sales) / last_month_sales * 100) if last_month_sales > 0 else (100 if this_month_sales > 0 else 0)
+    
+    today_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).date() == now.date())
+    weekly_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).date() >= (now.date() - timedelta(days=7)))
+    
+    daily_chart = {}
+    for i in range(6, -1, -1):
+        d_str = (now - timedelta(days=i)).strftime('%Y-%m-%d')
+        daily_chart[d_str] = 0
+        
+    for o in completed_orders:
+        d_str = parse_date(o.get('date')).strftime('%Y-%m-%d')
+        if d_str in daily_chart: daily_chart[d_str] += clean_total(o.get('total'))
+            
+    adv_stats = {
+        'total_sales': total_sales,
+        'net_sales': net_sales,
+        'total_orders': len(orders),
+        'completed_orders': len(completed_orders),
+        'canceled_orders': len(canceled_orders),
+        'avg_order_value': avg_order_value,
+        'customers_count': len(customers_map),
+        'top_customers': top_customers,
+        'best_sellers': best_sellers,
+        'least_sellers': least_sellers,
+        'this_month_sales': this_month_sales,
+        'last_month_sales': last_month_sales,
+        'today_sales': today_sales,
+        'weekly_sales': weekly_sales,
+        'growth_rate': growth_rate,
+        'completion_rate': completion_rate,
+        'delivery_fees': delivery_fees_total,
+        'chart_labels': list(daily_chart.keys()),
+        'chart_data': list(daily_chart.values())
+    }
+    
     status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
     for o in orders: status_counts[o.get('status', 'جديد 🟡')] += 1
-    return render_template('dashboard.html', products=database.get_products(session['user_id']), coupons=database.get_coupons(session['user_id']), settings=database.get_settings(session['user_id']), orders=orders, stats={"total_orders": len(orders), "total_revenue": total_rev, "status_counts": status_counts}, merchants=(database.get_all_users() if is_super_admin else []), store_slug=session['store_slug'], is_super_admin=is_super_admin)
+    
+    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
