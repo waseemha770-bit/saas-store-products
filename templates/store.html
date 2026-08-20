@@ -19,7 +19,7 @@
         .store-logo { object-fit: cover; border-radius: 50%; border: 4px solid rgba(255,255,255,0.8); box-shadow: 0 5px 15px rgba(0,0,0,0.2); background-color: #fff; }
         .product-card { border: 1px solid #dcdcdc; border-radius: 15px; box-shadow: 0 6px 12px rgba(0,0,0,0.06); overflow: hidden; }
         .img-wrapper { overflow: hidden; position: relative; border-bottom: 1px solid #eee; cursor: pointer; background-color: #fff;}
-        .product-img { height: 200px; object-fit: cover; object-position: center; width: 100%; image-rendering: high-quality; transition: transform 0.4s ease; }
+        .product-img { height: 200px; object-fit: contain; object-position: center; width: 100%; background-color: #ffffff; padding: 5px; image-rendering: high-quality; transition: transform 0.4s ease; }
         .product-card:hover .product-img { transform: scale(1.08); }
         .btn-custom { background-color: var(--main-color); color: white; font-weight: bold; transition: all 0.3s;}
         #floating-cart { position: fixed; bottom: 20px; left: 20px; background-color: var(--main-color); color: white; border-radius: 50px; padding: 15px 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); cursor: pointer; z-index: 1000; font-weight: bold; font-size: 1.1rem; display: none; transition: transform 0.2s;}
@@ -111,7 +111,7 @@
     
     <!-- نافذة التفاصيل مع دالة الطوارئ fixImg -->
     <div class="modal fade" id="detailsModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow-lg overflow-hidden"><div class="modal-header bg-light border-0"><h5 class="modal-title fw-bold text-dark" id="detailsName">اسم المنتج</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0">
-        <img id="detailsImg" src="" onerror="fixImg(this)" class="w-100" style="max-height:350px; object-fit:cover; background:#f8f9fa;">
+        <img id="detailsImg" src="" onerror="fixImg(this)" class="w-100" style="max-height:350px; object-fit:contain; background:#ffffff; padding:10px;">
         <div class="p-4"><div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2"><h4 class="text-primary fw-bold mb-0"><span id="detailsPrice"></span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h4></div><h6 class="fw-bold mb-2 text-dark"><i class="fas fa-info-circle text-primary"></i> وصف المنتج:</h6><p id="detailsDesc" class="text-muted" style="line-height: 1.7; font-size: 0.95rem; white-space: pre-wrap;"></p></div></div><div class="modal-footer bg-light border-0 p-3"><button id="detailsAddToCartBtn" class="btn btn-primary w-100 fw-bold py-2 fs-5"><i class="fas fa-cart-plus"></i> {{ settings.get('btn_text', 'إضافة للسلة') }}</button></div></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

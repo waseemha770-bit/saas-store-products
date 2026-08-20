@@ -190,7 +190,11 @@ def dashboard():
             if is_super_admin: settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
             database.update_settings(session['user_id'], settings_data); flash("تم الحفظ بنجاح", "success")
         elif action == 'add_merchant' and is_super_admin:
-            if database.create_new_merchant(request.form.get('name'), request.form.get('slug'), request.form.get('password')): flash("تم الإنشاء", "success")
+            slug = request.form.get('slug')
+            if database.create_new_merchant(request.form.get('name'), slug, request.form.get('password')):
+                new_user = database.users_col.find_one({"store_slug": slug})
+                if new_user:
+                    database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي تمت إضافته لمتجرك لتتعرف على شكل عرض المنتجات. يمكنك تعديله أو حذفه من لوحة التحكم، والبدء بإضافة منتجاتك الحقيقية بكل سهولة.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
