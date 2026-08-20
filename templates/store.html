@@ -218,42 +218,47 @@ document.addEventListener("DOMContentLoaded", function() {
 </script>
 
 
-<!-- سكربت فلترة التصنيفات الفرعية -->
-<script>
-function filterSubCats(btn, catName) {
-    // إزالة اللون الأزرق الداكن (active) من كل الأزرار في نفس التبويب
-    let container = btn.closest('.subcat-filters');
-    container.querySelectorAll('.filter-btn').forEach(b => {
-        b.classList.remove('btn-primary', 'active');
-        b.classList.add('btn-outline-primary');
-    });
-    // إضافة اللون الداكن للزر المضغوط
-    btn.classList.remove('btn-outline-primary');
-    btn.classList.add('btn-primary', 'active');
 
-    // إظهار وإخفاء المنتجات
+
+
+
+<!-- السكربت الرسمي للتبويبات الفرعية -->
+<script>
+function applySubFilter(btn, catName) {
+    // 1. تحديث التصميم المرئي للأزرار
+    let ul = btn.closest('.nav-pills');
+    ul.querySelectorAll('.nav-link').forEach(b => {
+        b.classList.remove('active', 'text-white');
+        b.classList.add('text-secondary', 'bg-white');
+    });
+    btn.classList.remove('text-secondary', 'bg-white');
+    btn.classList.add('active', 'text-white');
+
+    // 2. الفلترة الرسمية باستخدام كلاس d-none لمنع الفراغات والتشوهات
     let filterValue = btn.getAttribute('data-filter');
     let tabPane = btn.closest('.tab-pane');
     let products = tabPane.querySelectorAll('.product-item');
 
     products.forEach(p => {
         if (filterValue === 'all') {
-            p.style.display = 'block';
-            setTimeout(() => { p.style.opacity = '1'; }, 50);
+            p.classList.remove('d-none');
         } else {
             if (p.getAttribute('data-subcat') === filterValue) {
-                p.style.display = 'block';
-                setTimeout(() => { p.style.opacity = '1'; }, 50);
+                p.classList.remove('d-none');
             } else {
-                p.style.opacity = '0';
-                setTimeout(() => { p.style.display = 'none'; }, 300); // حركة إخفاء ناعمة
+                p.classList.add('d-none');
             }
         }
     });
 }
 </script>
 <style>
-.product-item { transition: opacity 0.3s ease-in-out; }
+/* إخفاء شريط التمرير مع إبقاء خاصية التمرير (Mobile Friendly) */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.subcategories-wrapper { margin-top: 5px; margin-bottom: 20px; }
+.nav-pills .nav-link { transition: all 0.2s ease-in-out; }
+.nav-pills .nav-link:hover { transform: translateY(-2px); }
 </style>
 
 </body>
