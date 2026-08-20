@@ -160,5 +160,26 @@
         async function submitRating() { if(selectedStars === 0) { alert("حدد النجوم أولاً"); return; } let btn = document.getElementById('btnSubmitRating'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> حفظ...'; btn.disabled = true; let savedRating = localStorage.getItem('tajergo_rating_' + currentRatingPid); if(savedRating) { await fetch('/api/undo_rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({product_id: currentRatingPid, stars: savedRating}) }); } let res = await fetch('/api/rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({product_id: currentRatingPid, stars: selectedStars}) }); let data = await res.json(); if(data.success) { localStorage.setItem('tajergo_rating_' + currentRatingPid, selectedStars); location.reload(); } }
         async function deleteRating() { let savedRating = localStorage.getItem('tajergo_rating_' + currentRatingPid); if(!savedRating) return; let btn = document.getElementById('btnDeleteRating'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> حذف...'; btn.disabled = true; let res = await fetch('/api/undo_rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({product_id: currentRatingPid, stars: savedRating}) }); let data = await res.json(); if(data.success) { localStorage.removeItem('tajergo_rating_' + currentRatingPid); location.reload(); } }
     </script>
+
+<script>
+function submitRatingAjax(productId, stars, event) {
+    if(event) event.preventDefault();
+    fetch('/api/rate_product', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({product_id: productId, rating: stars})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            let container = document.getElementById('rating-box-' + productId);
+            if(container) container.innerHTML = '<span class="text-warning">★ ' + data.new_rating + '</span> <small class="text-muted">(' + data.total_reviews + ')</small>';
+        }
+    })
+    .catch(err => console.log('Rating error:', err));
+    return false;
+}
+</script>
+
 </body>
 </html>
