@@ -144,7 +144,7 @@ def checkout(slug):
     msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {address}\n💳 *الدفع:* {payment}\n\n🛍️ *المنتجات:*\n"
     for item in data['cart']: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
     if data.get('discount_info'): msg += f"\n🎟️ *الخصم:* {data['discount_info']}"
-    msg += f"\n💰 *الإجمالي النهائي:* {data['final_total']} {settings.get('currency', 'ريال')}\n\n*(الرجاء إرفاق صورة الحوالة إن وجدت)*"
+    msg += f"\n💰 *الإجمالي النهائي:* {data['final_total']} {settings.get('currency', 'ريال')}\n\n*()*"
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
 
 @app.route('/export/orders')
@@ -189,12 +189,20 @@ def dashboard():
             }
             if is_super_admin: settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
             database.update_settings(session['user_id'], settings_data); flash("تم الحفظ بنجاح", "success")
+        elif action == 'add_package' and is_super_admin:
+            database.add_package(request.form.get('pkg_name'), request.form.get('pkg_price'), request.form.get('pkg_max'), request.form.get('pkg_features'))
+            flash("تمت إضافة الباقة بنجاح", "success")
+        elif action == 'delete_package' and is_super_admin:
+            database.delete_package(request.form.get('pkg_id'))
+            flash("تم حذف الباقة", "danger")
         elif action == 'add_merchant' and is_super_admin:
             slug = request.form.get('slug', '').strip()
             if database.create_new_merchant(request.form.get('name'), slug, request.form.get('password', '').strip()):
                 new_user = database.users_col.find_one({"store_slug": slug})
-                if new_user: database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
-                flash("تم إنشاء المتجر بنجاح!", "success")
+                if new_user:
+                    database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
+                    database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
+                flash("تم إنشاء المتجر بنجاح وتحديد الباقة!", "success")
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
@@ -292,7 +300,7 @@ def dashboard():
     status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
     for o in orders: status_counts[o.get('status', 'جديد 🟡')] += 1
     
-    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), store_slug=session['store_slug'], is_super_admin=is_super_admin)
+    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'_id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))

@@ -72,3 +72,12 @@ def add_coupon(user_id, code, discount_percent): coupons_col.insert_one({"id": f
 def get_coupons(user_id): return list(coupons_col.find({"u_id": user_id}))
 def delete_coupon(coupon_id, user_id): coupons_col.delete_one({"id": coupon_id, "u_id": user_id})
 def validate_coupon(user_id, code): return coupons_col.find_one({"u_id": user_id, "code": code.upper()})
+
+# إعدادات باقات المنصة
+packages_col = db['packages']
+def get_packages(): return list(packages_col.find())
+def add_package(name, price, max_products, features):
+    packages_col.insert_one({'name': name, 'price': price, 'max_products': int(max_products), 'features': features})
+def delete_package(pkg_id):
+    from bson.objectid import ObjectId
+    packages_col.delete_one({'_id': ObjectId(pkg_id)})
