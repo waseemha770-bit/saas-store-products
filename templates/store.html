@@ -43,5 +43,34 @@ function applySubFilter(btn) {
 .nav-pills .nav-link:hover { transform: translateY(-2px); }
 </style>
 
+
+<script>
+function applyFilter(btn) {
+    let ul = btn.closest('.nav-pills');
+    ul.querySelectorAll('.nav-link').forEach(b => {
+        b.classList.remove('active', 'text-white', 'bg-primary');
+        b.classList.add('text-secondary', 'bg-white');
+    });
+    btn.classList.remove('text-secondary', 'bg-white');
+    btn.classList.add('active', 'text-white', 'bg-primary');
+
+    let filterValue = btn.getAttribute('data-filter');
+    let tabPane = btn.closest('.tab-pane');
+    let products = tabPane.querySelectorAll('.product-item');
+
+    products.forEach(p => {
+        if (filterValue === 'all' || p.getAttribute('data-subcat') === filterValue) {
+            p.classList.remove('d-none');
+        } else {
+            p.classList.add('d-none');
+        }
+    });
+}
+</script>
+<style>
+.nav-pills::-webkit-scrollbar { display: none; }
+.nav-pills { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
 </body>
 </html>
