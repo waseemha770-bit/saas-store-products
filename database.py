@@ -81,3 +81,11 @@ def add_package(name, price, max_products, features):
 def delete_package(pkg_id):
     from bson.objectid import ObjectId
     packages_col.delete_one({'_id': ObjectId(pkg_id)})
+
+def edit_merchant_slug(user_id, new_slug):
+    from bson.objectid import ObjectId
+    existing = users_col.find_one({'store_slug': new_slug})
+    # التأكد من أن الرابط غير محجوز لتاجر آخر
+    if existing and str(existing['_id']) != str(user_id): return False
+    users_col.update_one({'_id': ObjectId(user_id)}, {'$set': {'store_slug': new_slug}})
+    return True

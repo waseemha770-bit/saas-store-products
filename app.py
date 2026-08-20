@@ -223,6 +223,9 @@ def dashboard():
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
+        elif action == 'edit_merchant_slug' and is_super_admin:
+            if database.edit_merchant_slug(request.form.get('user_id'), request.form.get('new_slug', '').strip()): flash("تم تعديل الرابط بنجاح!", "success")
+            else: flash("الرابط الجديد محجوز لتاجر آخر!", "danger")
         return redirect(url_for('dashboard'))
     
     orders = database.get_orders(session['user_id'])
