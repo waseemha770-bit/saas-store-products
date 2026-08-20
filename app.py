@@ -1,7 +1,20 @@
+import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
 
 app = Flask(__name__)
+
+# ==========================================
+# نظام إشعارات التلجرام (Super Admin)
+# ==========================================
+def send_telegram_alert(message):
+    try:
+        import requests
+        url = "https://api.telegram.org/bot8843130010:AAE0z_PMlt9EoQi75z99cXece4RAzfRk2g4/sendMessage"
+        requests.post(url, json={"chat_id": "892385625", "text": message, "parse_mode": "HTML"}, timeout=3)
+    except:
+        pass
+
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
@@ -202,6 +215,10 @@ def dashboard():
                 if new_user:
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
                     database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
+                
+                # إرسال إشعار للمدير
+                send_telegram_alert(f"🎉 <b>تاجر جديد انضم لمنصتك!</b>\n\n👤 <b>اسم التاجر:</b> {request.form.get('name')}\n🔗 <b>رابط المتجر:</b> {slug}\n📦 <b>الباقة:</b> {request.form.get('package', 'أساسية')}\n🔑 <b>كلمة المرور:</b> {request.form.get('password', '').strip()}")
+
                 flash("تم إنشاء المتجر بنجاح وتحديد الباقة!", "success")
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
