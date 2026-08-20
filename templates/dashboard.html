@@ -64,96 +64,30 @@
 </div>
 
     <!-- استخراج التصنيفات -->
-    {% set unique_cats = [] %}
-    {% set unique_subcats = [] %}
-    {% for p in products %}
-        {% if p.cat and p.cat not in unique_cats %}{% set _ = unique_cats.append(p.cat) %}{% endif %}
-        {% if p.get('sub_cat') and p.get('sub_cat').strip() != '' and p.sub_cat not in unique_subcats %}{% set _ = unique_subcats.append(p.sub_cat) %}{% endif %}
-    {% endfor %}
+    
 
     <!-- قوائم الإكمال التلقائي المخفية -->
-    <datalist id="existing-cats">{% for c in unique_cats %}<option value="{{ c }}">{% endfor %}</datalist>
-    <datalist id="existing-subcats">{% for s in unique_subcats %}<option value="{{ s }}">{% endfor %}</datalist>
+    
+    
 
     <!-- لوحة إدارة التصنيفات السريعة -->
     <div class="card border-primary shadow-sm mb-4">
-        <div class="card-body">
-            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-folder-open"></i> إدارة التبويبات والتصنيفات</h6>
-            <div class="row">
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_category">
-                        <select name="old_cat" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف رئيسي لتعديله...</option>
-                            {% for c in unique_cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_cat" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_sub_category">
-                        <select name="old_sub" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف فرعي لتعديله...</option>
-                            {% for s in unique_subcats %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_sub" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-outline-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-            </div>
-            <small class="text-muted"><i class="fas fa-info-circle"></i> تنبيه: تعديل اسم التصنيف هنا سيقوم بتحديثه في جميع المنتجات المرتبطة به تلقائياً. لحذف تصنيف نهائياً، قم بحذف أو نقل المنتجات الموجودة بداخله.</small>
-        </div>
-    </div>
+        
     
 <div class="table-responsive">
 <table class="table table-hover align-middle"><thead class="table-light"><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>الكمية</th><th>التصنيف</th><th>إجراءات</th></tr></thead><tbody>{% for p in products %}<tr class="admin-product-row" data-name="{{ p.name }}" data-cat="{{ p.category }}"><td><img src="{{ p.image_url }}" onerror="fixImg(this)" width="50" height="50" style="object-fit:cover; border-radius:5px;"></td><td class="fw-bold">{{ p.name }}</td><td class="text-primary">{{ p.price }}</td><td>{{ p.stock }}</td><td><span class="badge bg-secondary">{{ p.category }}</span></td><td><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">تعديل</button> <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}"><button class="btn btn-sm btn-danger">حذف</button></form></td></tr><div class="modal fade" id="editModal{{ p.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" class="row g-3"><input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}"><div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div><div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" value="{{ p.price }}" required></div><div class="col-6"><label class="small fw-bold">المخزون</label><input name="stock" type="number" class="form-control" value="{{ p.stock }}" required></div><div class="col-12"><label class="small fw-bold">التصنيف</label><input name="cat" class="form-control" value="{{ p.category }}" required></div><div class="col-12"><label class="small fw-bold">تغيير الصورة</label><input type="file" class="form-control mb-1" accept="image/*" onchange="uploadImageToCloud(this, 'editImgUrl{{ p.id }}', 'editImgStatus{{ p.id }}', 'editSaveBtn{{ p.id }}')"><small id="editImgStatus{{ p.id }}" class="fw-bold d-block text-secondary mb-1"></small><input type="text" name="img" id="editImgUrl{{ p.id }}" class="form-control" value="{{ p.image_url }}"></div><div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control" value="{{ p.description }}"></div><div class="col-12 mt-3"><button class="btn btn-primary w-100 fw-bold" id="editSaveBtn{{ p.id }}">حفظ التعديلات</button></div></form></div></div></div></div>{% endfor %}</tbody></table></div></div></div></div>
 
             <div class="tab-pane fade" id="coupons"><div class="row"><div class="col-md-5 mb-4"><div class="card shadow-sm border-0 border-top border-4 border-warning"><div class="card-body"><h5 class="fw-bold mb-3"><i class="fas fa-ticket-alt text-warning"></i> إنشاء كوبون خصم</h5><form method="POST"><input type="hidden" name="action" value="add_coupon"><div class="mb-3"><label class="small fw-bold">كود الكوبون (مثال: KSA20)</label><input type="text" name="code" class="form-control" required style="text-transform: uppercase;"></div><div class="mb-4"><label class="small fw-bold">نسبة الخصم المئوية (%)</label><input type="number" name="discount" class="form-control" placeholder="مثال: 15" required min="1" max="99"></div><button class="btn btn-warning w-100 fw-bold text-dark shadow-sm">تفعيل الكوبون</button></form></div></div></div><div class="col-md-7"><div class="card shadow-sm border-0"><div class="card-body"><h5 class="fw-bold mb-3">الكوبونات الفعالة</h5>
     <!-- استخراج التصنيفات -->
-    {% set unique_cats = [] %}
-    {% set unique_subcats = [] %}
-    {% for p in products %}
-        {% if p.cat and p.cat not in unique_cats %}{% set _ = unique_cats.append(p.cat) %}{% endif %}
-        {% if p.get('sub_cat') and p.get('sub_cat').strip() != '' and p.sub_cat not in unique_subcats %}{% set _ = unique_subcats.append(p.sub_cat) %}{% endif %}
-    {% endfor %}
+    
 
     <!-- قوائم الإكمال التلقائي المخفية -->
-    <datalist id="existing-cats">{% for c in unique_cats %}<option value="{{ c }}">{% endfor %}</datalist>
-    <datalist id="existing-subcats">{% for s in unique_subcats %}<option value="{{ s }}">{% endfor %}</datalist>
+    
+    
 
     <!-- لوحة إدارة التصنيفات السريعة -->
     <div class="card border-primary shadow-sm mb-4">
-        <div class="card-body">
-            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-folder-open"></i> إدارة التبويبات والتصنيفات</h6>
-            <div class="row">
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_category">
-                        <select name="old_cat" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف رئيسي لتعديله...</option>
-                            {% for c in unique_cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_cat" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_sub_category">
-                        <select name="old_sub" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف فرعي لتعديله...</option>
-                            {% for s in unique_subcats %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_sub" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-outline-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-            </div>
-            <small class="text-muted"><i class="fas fa-info-circle"></i> تنبيه: تعديل اسم التصنيف هنا سيقوم بتحديثه في جميع المنتجات المرتبطة به تلقائياً. لحذف تصنيف نهائياً، قم بحذف أو نقل المنتجات الموجودة بداخله.</small>
-        </div>
-    </div>
+        
     
 <div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>كود الكوبون</th><th>نسبة الخصم</th><th>إجراءات</th></tr></thead><tbody>{% for c in coupons %}<tr><td class="fw-bold text-primary fs-5">{{ c.code }}</td><td><span class="badge bg-success fs-6">{{ c.discount }}%</span></td><td><form method="POST" onsubmit="return confirm('إلغاء هذا الكوبون؟');"><input type="hidden" name="action" value="delete_coupon"><input type="hidden" name="coupon_id" value="{{ c.id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted py-3 text-center fw-bold">لا توجد كوبونات فعالة حالياً</td></tr>{% endfor %}</tbody></table></div></div></div></div></div></div>
 
@@ -195,96 +129,30 @@
 <div class="row"><div class="col-md-4 mb-3"><form method="POST" class="p-3 bg-light rounded border"><input type="hidden" name="action" value="add_package"><label class="small fw-bold">اسم الباقة</label><input type="text" name="pkg_name" class="form-control mb-2" placeholder="مثال: VIP أو Pro" required><label class="small fw-bold">السعر (شهرياً/سنوياً)</label><input type="text" name="pkg_price" class="form-control mb-2" placeholder="مثال: 50$ شهرياً" required><label class="small fw-bold">الحد الأقصى للمنتجات</label><input type="number" name="pkg_max" class="form-control mb-2" placeholder="مثال: 100" required><label class="small fw-bold">المميزات (مفصولة بفاصلة)</label><input type="text" name="pkg_features" class="form-control mb-3" placeholder="دعم فني, دومين مخصص" required><button class="btn btn-primary w-100 fw-bold">إضافة الباقة</button></form></div>
 <div class="col-md-8">
     <!-- استخراج التصنيفات -->
-    {% set unique_cats = [] %}
-    {% set unique_subcats = [] %}
-    {% for p in products %}
-        {% if p.cat and p.cat not in unique_cats %}{% set _ = unique_cats.append(p.cat) %}{% endif %}
-        {% if p.get('sub_cat') and p.get('sub_cat').strip() != '' and p.sub_cat not in unique_subcats %}{% set _ = unique_subcats.append(p.sub_cat) %}{% endif %}
-    {% endfor %}
+    
 
     <!-- قوائم الإكمال التلقائي المخفية -->
-    <datalist id="existing-cats">{% for c in unique_cats %}<option value="{{ c }}">{% endfor %}</datalist>
-    <datalist id="existing-subcats">{% for s in unique_subcats %}<option value="{{ s }}">{% endfor %}</datalist>
+    
+    
 
     <!-- لوحة إدارة التصنيفات السريعة -->
     <div class="card border-primary shadow-sm mb-4">
-        <div class="card-body">
-            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-folder-open"></i> إدارة التبويبات والتصنيفات</h6>
-            <div class="row">
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_category">
-                        <select name="old_cat" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف رئيسي لتعديله...</option>
-                            {% for c in unique_cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_cat" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_sub_category">
-                        <select name="old_sub" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف فرعي لتعديله...</option>
-                            {% for s in unique_subcats %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_sub" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-outline-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-            </div>
-            <small class="text-muted"><i class="fas fa-info-circle"></i> تنبيه: تعديل اسم التصنيف هنا سيقوم بتحديثه في جميع المنتجات المرتبطة به تلقائياً. لحذف تصنيف نهائياً، قم بحذف أو نقل المنتجات الموجودة بداخله.</small>
-        </div>
-    </div>
+        
     
 <div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>الباقة</th><th>السعر</th><th>الحد الأقصى</th><th>المميزات</th><th>إجراء</th></tr></thead><tbody>
 {% for pkg in packages %}<tr><td class="fw-bold">{{ pkg.name }}</td><td class="text-success fw-bold">{{ pkg.price }}</td><td>{{ pkg.max_products }} منتج</td><td><small>{{ pkg.features }}</small></td><td><form method="POST" onsubmit="return confirm('حذف هذه الباقة؟');"><input type="hidden" name="action" value="delete_package"><input type="hidden" name="pkg_id" value="{{ pkg._id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="5" class="text-center text-muted">لا توجد باقات، قم بإضافة باقة جديدة.</td></tr>{% endfor %}
 </tbody></table></div></div></div></div></div></div></div>
 <div class="row"><div class="col-md-4 mb-4"><div class="card bg-dark text-white border-warning shadow-lg"><div class="card-body"><h5 class="fw-bold text-warning mb-3">➕ إضافة تاجر جديد</h5><form method="POST"><input type="hidden" name="action" value="add_merchant"><input type="text" name="name" class="form-control mb-3" placeholder="اسم التاجر" required><input type="text" name="slug" class="form-control mb-3" placeholder="رابط المتجر" required><input type="text" name="password" class="form-control mb-3" placeholder="كلمة المرور" required><select name="package" class="form-select mb-3" required><option value="" disabled selected>-- اختر باقة المتجر --</option>{% for pkg in packages %}<option value="{{ pkg.name }}">{{ pkg.name }}</option>{% endfor %}</select><button class="btn btn-warning w-100 fw-bold text-dark">إنشاء وبناء المتجر</button></form></div></div></div><div class="col-md-8"><div class="card border-danger shadow-sm"><div class="card-body"><h5 class="fw-bold text-danger mb-3">🏢 المتاجر المشتركة في منصتك</h5>
     <!-- استخراج التصنيفات -->
-    {% set unique_cats = [] %}
-    {% set unique_subcats = [] %}
-    {% for p in products %}
-        {% if p.cat and p.cat not in unique_cats %}{% set _ = unique_cats.append(p.cat) %}{% endif %}
-        {% if p.get('sub_cat') and p.get('sub_cat').strip() != '' and p.sub_cat not in unique_subcats %}{% set _ = unique_subcats.append(p.sub_cat) %}{% endif %}
-    {% endfor %}
+    
 
     <!-- قوائم الإكمال التلقائي المخفية -->
-    <datalist id="existing-cats">{% for c in unique_cats %}<option value="{{ c }}">{% endfor %}</datalist>
-    <datalist id="existing-subcats">{% for s in unique_subcats %}<option value="{{ s }}">{% endfor %}</datalist>
+    
+    
 
     <!-- لوحة إدارة التصنيفات السريعة -->
     <div class="card border-primary shadow-sm mb-4">
-        <div class="card-body">
-            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-folder-open"></i> إدارة التبويبات والتصنيفات</h6>
-            <div class="row">
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_category">
-                        <select name="old_cat" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف رئيسي لتعديله...</option>
-                            {% for c in unique_cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_cat" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-                <div class="col-md-6 mb-2">
-                    <form method="POST" class="d-flex">
-                        <input type="hidden" name="action" value="rename_sub_category">
-                        <select name="old_sub" class="form-select form-select-sm me-2" required>
-                            <option value="" disabled selected>اختر تصنيف فرعي لتعديله...</option>
-                            {% for s in unique_subcats %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
-                        </select>
-                        <input type="text" name="new_sub" class="form-control form-control-sm me-2" placeholder="الاسم الجديد" required>
-                        <button class="btn btn-sm btn-outline-primary fw-bold">حفظ</button>
-                    </form>
-                </div>
-            </div>
-            <small class="text-muted"><i class="fas fa-info-circle"></i> تنبيه: تعديل اسم التصنيف هنا سيقوم بتحديثه في جميع المنتجات المرتبطة به تلقائياً. لحذف تصنيف نهائياً، قم بحذف أو نقل المنتجات الموجودة بداخله.</small>
-        </div>
-    </div>
+        
     
 <div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>التاجر</th><th>الباقة</th><th>الرابط</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>{% for m in merchants %}<tr><td>{{ m.username }}<br><small class="text-muted">Pass: {{ m.password }}</small></td><td><span class="badge bg-info text-dark">{{ m.get("package", "أساسية") }}</span></td><td><a href="/store/{{ m.store_slug }}" target="_blank" class="fw-bold">{{ m.store_slug }}</a></td><td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td><td><form method="POST" class="d-inline"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button></form>{% if m.store_slug != 'admin-store' %}<form method="POST" class="d-inline" onsubmit="return confirm('حذف نهائي؟');"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>{% endif %} <button type="button" class="btn btn-sm btn-primary ms-1" data-bs-toggle="modal" data-bs-target="#editSlugModal{{ m.id }}"><i class="fas fa-edit"></i> تعديل</button></td></tr><div class="modal fade" id="editSlugModal{{ m.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit"></i> تعديل بيانات المتجر: {{ m.username }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST"><input type="hidden" name="action" value="edit_merchant_info"><input type="hidden" name="user_id" value="{{ m.id }}"><label class="small fw-bold mb-2">الرابط الجديد (بدون مسافات):</label><input type="text" name="new_slug" class="form-control mb-3" value="{{ m.store_slug }}" required>
 <label class="small fw-bold mb-2">باقة الاشتراك:</label>
