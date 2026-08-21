@@ -96,6 +96,20 @@
         <span class="text-secondary ms-1" style="font-size: 0.8em;" id="display-count-{{ p.id }}">({{ p.reviews|default(0) }})</span>
     </div>
     <!-- END_RATING -->
+<!-- ADV_BADGES -->
+    <div class="mb-2 d-flex flex-wrap gap-1" style="font-size: 0.75em;">
+        {% if p.subcategory %}
+            <span class="badge bg-light text-primary border px-2 py-1"><i class="fas fa-tag me-1"></i>{{ p.subcategory }}</span>
+        {% endif %}
+        {% if p.brand %}
+            <span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-bookmark me-1"></i>{{ p.brand }}</span>
+        {% endif %}
+        {% if p.p_type %}
+            <span class="badge bg-light text-secondary border px-2 py-1"><i class="fas fa-info-circle me-1"></i>{{ p.p_type }}</span>
+        {% endif %}
+    </div>
+    <!-- END_ADV_BADGES -->
+
 
 
             
