@@ -20,8 +20,22 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark mb-4 shadow"><div class="container"><a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#"><img src="{{ platform_logo }}" onerror="fixImg(this)" width="35" height="35" style="object-fit:cover; border-radius:50%; background:#fff; padding:1px;" alt="Logo"> لوحة تحكم TajerGo</a><div><a href="/store/{{ store_slug }}" target="_blank" class="btn btn-outline-light btn-sm mx-2"><i class="fas fa-store"></i> زيارة متجري</a><a href="/logout" class="btn btn-danger btn-sm">خروج</a></div></div></nav>
-    <div class="container pb-5">
+    <nav class="navbar navbar-dark bg-dark mb-4 shadow">
+<div class="row mt-4">
+    <div class="col-12 col-md-4 mb-2"><div class="card p-3 text-center bg-primary text-white"><h6>زيارات اليوم</h6><h3>{{ stats.daily }}</h3></div></div>
+    <div class="col-12 col-md-4 mb-2"><div class="card p-3 text-center bg-info text-white"><h6>زيارات الأسبوع</h6><h3>{{ stats.weekly }}</h3></div></div>
+    <div class="col-12 col-md-4 mb-2"><div class="card p-3 text-center bg-success text-white"><h6>زيارات الشهر</h6><h3>{{ stats.monthly }}</h3></div></div>
+</div>
+
+<div class="container"><a class="navbar-brand fw-bold d-flex align-items-center gap-2" href="#"><img src="{{ platform_logo }}" onerror="fixImg(this)" width="35" height="35" style="object-fit:cover; border-radius:50%; background:#fff; padding:1px;" alt="Logo"> لوحة تحكم TajerGo</a><div><a href="/store/{{ store_slug }}" target="_blank" class="btn btn-outline-light btn-sm mx-2"><i class="fas fa-store"></i> زيارة متجري</a><a href="/logout" class="btn btn-danger btn-sm">خروج</a></div></div></nav>
+    
+<div class="row mt-4">
+    <div class="col-12 col-md-4 mb-2"><div class="card p-3 text-center bg-primary text-white"><h6>زيارات اليوم</h6><h3>{{ stats.daily }}</h3></div></div>
+    <div class="col-12 col-md-4 mb-2"><div class="card p-3 text-center bg-info text-white"><h6>زيارات الأسبوع</h6><h3>{{ stats.weekly }}</h3></div></div>
+    <div class="col-12 col-md-4 mb-2"><div class="card p-3 text-center bg-success text-white"><h6>زيارات الشهر</h6><h3>{{ stats.monthly }}</h3></div></div>
+</div>
+
+<div class="container pb-5">
         {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
 
         <ul class="nav nav-tabs mb-4 bg-white p-2 rounded shadow-sm" id="myTab">

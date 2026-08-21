@@ -336,15 +336,6 @@ def logout(): session.clear(); return redirect(url_for('login'))
 
 
 # --- نظام تتبع المشاهدات ---
-@app.before_request
-def track_store_views():
-    from flask import request
-    # احتساب زيارات المتجر فقط (تجاهل لوحة التحكم والملفات الثابتة)
-    if request.method == 'GET' and not request.path.startswith(('/api', '/static', '/dashboard', '/login', '/logout')):
-        try:
-            db_obj = database.db if hasattr(database, 'db') else database
-            db_obj.store_stats.update_one({"_id": "store_views"}, {"$inc": {"count": 1}}, upsert=True)
-        except: pass
 
 @app.context_processor
 def inject_views():
@@ -399,3 +390,30 @@ def api_rate_product_clean():
         return jsonify({"success": False, "error": str(e)})
 
 if __name__ == '__main__': app.run(debug=True)
+
+
+from datetime import datetime, timedelta
+
+@app.before_request
+def track_visit():
+    if request.method == 'GET' and not any(request.path.startswith(x) for x in ['/api', '/static', '/dashboard', '/login']):
+        try:
+            db_obj = database.db if hasattr(database, 'db') else database
+            db_obj.visit_logs.insert_one({"timestamp": datetime.utcnow()})
+        except: pass
+
+def get_stats():
+    try:
+        db_obj = database.db if hasattr(database, 'db') else database
+        now = datetime.utcnow()
+        return {
+            "daily": db_obj.visit_logs.count_documents({"timestamp": {"$gte": now - timedelta(days=1)}}),
+            "weekly": db_obj.visit_logs.count_documents({"timestamp": {"$gte": now - timedelta(days=7)}}),
+            "monthly": db_obj.visit_logs.count_documents({"timestamp": {"$gte": now - timedelta(days=30)}})
+        }
+    except: return {"daily": 0, "weekly": 0, "monthly": 0}
+
+# تحديث دالة dashboard لتمرير الإحصائيات
+original_dashboard = re.search(r'@app\.route\(['"]/dashboard['"].*?def dashboard', app_code, re.DOTALL)
+if original_dashboard:
+    app_code = app_code.replace("return render_template('dashboard.html')", "return render_template('dashboard.html', stats=get_stats())")
