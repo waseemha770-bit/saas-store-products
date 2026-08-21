@@ -408,44 +408,77 @@ document.addEventListener("DOMContentLoaded", function() {
     </script>
     
 
-<!-- ⭐ GOLDEN RATING SYNC ⭐ -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // اعتراض طلبات الشبكة (Fetch API) الخاصة بالتقييم
-    const originalFetch = window.fetch;
-    window.fetch = async function() {
-        let response = await originalFetch.apply(this, arguments);
-        let url = arguments[0];
-        // إذا كان الطلب يخص التقييم، ننتظر نصف ثانية ثم نحدث الصفحة
-        if (typeof url === 'string' && url.includes('/api/rate_product')) {
-            setTimeout(() => {
-                alert("تم حفظ تقييمك بنجاح! شكراً لك.");
-                window.location.reload(true);
-            }, 500);
-        }
-        return response;
-    };
 
-    // خطة بديلة: اعتراض النماذج التقليدية (Forms) الخاصة بالتقييم
-    document.addEventListener('submit', function(e) {
-        if (e.target.action && e.target.action.includes('/api/rate_product')) {
-            e.preventDefault();
-            let formData = new FormData(e.target);
-            let payload = Object.fromEntries(formData.entries());
+
+
+<!-- 🌍 GLOBAL STANDARD AJAX RATING 🌍 -->
+<script>
+window.submitGlobalRating = function(pid, ratingValue) {
+    fetch('/api/rate_product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ id: pid, rating: ratingValue })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 1. تحديث الأرقام في بطاقة المنتج فوراً
+            let avgEl = document.getElementById('display-avg-' + pid);
+            let countEl = document.getElementById('display-count-' + pid);
+            if(avgEl) avgEl.innerText = data.new_rating;
+            if(countEl) countEl.innerText = '(' + data.new_reviews + ')';
             
-            originalFetch('/api/rate_product', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }).then(() => {
-                alert("تم حفظ تقييمك بنجاح! شكراً لك.");
-                window.location.reload(true);
-            });
+            // 2. تحديث النجوم بصرياً للون الذهبي الفاتح (#FFD700)
+            let starsContainer = document.getElementById('display-stars-' + pid);
+            if(starsContainer) {
+                let svgStars = '';
+                let avg = Math.round(data.new_rating);
+                for (let i = 1; i <= 5; i++) {
+                    let fill = (avg >= i) ? '#FFD700' : '#e4e5e9';
+                    svgStars += `<svg width="15" height="15" viewBox="0 0 24 24" fill="${fill}" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+                }
+                starsContainer.innerHTML = svgStars;
+            }
+            
+            // 3. إغلاق نافذة التقييم (Modal) إن وجدت
+            let modalEl = document.getElementById('ratingModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                let modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if(modalInstance) modalInstance.hide();
+            }
+            
+            // 4. عرض إشعار احترافي منبثق (Toast) أسفل الشاشة
+            let toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#28a745; color:white; padding:12px 24px; border-radius:30px; z-index:9999; box-shadow:0 10px 15px rgba(0,0,0,0.2); font-weight:bold; font-size:14px; opacity:0; transition:opacity 0.3s;';
+            toast.innerHTML = '⭐ تم حفظ التقييم بنجاح';
+            document.body.appendChild(toast);
+            
+            // تحريك الإشعار وإخفاؤه
+            setTimeout(() => toast.style.opacity = '1', 10);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+            
+        } else {
+            console.error("خطأ في التقييم: " + data.error);
         }
-    });
+    })
+    .catch(err => console.error("Network Error:", err));
+};
+
+// اعتراض نموذج التقييم لمنع تحديث الصفحة
+document.addEventListener('submit', function(e) {
+    if (e.target.action && e.target.action.includes('/api/rate_product')) {
+        e.preventDefault(); // منع التحميل
+        let formData = new FormData(e.target);
+        let payload = Object.fromEntries(formData.entries());
+        let pid = payload.product_id || payload.id;
+        let ratingVal = payload.rating || payload.rating_value;
+        if(pid && ratingVal) {
+            submitGlobalRating(pid, ratingVal);
+        }
+    }
 });
 </script>
-<!-- ⭐ END GOLDEN RATING SYNC ⭐ -->
+<!-- 🌍 END GLOBAL STANDARD AJAX RATING 🌍 -->
 
 </body>
 </html>

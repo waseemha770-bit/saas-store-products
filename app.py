@@ -327,13 +327,14 @@ def dashboard():
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
 
-@app.route('/api/rate_product', methods=['POST', 'GET'])
-def api_rate_product_fixed():
+
+
+@app.route('/api/rate_product', methods=['POST'])
+def api_rate_product_global():
     try:
         from flask import request, jsonify
         from bson.objectid import ObjectId
         
-        # دعم جلب البيانات سواء كانت Form أو JSON
         data = request.get_json() if request.is_json else request.form
         pid = data.get('product_id') or data.get('id')
         rating_val = float(data.get('rating', 0))
@@ -343,33 +344,29 @@ def api_rate_product_fixed():
             
         db_col = database.products_col if hasattr(database, 'products_col') else (database.db.products if hasattr(database, 'db') else database.products)
         
-        # البحث عن المنتج بأكثر من طريقة لضمان إيجاده
-        try:
-            query = {"_id": ObjectId(pid)}
+        try: query = {"_id": ObjectId(pid)}
+        except: query = {"id": str(pid)}
+        
+        prod = db_col.find_one(query)
+        if not prod:
+            query = {"id": int(pid)} if str(pid).isdigit() else {"name": pid}
             prod = db_col.find_one(query)
-            if not prod: raise Exception()
-        except:
-            query = {"id": str(pid)}
-            prod = db_col.find_one(query)
-            if not prod:
-                query = {"id": int(pid)} if str(pid).isdigit() else {"name": pid}
-                prod = db_col.find_one(query)
-                
+            
         if prod:
             curr_rating = float(prod.get('rating', 0))
             curr_reviews = int(prod.get('reviews', 0))
             
             new_reviews = curr_reviews + 1
-            # حساب المتوسط الرياضي للتقييم الجديد
+            # الحساب الدقيق للمتوسط
             new_rating = ((curr_rating * curr_reviews) + rating_val) / new_reviews
+            new_rating = round(new_rating, 1)
             
-            # تحديث قاعدة البيانات بقوة
-            db_col.update_one(query, {"$set": {"rating": round(new_rating, 1), "reviews": new_reviews}})
-            return jsonify({"success": True})
+            db_col.update_one(query, {"$set": {"rating": new_rating, "reviews": new_reviews}})
+            # المعيار العالمي: إرجاع الأرقام الجديدة للواجهة لتحديثها فوراً
+            return jsonify({"success": True, "new_rating": new_rating, "new_reviews": new_reviews})
             
-        return jsonify({"success": False, "error": "المنتج غير موجود في قاعدة البيانات"})
+        return jsonify({"success": False, "error": "المنتج غير موجود"})
     except Exception as e:
-        print("Rating DB Error:", e)
         return jsonify({"success": False, "error": str(e)})
 
 if __name__ == '__main__': app.run(debug=True)
