@@ -83,7 +83,7 @@
                                 <h6 class="fw-bold mb-1">{{ p.name }}
 </h6>
 <!-- STR_RATING -->
-    <div class="mt-1 mb-2 d-flex align-items-center" style="cursor:pointer;" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "\'")|replace('"', '\"') }}')" title="اضغط لتقييم المنتج">
+    <div class="mt-1 mb-1 d-flex align-items-center" style="cursor:pointer;" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "\'")|replace('"', '\"') }}')" title="اضغط لتقييم المنتج">
         <div class="d-inline-flex" id="display-stars-{{ p.id }}">
             {% set avg = p.rating|default(0)|float|round %}
             {% for i in range(1, 6) %}
@@ -99,34 +99,18 @@
 <!-- ADV_BADGES -->
     <div class="mb-2 d-flex flex-wrap gap-1" style="font-size: 0.75em;">
         {% if p.subcategory %}
-            <span class="badge bg-light text-primary border px-2 py-1"><i class="fas fa-tag me-1"></i>{{ p.subcategory }}</span>
+            <span class="badge bg-light text-primary border px-2 py-1 shadow-sm"><i class="fas fa-tag me-1"></i>{{ p.subcategory }}</span>
         {% endif %}
         {% if p.brand %}
-            <span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-bookmark me-1"></i>{{ p.brand }}</span>
+            <span class="badge bg-light text-dark border px-2 py-1 shadow-sm"><i class="fas fa-copyright me-1"></i>{{ p.brand }}</span>
         {% endif %}
         {% if p.p_type %}
-            <span class="badge bg-light text-secondary border px-2 py-1"><i class="fas fa-info-circle me-1"></i>{{ p.p_type }}</span>
+            <span class="badge bg-light text-secondary border px-2 py-1 shadow-sm"><i class="fas fa-info-circle me-1"></i>{{ p.p_type }}</span>
         {% endif %}
     </div>
     <!-- END_ADV_BADGES -->
 
 
-
-            
-
-        
-    
-                                <div class="average-rating" onclick="openRatingModal('{{ p.id }}', '{{ p.name }}')" title="اضغط لتقييم المنتج">
-                                    <div class="stars-display">
-                                        {% for i in range(1, 6) %}
-                                            {% if p.rating >= i %} <i class="fas fa-star"></i>
-                                            {% elif p.rating >= (i - 0.5) %} <i class="fas fa-star-half-alt"></i>
-                                            {% else %} <i class="far fa-star text-warning"></i> {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                    <span class="rating-number">{{ p.rating }}</span>
-                                    <span class="rating-count">({{ p.rating_count }})</span>
-                                </div>
                                 <div class="product-desc-clamped">{{ p.description }}</div>
                                 {% if p.description %}<a class="read-more-btn d-inline-block" onclick="openDetailsModal('{{ p.id }}', {{ p.price }})">التفاصيل...</a>{% else %}<div class="mb-2"></div>{% endif %}
                                 <h5 class="text-primary fw-bold mt-auto mb-3">{% if p.price and p.price|string != "0" and p.price|string != "None" and p.price|string != "" %}{{ p.price }} <small class="text-muted fs-6">{{ settings.currency }}</small>{% else %}<span class="badge bg-secondary px-2 py-1 shadow-sm mt-1 mb-1">السعر عند الطلب</span>{% endif %}</h5>
