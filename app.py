@@ -1,6 +1,7 @@
 import requests
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, send_file
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -17,6 +18,54 @@ def send_telegram_alert(message):
 
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
+
+# ==========================================
+# نظام الإحصائيات (تتبع زيارات المتجر) ومسارات الـ PWA
+# ==========================================
+@app.route('/manifest.json')
+def serve_manifest_global():
+    if os.path.exists('static/manifest.json'):
+        return send_file('static/manifest.json', mimetype='application/json')
+    return jsonify({"error": "not found"}), 404
+
+@app.route('/sw.js')
+def serve_sw_global():
+    if os.path.exists('static/sw.js'):
+        return send_file('static/sw.js', mimetype='application/javascript')
+    return Response("self.addEventListener('install', (e) => {}); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
+
+@app.before_request
+def track_store_views():
+    if request.method == 'GET' and not request.path.startswith(('/api', '/static', '/dashboard', '/login', '/logout', '/manifest', '/sw.js')):
+        try:
+            db_obj = database.db if hasattr(database, 'db') else database
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            db_obj.store_stats.update_one(
+                {"_id": "views_tracker"},
+                {"$inc": {"total": 1, f"daily.{today}": 1, f"monthly.{month}": 1}},
+                upsert=True
+            )
+        except: pass
+
+@app.context_processor
+def inject_dashboard_stats():
+    if request.path.startswith('/dashboard') or request.path.startswith('/admin'):
+        try:
+            db_obj = database.db if hasattr(database, 'db') else database
+            stats = db_obj.store_stats.find_one({"_id": "views_tracker"}) or {}
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            
+            daily = stats.get('daily', {}).get(today, 0)
+            monthly = stats.get('monthly', {}).get(month, 0)
+            total = stats.get('total', 0)
+            weekly = sum(stats.get('daily', {}).get((datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d'), 0) for i in range(7))
+            
+            return dict(v_daily=daily, v_weekly=weekly, v_monthly=monthly, v_total=total)
+        except Exception:
+            return dict(v_daily=0, v_weekly=0, v_monthly=0, v_total=0)
+    return {}
 
 @app.context_processor
 def inject_global_vars():
@@ -60,9 +109,6 @@ def pwa_manifest(slug):
     settings = database.get_settings(user['id']); store_name = settings.get('store_name', 'TajerGo Store'); logo = settings.get('logo_url') or "https://via.placeholder.com/192x192.png?text=App"
     return jsonify({"name": store_name, "short_name": store_name, "start_url": f"/store/{slug}", "display": "standalone", "background_color": "#ffffff", "theme_color": settings.get('theme_color', '#0d6efd'), "icons": [{"src": logo, "sizes": "192x192", "type": "image/png"}, {"src": logo, "sizes": "512x512", "type": "image/png"}]})
 
-@app.route('/sw.js')
-def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
-
 # ==============================================================
 # بروكسي الرفع القوي والمموه لتجاوز حظر الاستضافات وحظر البوتات
 # ==============================================================
@@ -80,7 +126,6 @@ def proxy_upload():
     try:
         raw_b64 = b64_data.split(',')[1] if ',' in b64_data else b64_data
         
-        # التمويه بأن الطلب قادم من متصفح جوجل كروم حقيقي لمنع الحظر
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -137,7 +182,7 @@ def rate_product_api():
         data = request.get_json()
         pid = data.get('product_id')
         stars = int(data.get('rating', 0))
-        old_stars = data.get('old_rating')  # جلب التقييم القديم إن وجد
+        old_stars = data.get('old_rating')
         
         prod_col = None
         if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
@@ -156,14 +201,11 @@ def rate_product_api():
             cr = int(product.get('reviews', 0))
             c_rating = float(product.get('rating', 0))
             
-            # الخوارزمية الرياضية الذكية لتعديل التقييم
             if old_stars and cr > 0:
-                # إزالة التقييم القديم من المجموع الكلي، وإضافة الجديد، دون زيادة عدد المقيمين
                 total_sum = (c_rating * cr) - int(old_stars) + stars
                 nr = cr
                 n_rating = total_sum / nr if nr > 0 else stars
             else:
-                # تقييم جديد تماماً
                 nr = cr + 1
                 n_rating = ((c_rating * cr) + stars) / nr
                 
@@ -256,7 +298,6 @@ def dashboard():
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
                     database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
                 
-                # إرسال إشعار للمدير
                 send_telegram_alert(f"🎉 <b>تاجر جديد انضم لمنصتك!</b>\n\n👤 <b>اسم التاجر:</b> {request.form.get('name')}\n🔗 <b>رابط المتجر:</b> {slug}\n📦 <b>الباقة:</b> {request.form.get('package', 'أساسية')}\n🔑 <b>كلمة المرور:</b> {request.form.get('password', '').strip()}")
 
                 flash("تم إنشاء المتجر بنجاح وتحديد الباقة!", "success")
@@ -273,8 +314,6 @@ def dashboard():
     settings = database.get_settings(session['user_id'])
     coupons = database.get_coupons(session['user_id'])
     
-    # === خوارزمية الذكاء والإحصاء المتقدمة ===
-    from datetime import datetime, timedelta
     now = datetime.now()
     def parse_date(d):
         if isinstance(d, datetime): return d
@@ -364,4 +403,10 @@ def dashboard():
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
+
 if __name__ == '__main__': app.run(debug=True)
+EOF
+
+git add app.py
+git commit -m "Integrated PWA endpoints and store view analytics securely into original app.py backend"
+git push origin main
