@@ -454,6 +454,6 @@ def get_stats():
     except: return {"daily": 0, "weekly": 0, "monthly": 0}
 
 # تحديث دالة dashboard لتمرير الإحصائيات
-original_dashboard = re.search(r'@app\.route\(['"]/dashboard['"].*?def dashboard', app_code, re.DOTALL)
+original_dashboard = re.search(r"""@app\.route\(['"]/dashboard['"].*?def dashboard""", app_code, re.DOTALL)
 if original_dashboard:
     app_code = app_code.replace("return render_template('dashboard.html')", "return render_template('dashboard.html', stats=get_stats())")
