@@ -83,32 +83,22 @@
                                 <h6 class="fw-bold mb-1">{{ p.name }}
 </h6>
 <!-- STR_RATING -->
-    <div class="mt-1 mb-1 d-flex align-items-center" style="cursor:pointer;" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "\'")|replace('"', '\"') }}')" title="اضغط لتقييم المنتج">
-        <div class="d-inline-flex" id="display-stars-{{ p.id }}">
+    <div class="mt-1 mb-2 d-flex align-items-center" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "\'")|replace('"', '\"') }}')" style="cursor:pointer;">
+        <div class="d-inline-flex">
             {% set avg = p.rating|default(0)|float|round %}
             {% for i in range(1, 6) %}
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="{% if avg >= i %}#ffc107{% else %}#e4e5e9{% endif %}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="{% if avg >= i %}#ffc107{% else %}#e4e5e9{% endif %}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
             {% endfor %}
         </div>
-        <span class="ms-1 fw-bold text-dark" style="font-size: 0.85em;" id="display-avg-{{ p.id }}">{{ p.rating|default(0)|float|round(1) }}</span>
-        <span class="text-secondary ms-1" style="font-size: 0.8em;" id="display-count-{{ p.id }}">({{ p.reviews|default(0) }})</span>
+        <span class="ms-1 fw-bold text-dark" style="font-size: 0.85em;">{{ p.rating|default(0)|float|round(1) }}</span>
+        <span class="text-secondary ms-1" style="font-size: 0.8em;">({{ p.reviews|default(0) }})</span>
     </div>
     <!-- END_RATING -->
-<!-- ADV_BADGES -->
-    <div class="mb-2 d-flex flex-wrap gap-1" style="font-size: 0.75em;">
-        {% if p.subcategory %}
-            <span class="badge bg-light text-primary border px-2 py-1 shadow-sm"><i class="fas fa-tag me-1"></i>{{ p.subcategory }}</span>
-        {% endif %}
-        {% if p.brand %}
-            <span class="badge bg-light text-dark border px-2 py-1 shadow-sm"><i class="fas fa-copyright me-1"></i>{{ p.brand }}</span>
-        {% endif %}
-        {% if p.p_type %}
-            <span class="badge bg-light text-secondary border px-2 py-1 shadow-sm"><i class="fas fa-info-circle me-1"></i>{{ p.p_type }}</span>
-        {% endif %}
-    </div>
-    <!-- END_ADV_BADGES -->
+
+
+
 
 
                                 <div class="product-desc-clamped">{{ p.description }}</div>

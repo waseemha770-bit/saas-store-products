@@ -225,16 +225,10 @@ def dashboard():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_product': database.add_product(session['user_id'], request.form.get('name')
-        try:
-            db_col = database.products_col if hasattr(database, 'products_col') else (database.db.products if hasattr(database, 'db') else database.products)
-            db_col.update_one({"name": request.form.get("name")}, {"$set": {"subcategory": request.form.get("subcategory", ""), "brand": request.form.get("brand", ""), "p_type": request.form.get("p_type", "")}})
-        except Exception as e: print("Adv fields error:", e)
+        
 , request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة", "success")
         elif action == 'edit_product': database.edit_product(request.form.get('product_id')
-        try:
-            db_col = database.products_col if hasattr(database, 'products_col') else (database.db.products if hasattr(database, 'db') else database.products)
-            db_col.update_one({"name": request.form.get("name")}, {"$set": {"subcategory": request.form.get("subcategory", ""), "brand": request.form.get("brand", ""), "p_type": request.form.get("p_type", "")}})
-        except Exception as e: print("Adv fields error:", e)
+        
 , session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
@@ -265,10 +259,7 @@ def dashboard():
                 if new_user:
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
                     database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
-        try:
-            db_col = database.products_col if hasattr(database, 'products_col') else (database.db.products if hasattr(database, 'db') else database.products)
-            db_col.update_one({"name": request.form.get("name")}, {"$set": {"subcategory": request.form.get("subcategory", ""), "brand": request.form.get("brand", ""), "p_type": request.form.get("p_type", "")}})
-        except Exception as e: print("Adv fields error:", e)
+        
 
                 
                 # إرسال إشعار للمدير
