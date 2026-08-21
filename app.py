@@ -331,20 +331,25 @@ def logout(): session.clear(); return redirect(url_for('login'))
 
 
 
+
+
 @app.route('/api/rate_product', methods=['POST'])
-def api_rate_product_secure():
+def api_rate_product_ultimate():
     try:
-        from flask import request, jsonify
+        from flask import request, jsonify, make_response
         from bson.objectid import ObjectId
         
         data = request.get_json() if request.is_json else request.form
         pid = data.get('product_id') or data.get('id')
         rating_val = float(data.get('rating', 0))
         
-        # جلب عنوان الـ IP الحقيقي للمستخدم
-        user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        if user_ip and ',' in user_ip:
-            user_ip = user_ip.split(',')[0].strip()
+        # 1. فحص الكوكيز (الخط الدفاعي الأول)
+        if request.cookies.get(f'rated_{pid}'):
+            return jsonify({"success": False, "error": "already_rated"})
+        
+        # 2. جلب الـ IP الحقيقي من شبكة Vercel (الخط الدفاعي الثاني)
+        user_ip = request.headers.get('x-real-ip', request.headers.get('x-vercel-forwarded-for', request.headers.get('X-Forwarded-For', request.remote_addr)))
+        if user_ip and ',' in user_ip: user_ip = user_ip.split(',')[0].strip()
             
         if not pid or rating_val < 1:
             return jsonify({"success": False, "error": "بيانات غير مكتملة"})
@@ -360,7 +365,6 @@ def api_rate_product_secure():
             prod = db_col.find_one(query)
             
         if prod:
-            # 🛡️ الحماية من التكرار عبر السيرفر
             rated_ips = prod.get('rated_ips', [])
             if user_ip in rated_ips:
                 return jsonify({"success": False, "error": "already_rated"})
@@ -371,13 +375,16 @@ def api_rate_product_secure():
             new_reviews = curr_reviews + 1
             new_rating = round(((curr_rating * curr_reviews) + rating_val) / new_reviews, 1)
             
-            # تحديث الأرقام + إضافة الـ IP للقائمة السوداء لهذا المنتج
+            # تحديث قاعدة البيانات
             db_col.update_one(query, {
                 "$set": {"rating": new_rating, "reviews": new_reviews},
                 "$addToSet": {"rated_ips": user_ip}
             })
             
-            return jsonify({"success": True, "new_rating": new_rating, "new_reviews": new_reviews})
+            # إرجاع الاستجابة مع زرع كعكة (Cookie) صالحة لـ 10 سنوات
+            resp = make_response(jsonify({"success": True, "new_rating": new_rating, "new_reviews": new_reviews}))
+            resp.set_cookie(f'rated_{pid}', '1', max_age=315360000)
+            return resp
             
         return jsonify({"success": False, "error": "المنتج غير موجود"})
     except Exception as e:
