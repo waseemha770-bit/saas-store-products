@@ -130,50 +130,6 @@ def proxy_upload():
         
     return jsonify({"success": False, "error": "مزود خدمة غير مدعوم"})
 
-@app.route('/api/rate_product', methods=['POST'])
-def rate_product_api():
-    from flask import request, jsonify
-    try:
-        data = request.get_json()
-        pid = data.get('product_id')
-        stars = int(data.get('rating', 0))
-        old_stars = data.get('old_rating')  # جلب التقييم القديم إن وجد
-        
-        prod_col = None
-        if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
-        elif hasattr(database, 'products'): prod_col = database.products
-        elif hasattr(database, 'products_col'): prod_col = database.products_col
-        else: return jsonify({"success": False, "error": "db not found"})
-
-        product = prod_col.find_one({"id": pid})
-        if not product:
-            try:
-                from bson.objectid import ObjectId
-                product = prod_col.find_one({"_id": ObjectId(pid)})
-            except: pass
-
-        if product:
-            cr = int(product.get('reviews', 0))
-            c_rating = float(product.get('rating', 0))
-            
-            # الخوارزمية الرياضية الذكية لتعديل التقييم
-            if old_stars and cr > 0:
-                # إزالة التقييم القديم من المجموع الكلي، وإضافة الجديد، دون زيادة عدد المقيمين
-                total_sum = (c_rating * cr) - int(old_stars) + stars
-                nr = cr
-                n_rating = total_sum / nr if nr > 0 else stars
-            else:
-                # تقييم جديد تماماً
-                nr = cr + 1
-                n_rating = ((c_rating * cr) + stars) / nr
-                
-            update_query = {"_id": product["_id"]} if "_id" in product else {"id": pid}
-            prod_col.update_one(update_query, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
-            
-            return jsonify({"success": True, "new_rating": round(n_rating, 1), "total_reviews": nr})
-    except Exception as e:
-        print("Rate API Error:", str(e))
-    return jsonify({"success": False}), 400
 
 @app.route('/api/undo_rate_product', methods=['POST'])
 def undo_rate_product_api():
@@ -370,4 +326,50 @@ def dashboard():
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
+
+@app.route('/api/rate_product', methods=['POST', 'GET'])
+def api_rate_product_fixed():
+    try:
+        from flask import request, jsonify
+        from bson.objectid import ObjectId
+        
+        # دعم جلب البيانات سواء كانت Form أو JSON
+        data = request.get_json() if request.is_json else request.form
+        pid = data.get('product_id') or data.get('id')
+        rating_val = float(data.get('rating', 0))
+        
+        if not pid or rating_val < 1:
+            return jsonify({"success": False, "error": "بيانات التقييم غير مكتملة"})
+            
+        db_col = database.products_col if hasattr(database, 'products_col') else (database.db.products if hasattr(database, 'db') else database.products)
+        
+        # البحث عن المنتج بأكثر من طريقة لضمان إيجاده
+        try:
+            query = {"_id": ObjectId(pid)}
+            prod = db_col.find_one(query)
+            if not prod: raise Exception()
+        except:
+            query = {"id": str(pid)}
+            prod = db_col.find_one(query)
+            if not prod:
+                query = {"id": int(pid)} if str(pid).isdigit() else {"name": pid}
+                prod = db_col.find_one(query)
+                
+        if prod:
+            curr_rating = float(prod.get('rating', 0))
+            curr_reviews = int(prod.get('reviews', 0))
+            
+            new_reviews = curr_reviews + 1
+            # حساب المتوسط الرياضي للتقييم الجديد
+            new_rating = ((curr_rating * curr_reviews) + rating_val) / new_reviews
+            
+            # تحديث قاعدة البيانات بقوة
+            db_col.update_one(query, {"$set": {"rating": round(new_rating, 1), "reviews": new_reviews}})
+            return jsonify({"success": True})
+            
+        return jsonify({"success": False, "error": "المنتج غير موجود في قاعدة البيانات"})
+    except Exception as e:
+        print("Rating DB Error:", e)
+        return jsonify({"success": False, "error": str(e)})
+
 if __name__ == '__main__': app.run(debug=True)

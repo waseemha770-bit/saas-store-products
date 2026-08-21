@@ -29,12 +29,12 @@
         .category-tabs .nav-link.active { background-color: var(--main-color); color: white; border-color: var(--main-color); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transform: scale(1.05); }
         .average-rating { cursor: pointer; display: inline-flex; align-items: center; background: #fffdf5; padding: 4px 10px; border-radius: 8px; border: 1px solid #ffe499; transition: all 0.2s; margin-bottom: 8px; }
         .average-rating:hover { background: #ffecb3; transform: scale(1.02); }
-        .stars-display { direction: ltr; display: inline-flex; color: #ffc107; font-size: 0.85rem; margin-left: 5px; gap: 2px;}
+        .stars-display { direction: ltr; display: inline-flex; color: #FFD700; font-size: 0.85rem; margin-left: 5px; gap: 2px;}
         .rating-number { font-weight: 800; color: #333; font-size: 0.9rem; margin-left: 4px; }
         .rating-count { font-size: 0.75rem; color: #888; font-weight: bold; }
         .interactive-stars { direction: ltr; display: flex; justify-content: center; gap: 8px; font-size: 2.2rem; color: #e0e0e0; cursor: pointer; }
         .modal-star { transition: all 0.2s; }
-        .modal-star.hovered, .modal-star.filled { color: #ffc107; text-shadow: 0 0 10px rgba(255, 193, 7, 0.4); transform: scale(1.1); }
+        .modal-star.hovered, .modal-star.filled { color: #FFD700; text-shadow: 0 0 10px rgba(255, 193, 7, 0.4); transform: scale(1.1); }
         .product-desc-clamped { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; font-size: 0.85rem; color: #6c757d; margin-bottom: 2px; line-height: 1.5; }
         .read-more-btn { font-size: 0.8rem; font-weight: bold; color: var(--main-color); cursor: pointer; text-decoration: none; margin-bottom: 10px; }
         .read-more-btn:hover { text-decoration: underline; opacity: 0.8; }
@@ -87,7 +87,7 @@
         <div class="d-inline-flex">
             {% set avg = p.rating|default(0)|float|round %}
             {% for i in range(1, 6) %}
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="{% if avg >= i %}#ffc107{% else %}#e4e5e9{% endif %}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="{% if avg >= i %}#FFD700{% else %}#e4e5e9{% endif %}" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
                 </svg>
             {% endfor %}
@@ -187,11 +187,11 @@
       <div class="modal-body text-center pt-2 pb-3">
         <p id="ratingModalProductName" class="text-secondary small fw-bold mb-3"></p>
         <div class="d-flex justify-content-center flex-row-reverse mb-3" id="interactive-stars" onmouseleave="resetHover()">
-            <svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            <svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         </div>
         <div class="mb-2">
             <button id="confirmRatingBtn" class="btn btn-primary btn-sm px-4 fw-bold rounded-pill" disabled>تأكيد التقييم</button>
@@ -203,8 +203,8 @@
 </div>
 
 <style>
-.modal-star:hover, .modal-star:hover ~ .modal-star { fill: #ffc107 !important; transform: scale(1.15); }
-.star-selected { fill: #ffc107 !important; }
+.modal-star:hover, .modal-star:hover ~ .modal-star { fill: #FFD700 !important; transform: scale(1.15); }
+.star-selected { fill: #FFD700 !important; }
 </style>
 
 <script id="rating-script-pro">
@@ -241,7 +241,7 @@ function openRatingModal(pid, pname) {
         let val = parseInt(s.getAttribute('data-val'));
         if(val <= selectedRating) {
             s.classList.add('star-selected');
-            s.setAttribute('fill', '#ffc107');
+            s.setAttribute('fill', '#FFD700');
         } else {
             s.classList.remove('star-selected');
             s.setAttribute('fill', '#e4e5e9');
@@ -255,7 +255,7 @@ function openRatingModal(pid, pname) {
 function resetHover() { 
     document.querySelectorAll('.modal-star').forEach(s => {
         let val = parseInt(s.getAttribute('data-val'));
-        if(val <= selectedRating) { s.setAttribute('fill', '#ffc107'); } 
+        if(val <= selectedRating) { s.setAttribute('fill', '#FFD700'); } 
         else { s.setAttribute('fill', '#e4e5e9'); }
     }); 
 }
@@ -266,7 +266,7 @@ document.querySelectorAll('.modal-star').forEach(star => {
         document.querySelectorAll('.modal-star').forEach(s => {
             if(parseInt(s.getAttribute('data-val')) <= selectedRating) {
                 s.classList.add('star-selected');
-                s.setAttribute('fill', '#ffc107');
+                s.setAttribute('fill', '#FFD700');
             } else {
                 s.classList.remove('star-selected');
                 s.setAttribute('fill', '#e4e5e9');
@@ -311,8 +311,8 @@ document.getElementById('confirmRatingBtn').addEventListener('click', function()
             let svgStars = '';
             let newRate = Math.round(data.new_rating);
             for(let i=1; i<=5; i++){
-                let color = (newRate >= i) ? '#ffc107' : '#e4e5e9';
-                svgStars += `<svg width="16" height="16" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+                let color = (newRate >= i) ? '#FFD700' : '#e4e5e9';
+                svgStars += `<svg width="16" height="16" viewBox="0 0 24 24" fill="${color}" stroke="#FFD700" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
             }
             document.getElementById('display-stars-' + pid).innerHTML = svgStars;
             setTimeout(() => { ratingModal.hide(); }, 1800);
@@ -407,5 +407,45 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     </script>
     
+
+<!-- ⭐ GOLDEN RATING SYNC ⭐ -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // اعتراض طلبات الشبكة (Fetch API) الخاصة بالتقييم
+    const originalFetch = window.fetch;
+    window.fetch = async function() {
+        let response = await originalFetch.apply(this, arguments);
+        let url = arguments[0];
+        // إذا كان الطلب يخص التقييم، ننتظر نصف ثانية ثم نحدث الصفحة
+        if (typeof url === 'string' && url.includes('/api/rate_product')) {
+            setTimeout(() => {
+                alert("تم حفظ تقييمك بنجاح! شكراً لك.");
+                window.location.reload(true);
+            }, 500);
+        }
+        return response;
+    };
+
+    // خطة بديلة: اعتراض النماذج التقليدية (Forms) الخاصة بالتقييم
+    document.addEventListener('submit', function(e) {
+        if (e.target.action && e.target.action.includes('/api/rate_product')) {
+            e.preventDefault();
+            let formData = new FormData(e.target);
+            let payload = Object.fromEntries(formData.entries());
+            
+            originalFetch('/api/rate_product', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                alert("تم حفظ تقييمك بنجاح! شكراً لك.");
+                window.location.reload(true);
+            });
+        }
+    });
+});
+</script>
+<!-- ⭐ END GOLDEN RATING SYNC ⭐ -->
+
 </body>
 </html>
