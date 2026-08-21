@@ -83,5 +83,71 @@
         </div>
         {% endif %}
     </div>
+
+<!-- ============================================== -->
+<!-- ⚡ DYNAMIC JS INJECTION: ADVANCED FIELDS ⚡ -->
+<!-- ============================================== -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    function injectAdvancedFields() {
+        // البحث عن أي فورم أو نافذة منبثقة تتعلق بالمنتجات
+        let forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            // نتأكد أن الفورم خاص بالمنتجات (يحتوي على حقل السعر مثلاً)
+            if (form.querySelector('input[name="price"]') && !form.querySelector('.dynamic-adv-fields')) {
+                
+                let advBox = document.createElement('div');
+                advBox.className = 'dynamic-adv-fields col-12 mt-4 mb-3 w-100 p-3 bg-light rounded border border-info shadow-sm';
+                advBox.style.borderRight = '4px solid #0dcaf0';
+                
+                advBox.innerHTML = `
+                    <h6 class="text-info mb-3 fw-bold"><i class="fas fa-tags"></i> خصائص إضافية (اختياري)</h6>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">التصنيف الفرعي</label>
+                            <input type="text" name="subcategory" class="form-control form-control-sm" placeholder="مثال: هواتف">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">الماركة / الموديل</label>
+                            <input type="text" name="brand" class="form-control form-control-sm" placeholder="مثال: سامسونج">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold text-muted">النوع / الخصائص</label>
+                            <input type="text" name="p_type" class="form-control form-control-sm" placeholder="مثال: 128GB">
+                        </div>
+                    </div>
+                `;
+
+                // البحث عن زر الإرسال أو الإغلاق لنزرع الصندوق قبله مباشرة
+                let submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+                let priceInput = form.querySelector('input[name="price"]');
+                
+                if (submitBtn) {
+                    submitBtn.parentNode.insertBefore(advBox, submitBtn);
+                } else if (priceInput) {
+                    priceInput.parentNode.appendChild(advBox);
+                } else {
+                    form.appendChild(advBox);
+                }
+            }
+        });
+    }
+
+    // التنفيذ الفوري عند فتح الصفحة
+    injectAdvancedFields();
+
+    // التنفيذ المستمر (مراقبة): لمواجهة النوافذ المنبثقة التي تفتح بعد التحميل
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length) {
+                injectAdvancedFields();
+            }
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+});
+</script>
+<!-- ============================================== -->
+
 </body>
 </html>
