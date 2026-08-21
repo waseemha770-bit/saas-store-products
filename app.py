@@ -1,7 +1,7 @@
-import re
 import requests
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, send_file
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
@@ -18,6 +18,54 @@ def send_telegram_alert(message):
 
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
+
+# ==========================================
+# نظام الإحصائيات (تتبع زيارات المتجر) ومسارات الـ PWA
+# ==========================================
+@app.route('/manifest.json')
+def serve_manifest_global():
+    if os.path.exists('static/manifest.json'):
+        return send_file('static/manifest.json', mimetype='application/json')
+    return jsonify({"error": "not found"}), 404
+
+@app.route('/sw.js')
+def serve_sw_global():
+    if os.path.exists('static/sw.js'):
+        return send_file('static/sw.js', mimetype='application/javascript')
+    return Response("self.addEventListener('install', (e) => {}); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
+
+@app.before_request
+def track_store_views():
+    if request.method == 'GET' and not request.path.startswith(('/api', '/static', '/dashboard', '/login', '/logout', '/manifest', '/sw.js')):
+        try:
+            db_obj = database.db if hasattr(database, 'db') else database
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            db_obj.store_stats.update_one(
+                {"_id": "views_tracker"},
+                {"$inc": {"total": 1, f"daily.{today}": 1, f"monthly.{month}": 1}},
+                upsert=True
+            )
+        except: pass
+
+@app.context_processor
+def inject_dashboard_stats():
+    if request.path.startswith('/dashboard') or request.path.startswith('/admin'):
+        try:
+            db_obj = database.db if hasattr(database, 'db') else database
+            stats = db_obj.store_stats.find_one({"_id": "views_tracker"}) or {}
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            
+            daily = stats.get('daily', {}).get(today, 0)
+            monthly = stats.get('monthly', {}).get(month, 0)
+            total = stats.get('total', 0)
+            weekly = sum(stats.get('daily', {}).get((datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d'), 0) for i in range(7))
+            
+            return dict(v_daily=daily, v_weekly=weekly, v_monthly=monthly, v_total=total)
+        except Exception:
+            return dict(v_daily=0, v_weekly=0, v_monthly=0, v_total=0)
+    return {}
 
 @app.context_processor
 def inject_global_vars():
@@ -61,9 +109,6 @@ def pwa_manifest(slug):
     settings = database.get_settings(user['id']); store_name = settings.get('store_name', 'TajerGo Store'); logo = settings.get('logo_url') or "https://via.placeholder.com/192x192.png?text=App"
     return jsonify({"name": store_name, "short_name": store_name, "start_url": f"/store/{slug}", "display": "standalone", "background_color": "#ffffff", "theme_color": settings.get('theme_color', '#0d6efd'), "icons": [{"src": logo, "sizes": "192x192", "type": "image/png"}, {"src": logo, "sizes": "512x512", "type": "image/png"}]})
 
-@app.route('/sw.js')
-def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
-
 # ==============================================================
 # بروكسي الرفع القوي والمموه لتجاوز حظر الاستضافات وحظر البوتات
 # ==============================================================
@@ -81,7 +126,6 @@ def proxy_upload():
     try:
         raw_b64 = b64_data.split(',')[1] if ',' in b64_data else b64_data
         
-        # التمويه بأن الطلب قادم من متصفح جوجل كروم حقيقي لمنع الحظر
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -131,6 +175,47 @@ def proxy_upload():
         
     return jsonify({"success": False, "error": "مزود خدمة غير مدعوم"})
 
+@app.route('/api/rate_product', methods=['POST'])
+def rate_product_api():
+    from flask import request, jsonify
+    try:
+        data = request.get_json()
+        pid = data.get('product_id')
+        stars = int(data.get('rating', 0))
+        old_stars = data.get('old_rating')
+        
+        prod_col = None
+        if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
+        elif hasattr(database, 'products'): prod_col = database.products
+        elif hasattr(database, 'products_col'): prod_col = database.products_col
+        else: return jsonify({"success": False, "error": "db not found"})
+
+        product = prod_col.find_one({"id": pid})
+        if not product:
+            try:
+                from bson.objectid import ObjectId
+                product = prod_col.find_one({"_id": ObjectId(pid)})
+            except: pass
+
+        if product:
+            cr = int(product.get('reviews', 0))
+            c_rating = float(product.get('rating', 0))
+            
+            if old_stars and cr > 0:
+                total_sum = (c_rating * cr) - int(old_stars) + stars
+                nr = cr
+                n_rating = total_sum / nr if nr > 0 else stars
+            else:
+                nr = cr + 1
+                n_rating = ((c_rating * cr) + stars) / nr
+                
+            update_query = {"_id": product["_id"]} if "_id" in product else {"id": pid}
+            prod_col.update_one(update_query, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
+            
+            return jsonify({"success": True, "new_rating": round(n_rating, 1), "total_reviews": nr})
+    except Exception as e:
+        print("Rate API Error:", str(e))
+    return jsonify({"success": False}), 400
 
 @app.route('/api/undo_rate_product', methods=['POST'])
 def undo_rate_product_api():
@@ -181,12 +266,8 @@ def dashboard():
     is_super_admin = (session['store_slug'] == 'admin-store')
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'add_product': database.add_product(session['user_id'], request.form.get('name')
-        
-, request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة", "success")
-        elif action == 'edit_product': database.edit_product(request.form.get('product_id')
-        
-, session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
+        if action == 'add_product': database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة", "success")
+        elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
         elif action == 'add_coupon': database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
@@ -216,10 +297,7 @@ def dashboard():
                 if new_user:
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
                     database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
-        
-
                 
-                # إرسال إشعار للمدير
                 send_telegram_alert(f"🎉 <b>تاجر جديد انضم لمنصتك!</b>\n\n👤 <b>اسم التاجر:</b> {request.form.get('name')}\n🔗 <b>رابط المتجر:</b> {slug}\n📦 <b>الباقة:</b> {request.form.get('package', 'أساسية')}\n🔑 <b>كلمة المرور:</b> {request.form.get('password', '').strip()}")
 
                 flash("تم إنشاء المتجر بنجاح وتحديد الباقة!", "success")
@@ -236,8 +314,6 @@ def dashboard():
     settings = database.get_settings(session['user_id'])
     coupons = database.get_coupons(session['user_id'])
     
-    # === خوارزمية الذكاء والإحصاء المتقدمة ===
-    from datetime import datetime, timedelta
     now = datetime.now()
     def parse_date(d):
         if isinstance(d, datetime): return d
@@ -328,133 +404,4 @@ def dashboard():
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
 
-
-
-
-
-
-
-
-
-# --- نظام تتبع المشاهدات ---
-
-
-@app.route('/api/rate_product', methods=['POST'])
-def api_rate_product_clean():
-    try:
-        from flask import request, jsonify, make_response
-        from bson.objectid import ObjectId
-        data = request.get_json() if request.is_json else request.form
-        pid = data.get('product_id') or data.get('id')
-        rating_val = float(data.get('rating', 0))
-        
-        if request.cookies.get(f'rated_{pid}'):
-            return jsonify({"success": False, "error": "already_rated"})
-            
-        user_ip = request.headers.get('x-real-ip', request.headers.get('X-Forwarded-For', request.remote_addr))
-        if user_ip and ',' in user_ip: user_ip = user_ip.split(',')[0].strip()
-            
-        if not pid or rating_val < 1: return jsonify({"success": False, "error": "invalid"})
-        
-        db_col = database.products_col if hasattr(database, 'products_col') else (database.db.products if hasattr(database, 'db') else database.products)
-        
-        try: query = {"_id": ObjectId(pid)}
-        except: query = {"id": str(pid)}
-        prod = db_col.find_one(query)
-        if not prod:
-            query = {"id": int(pid)} if str(pid).isdigit() else {"name": pid}
-            prod = db_col.find_one(query)
-            
-        if prod:
-            rated_ips = prod.get('rated_ips', [])
-            if user_ip in rated_ips: return jsonify({"success": False, "error": "already_rated"})
-            
-            curr_rating, curr_reviews = float(prod.get('rating', 0)), int(prod.get('reviews', 0))
-            new_reviews = curr_reviews + 1
-            new_rating = round(((curr_rating * curr_reviews) + rating_val) / new_reviews, 1)
-            
-            db_col.update_one(query, {"$set": {"rating": new_rating, "reviews": new_reviews}, "$addToSet": {"rated_ips": user_ip}})
-            resp = make_response(jsonify({"success": True, "new_rating": new_rating, "new_reviews": new_reviews}))
-            resp.set_cookie(f'rated_{pid}', '1', max_age=31536000)
-            return resp
-            
-        return jsonify({"success": False, "error": "not_found"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-
-@app.route('/manifest.json')
-def serve_manifest():
-    from flask import send_file
-    return send_file('static/manifest.json', mimetype='application/json')
-
-@app.route('/sw.js')
-def serve_sw():
-    from flask import send_file
-    return send_file('static/sw.js', mimetype='application/javascript')
-
-@app.before_request
-def track_store_views():
-    from flask import request
-    from datetime import datetime
-    if request.method == 'GET' and not request.path.startswith(('/api', '/static', '/dashboard', '/login', '/logout', '/manifest', '/sw.js')):
-        try:
-            db_obj = database.db if hasattr(database, 'db') else database
-            today = datetime.now().strftime('%Y-%m-%d')
-            month = datetime.now().strftime('%Y-%m')
-            db_obj.store_stats.update_one(
-                {"_id": "views_tracker"},
-                {"$inc": {"total": 1, f"daily.{today}": 1, f"monthly.{month}": 1}},
-                upsert=True
-            )
-        except: pass
-
-@app.context_processor
-def inject_dashboard_stats():
-    from flask import request
-    from datetime import datetime, timedelta
-    if request.path.startswith('/dashboard') or request.path.startswith('/admin'):
-        try:
-            db_obj = database.db if hasattr(database, 'db') else database
-            stats = db_obj.store_stats.find_one({"_id": "views_tracker"}) or {}
-            today = datetime.now().strftime('%Y-%m-%d')
-            month = datetime.now().strftime('%Y-%m')
-            
-            daily = stats.get('daily', {}).get(today, 0)
-            monthly = stats.get('monthly', {}).get(month, 0)
-            total = stats.get('total', 0)
-            
-            weekly = sum(stats.get('daily', {}).get((datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d'), 0) for i in range(7))
-            return dict(v_daily=daily, v_weekly=weekly, v_monthly=monthly, v_total=total)
-        except Exception: 
-            return dict(v_daily=0, v_weekly=0, v_monthly=0, v_total=0)
-    return {}
-
 if __name__ == '__main__': app.run(debug=True)
-
-
-from datetime import datetime, timedelta
-
-@app.before_request
-def track_visit():
-    if request.method == 'GET' and not any(request.path.startswith(x) for x in ['/api', '/static', '/dashboard', '/login']):
-        try:
-            db_obj = database.db if hasattr(database, 'db') else database
-            db_obj.visit_logs.insert_one({"timestamp": datetime.utcnow()})
-        except: pass
-
-def get_stats():
-    try:
-        db_obj = database.db if hasattr(database, 'db') else database
-        now = datetime.utcnow()
-        return {
-            "daily": db_obj.visit_logs.count_documents({"timestamp": {"$gte": now - timedelta(days=1)}}),
-            "weekly": db_obj.visit_logs.count_documents({"timestamp": {"$gte": now - timedelta(days=7)}}),
-            "monthly": db_obj.visit_logs.count_documents({"timestamp": {"$gte": now - timedelta(days=30)}})
-        }
-    except: return {"daily": 0, "weekly": 0, "monthly": 0}
-
-# تحديث دالة dashboard لتمرير الإحصائيات
-
-if __name__ == '__main__':
-    app.run(debug=True)
