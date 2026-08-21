@@ -337,15 +337,7 @@ def logout(): session.clear(); return redirect(url_for('login'))
 
 # --- نظام تتبع المشاهدات ---
 
-@app.context_processor
-def inject_views():
-    try:
-        db_obj = database.db if hasattr(database, 'db') else database
-        stats = db_obj.store_stats.find_one({"_id": "store_views"})
-        return dict(total_store_views=stats['count'] if stats else 1)
-    except: return dict(total_store_views=1)
 
-# --- نظام التقييم المحمي من التكرار ---
 @app.route('/api/rate_product', methods=['POST'])
 def api_rate_product_clean():
     try:
@@ -388,6 +380,54 @@ def api_rate_product_clean():
         return jsonify({"success": False, "error": "not_found"})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
+
+@app.route('/manifest.json')
+def serve_manifest():
+    from flask import send_file
+    return send_file('static/manifest.json', mimetype='application/json')
+
+@app.route('/sw.js')
+def serve_sw():
+    from flask import send_file
+    return send_file('static/sw.js', mimetype='application/javascript')
+
+@app.before_request
+def track_store_views():
+    from flask import request
+    from datetime import datetime
+    if request.method == 'GET' and not request.path.startswith(('/api', '/static', '/dashboard', '/login', '/logout', '/manifest', '/sw.js')):
+        try:
+            db_obj = database.db if hasattr(database, 'db') else database
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            db_obj.store_stats.update_one(
+                {"_id": "views_tracker"},
+                {"$inc": {"total": 1, f"daily.{today}": 1, f"monthly.{month}": 1}},
+                upsert=True
+            )
+        except: pass
+
+@app.context_processor
+def inject_dashboard_stats():
+    from flask import request
+    from datetime import datetime, timedelta
+    if request.path.startswith('/dashboard') or request.path.startswith('/admin'):
+        try:
+            db_obj = database.db if hasattr(database, 'db') else database
+            stats = db_obj.store_stats.find_one({"_id": "views_tracker"}) or {}
+            today = datetime.now().strftime('%Y-%m-%d')
+            month = datetime.now().strftime('%Y-%m')
+            
+            daily = stats.get('daily', {}).get(today, 0)
+            monthly = stats.get('monthly', {}).get(month, 0)
+            total = stats.get('total', 0)
+            
+            weekly = sum(stats.get('daily', {}).get((datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d'), 0) for i in range(7))
+            return dict(v_daily=daily, v_weekly=weekly, v_monthly=monthly, v_total=total)
+        except Exception: 
+            return dict(v_daily=0, v_weekly=0, v_monthly=0, v_total=0)
+    return {}
 
 if __name__ == '__main__': app.run(debug=True)
 
