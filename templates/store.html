@@ -411,9 +411,36 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 
-<!-- 🌍 GLOBAL STANDARD AJAX RATING 🌍 -->
+
+
+
+<!-- 🌍 SECURE AJAX RATING 🌍 -->
 <script>
+window.showToastMsg = function(msg, bgColor, textColor) {
+    let toast = document.createElement('div');
+    toast.style.cssText = `position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:${bgColor}; color:${textColor}; padding:12px 24px; border-radius:30px; z-index:9999; box-shadow:0 10px 15px rgba(0,0,0,0.2); font-weight:bold; font-size:14px; opacity:0; transition:opacity 0.3s; white-space:nowrap;`;
+    toast.innerHTML = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.style.opacity = '1', 10);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+};
+
+window.closeRatingModal = function() {
+    let modalEl = document.getElementById('ratingModal');
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        let modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modalInstance.hide();
+    }
+};
+
 window.submitGlobalRating = function(pid, ratingValue) {
+    // 🛡️ الحماية الأولى: المتصفح (Local Storage)
+    if (localStorage.getItem('rated_' + pid)) {
+        showToastMsg('⚠️ لقد قمت بتقييم هذا المنتج مسبقاً', '#ffc107', '#000');
+        closeRatingModal();
+        return;
+    }
+
     fetch('/api/rate_product', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -422,13 +449,13 @@ window.submitGlobalRating = function(pid, ratingValue) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // 1. تحديث الأرقام في بطاقة المنتج فوراً
+            localStorage.setItem('rated_' + pid, 'true'); // تسجيل في المتصفح
+            
             let avgEl = document.getElementById('display-avg-' + pid);
             let countEl = document.getElementById('display-count-' + pid);
             if(avgEl) avgEl.innerText = data.new_rating;
             if(countEl) countEl.innerText = '(' + data.new_reviews + ')';
             
-            // 2. تحديث النجوم بصرياً للون الذهبي الفاتح (#FFD700)
             let starsContainer = document.getElementById('display-stars-' + pid);
             if(starsContainer) {
                 let svgStars = '';
@@ -440,45 +467,33 @@ window.submitGlobalRating = function(pid, ratingValue) {
                 starsContainer.innerHTML = svgStars;
             }
             
-            // 3. إغلاق نافذة التقييم (Modal) إن وجدت
-            let modalEl = document.getElementById('ratingModal');
-            if (modalEl && typeof bootstrap !== 'undefined') {
-                let modalInstance = bootstrap.Modal.getInstance(modalEl);
-                if(modalInstance) modalInstance.hide();
-            }
+            showToastMsg('⭐ تم حفظ التقييم بنجاح', '#28a745', 'white');
+            closeRatingModal();
             
-            // 4. عرض إشعار احترافي منبثق (Toast) أسفل الشاشة
-            let toast = document.createElement('div');
-            toast.style.cssText = 'position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#28a745; color:white; padding:12px 24px; border-radius:30px; z-index:9999; box-shadow:0 10px 15px rgba(0,0,0,0.2); font-weight:bold; font-size:14px; opacity:0; transition:opacity 0.3s;';
-            toast.innerHTML = '⭐ تم حفظ التقييم بنجاح';
-            document.body.appendChild(toast);
-            
-            // تحريك الإشعار وإخفاؤه
-            setTimeout(() => toast.style.opacity = '1', 10);
-            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
-            
+        } else if (data.error === 'already_rated') {
+            // 🛡️ الحماية الثانية: استجابة السيرفر
+            localStorage.setItem('rated_' + pid, 'true');
+            showToastMsg('⚠️ لقد قمت بتقييم هذا المنتج مسبقاً', '#ffc107', '#000');
+            closeRatingModal();
         } else {
-            console.error("خطأ في التقييم: " + data.error);
+            console.error("خطأ: " + data.error);
         }
     })
-    .catch(err => console.error("Network Error:", err));
+    .catch(err => console.error("Error:", err));
 };
 
-// اعتراض نموذج التقييم لمنع تحديث الصفحة
 document.addEventListener('submit', function(e) {
     if (e.target.action && e.target.action.includes('/api/rate_product')) {
-        e.preventDefault(); // منع التحميل
+        e.preventDefault();
         let formData = new FormData(e.target);
         let payload = Object.fromEntries(formData.entries());
         let pid = payload.product_id || payload.id;
         let ratingVal = payload.rating || payload.rating_value;
-        if(pid && ratingVal) {
-            submitGlobalRating(pid, ratingVal);
-        }
+        if(pid && ratingVal) submitGlobalRating(pid, ratingVal);
     }
 });
 </script>
-<!-- 🌍 END GLOBAL STANDARD AJAX RATING 🌍 -->
+<!-- 🌍 END SECURE AJAX RATING 🌍 -->
 
 </body>
 </html>

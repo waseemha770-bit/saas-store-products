@@ -329,8 +329,10 @@ def logout(): session.clear(); return redirect(url_for('login'))
 
 
 
+
+
 @app.route('/api/rate_product', methods=['POST'])
-def api_rate_product_global():
+def api_rate_product_secure():
     try:
         from flask import request, jsonify
         from bson.objectid import ObjectId
@@ -339,8 +341,13 @@ def api_rate_product_global():
         pid = data.get('product_id') or data.get('id')
         rating_val = float(data.get('rating', 0))
         
+        # جلب عنوان الـ IP الحقيقي للمستخدم
+        user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if user_ip and ',' in user_ip:
+            user_ip = user_ip.split(',')[0].strip()
+            
         if not pid or rating_val < 1:
-            return jsonify({"success": False, "error": "بيانات التقييم غير مكتملة"})
+            return jsonify({"success": False, "error": "بيانات غير مكتملة"})
             
         db_col = database.products_col if hasattr(database, 'products_col') else (database.db.products if hasattr(database, 'db') else database.products)
         
@@ -353,16 +360,23 @@ def api_rate_product_global():
             prod = db_col.find_one(query)
             
         if prod:
+            # 🛡️ الحماية من التكرار عبر السيرفر
+            rated_ips = prod.get('rated_ips', [])
+            if user_ip in rated_ips:
+                return jsonify({"success": False, "error": "already_rated"})
+                
             curr_rating = float(prod.get('rating', 0))
             curr_reviews = int(prod.get('reviews', 0))
             
             new_reviews = curr_reviews + 1
-            # الحساب الدقيق للمتوسط
-            new_rating = ((curr_rating * curr_reviews) + rating_val) / new_reviews
-            new_rating = round(new_rating, 1)
+            new_rating = round(((curr_rating * curr_reviews) + rating_val) / new_reviews, 1)
             
-            db_col.update_one(query, {"$set": {"rating": new_rating, "reviews": new_reviews}})
-            # المعيار العالمي: إرجاع الأرقام الجديدة للواجهة لتحديثها فوراً
+            # تحديث الأرقام + إضافة الـ IP للقائمة السوداء لهذا المنتج
+            db_col.update_one(query, {
+                "$set": {"rating": new_rating, "reviews": new_reviews},
+                "$addToSet": {"rated_ips": user_ip}
+            })
+            
             return jsonify({"success": True, "new_rating": new_rating, "new_reviews": new_reviews})
             
         return jsonify({"success": False, "error": "المنتج غير موجود"})
