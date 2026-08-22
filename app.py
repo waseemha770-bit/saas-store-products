@@ -418,8 +418,3 @@ def dashboard():
 def logout(): session.clear(); return redirect(url_for('login'))
 
 if __name__ == '__main__': app.run(debug=True)
-EOF
-
-git add app.py
-git commit -m "Integrated PWA endpoints and store view analytics securely into original app.py backend"
-git push origin main
