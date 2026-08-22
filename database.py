@@ -162,8 +162,11 @@ def edit_product(product_id, user_id, name, desc, price, cat, img, stock):
 def delete_product(product_id, user_id): 
     products_col.delete_one({"id": product_id, "u_id": user_id})
 
-def get_products(user_id): 
-    return list(products_col.find({"u_id": user_id}))
+def get_products(user_id, page=1, limit=50):
+    skip = (page - 1) * limit
+    total = products_col.count_documents({"u_id": user_id})
+    items = list(products_col.find({"u_id": user_id}).sort("created_at", -1).skip(skip).limit(limit))
+    return items, total
 
 def rate_product(product_id, stars):
     try:
@@ -208,8 +211,11 @@ def create_order(store_id, customer_name, customer_phone, customer_address, paym
     })
     return order_id
 
-def get_orders(store_id): 
-    return list(orders_col.find({"store_id": store_id}).sort("date", -1))
+def get_orders(store_id, page=1, limit=50):
+    skip = (page - 1) * limit
+    total = orders_col.count_documents({"store_id": store_id})
+    items = list(orders_col.find({"store_id": store_id}).sort("date", -1).skip(skip).limit(limit))
+    return items, total
 
 # ==========================================
 # الكوبونات والباقات (Coupons & Packages)

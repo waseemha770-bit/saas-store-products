@@ -311,8 +311,19 @@ def dashboard():
             else: flash("الرابط الجديد محجوز لتاجر آخر!", "danger")
         return redirect(url_for('dashboard'))
     
-    orders = database.get_orders(session['user_id'])
-    products = database.get_products(session['user_id'])
+    
+    # Pagination Logic
+    page = int(request.args.get('page', 1))
+    orders, total_orders_count = database.get_orders(session['user_id'], page=page, limit=50)
+    products, total_products_count = database.get_products(session['user_id'], page=page, limit=50)
+    
+    total_pages_orders = (total_orders_count + 49) // 50
+    total_pages_products = (total_products_count + 49) // 50
+    pagination_info = {'current_page': page, 'total_pages_orders': total_pages_orders, 'total_pages_products': total_pages_products}
+    
+    # لجلب كل الطلبات لحساب الإحصائيات (نقوم بجلب الحقول المطلوبة فقط لتخفيف الضغط على الذاكرة)
+    all_orders_for_stats = list(database.orders_col.find({"store_id": session['user_id']}, {"status": 1, "total": 1, "date": 1, "customer_phone": 1, "customer_name": 1, "cart_items": 1}))
+
     settings = database.get_settings(session['user_id'])
     coupons = database.get_coupons(session['user_id'])
     
@@ -326,14 +337,14 @@ def dashboard():
         try: return float(str(t).replace(',', '').strip())
         except: return 0.0
 
-    completed_orders = [o for o in orders if o.get('status') == 'تم التوصيل 🟢']
-    canceled_orders = [o for o in orders if o.get('status') == 'ملغي 🔴']
+    completed_orders = [o for o in all_orders_for_stats if o.get('status') == 'تم التوصيل 🟢']
+    canceled_orders = [o for o in all_orders_for_stats if o.get('status') == 'ملغي 🔴']
     
-    total_sales = sum(clean_total(o.get('total')) for o in orders if o.get('status') != 'ملغي 🔴')
+    total_sales = sum(clean_total(o.get('total')) for o in all_orders_for_stats if o.get('status') != 'ملغي 🔴')
     net_sales = sum(clean_total(o.get('total')) for o in completed_orders)
     
     avg_order_value = net_sales / len(completed_orders) if completed_orders else 0
-    completion_rate = (len(completed_orders) / len(orders) * 100) if orders else 0
+    completion_rate = (len(completed_orders) / len(all_orders_for_stats) * 100) if orders else 0
     
     customers_map = {}
     product_sales = {}
@@ -379,7 +390,7 @@ def dashboard():
     adv_stats = {
         'total_sales': total_sales,
         'net_sales': net_sales,
-        'total_orders': len(orders),
+        'total_orders': len(all_orders_for_stats),
         'completed_orders': len(completed_orders),
         'canceled_orders': len(canceled_orders),
         'avg_order_value': avg_order_value,
@@ -399,9 +410,9 @@ def dashboard():
     }
     
     status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
-    for o in orders: status_counts[o.get('status', 'جديد 🟡')] += 1
+    for o in all_orders_for_stats: status_counts[o.get('status', 'جديد 🟡')] += 1
     
-    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'_id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
+    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, pagination=pagination_info, stats={"total_orders": len(all_orders_for_stats), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'_id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
