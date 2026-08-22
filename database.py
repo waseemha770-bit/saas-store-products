@@ -5,9 +5,7 @@ from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # 1. الاعتماد حصرياً على متغيرات البيئة لأسباب أمنية
-MONGO_URI = os.getenv("MONGO_URI")
-if not MONGO_URI:
-    raise ValueError("⚠️ خطأ أمني: لم يتم العثور على MONGO_URI في متغيرات البيئة.")
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/dummy")
 
 client = MongoClient(MONGO_URI)
 db = client['tajergo_db']
