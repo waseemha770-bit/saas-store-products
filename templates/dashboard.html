@@ -88,13 +88,15 @@
     </div>
     
     <div class="tab-pane fade" id="orders">
-        <div class="row"><div class="col-md-12 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a><div class="table-responsive" style="max-height: 400px;"><table class="table table-bordered table-striped text-center align-middle" style="font-size:0.9rem;"><thead class="table-light"><tr><th>الطلب</th><th>العميل</th><th>المنتجات والخصم</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody>{% for o in orders %}<tr><td>{{ o.order_id }}</td><td class="text-start">👤 {{ o.customer_name }}<br>📞 {{ o.customer_phone }}</td><td class="text-start">{% for i in o.cart_items %} ▪️ {{ i.name }} (x{{ i.qty }})<br> {% endfor %}{% if o.get('discount_info') %}<span class="badge bg-warning text-dark mt-1">{{ o.discount_info }}</span>{% endif %}</td><td class="fw-bold text-success">{{ o.total }}</td><td><form method="POST"><input type="hidden" name="action" value="update_order_status"><input type="hidden" name="order_id" value="{{ o.order_id }}"><select name="new_status" class="form-select form-select-sm fw-bold" onchange="this.form.submit()"><option value="جديد 🟡" {% if o.get('status') == 'جديد 🟡' %}selected{% endif %}>جديد 🟡</option><option value="قيد التجهيز 🔵" {% if o.get('status') == 'قيد التجهيز 🔵' %}selected{% endif %}>تجهيز 🔵</option><option value="تم التوصيل 🟢" {% if o.get('status') == 'تم التوصيل 🟢' %}selected{% endif %}>توصيل 🟢</option><option value="ملغي 🔴" {% if o.get('status') == 'ملغي 🔴' %}selected{% endif %}>ملغي 🔴</option></select></form></td></tr>{% endfor %}</tbody></table></div></div></div></div></div></div>
+        <div class="row"><div class="col-md-12 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a><div class="table-responsive" style="max-height: 400px;"><table class="table table-bordered table-striped text-center align-middle" style="font-size:0.9rem;"><thead class="table-light"><tr><th>الطلب</th><th>العميل</th><th>المنتجات والخصم</th><th>الإجمالي</th><th>الحالة</th></tr></thead><tbody>{% for o in orders %}<tr><td>{{ o.order_id }}</td><td class="text-start">👤 {{ o.customer_name }}<br>📞 {{ o.customer_phone }}</td><td class="text-start">{% for i in o.cart_items %} ▪️ {{ i.name }} (x{{ i.qty }})<br> {% endfor %}{% if o.get('discount_info') %}<span class="badge bg-warning text-dark mt-1">{{ o.discount_info }}</span>{% endif %}</td><td class="fw-bold text-success">{{ o.total }}</td><td><form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="update_order_status"><input type="hidden" name="order_id" value="{{ o.order_id }}"><select name="new_status" class="form-select form-select-sm fw-bold" onchange="this.form.submit()"><option value="جديد 🟡" {% if o.get('status') == 'جديد 🟡' %}selected{% endif %}>جديد 🟡</option><option value="قيد التجهيز 🔵" {% if o.get('status') == 'قيد التجهيز 🔵' %}selected{% endif %}>تجهيز 🔵</option><option value="تم التوصيل 🟢" {% if o.get('status') == 'تم التوصيل 🟢' %}selected{% endif %}>توصيل 🟢</option><option value="ملغي 🔴" {% if o.get('status') == 'ملغي 🔴' %}selected{% endif %}>ملغي 🔴</option></select></form></td></tr>{% endfor %}</tbody></table></div></div></div></div></div></div>
 
     <div class="tab-pane fade" id="products">
         <div class="card shadow-sm border-0 mb-4 border-top border-4 border-primary">
             <div class="card-body">
                 <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle text-primary"></i> إضافة منتج</h5>
                 <form method="POST" class="row g-3" id="addProductForm">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="action" value="add_product">
                     <div class="col-md-4"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" required></div>
                     <div class="col-md-4"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" required></div>
@@ -126,7 +128,8 @@
                                 <td><span class="badge bg-secondary">{{ p.category }}</span></td>
                                 <td>
                                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">تعديل</button>
-                                    <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>
+                                    <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>
                                 </td>
                             </tr>
                             <div class="modal fade" id="editModal{{ p.id }}">
@@ -135,6 +138,7 @@
                                         <div class="modal-header bg-light"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                         <div class="modal-body">
                                             <form method="POST" class="row g-3">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}">
                                                 <div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div>
                                                 <div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" value="{{ p.price }}" required></div>
@@ -158,8 +162,10 @@
 
     <div class="tab-pane fade" id="coupons">
         <div class="row">
-            <div class="col-md-5 mb-4"><div class="card shadow-sm border-0 border-top border-4 border-warning"><div class="card-body"><h5 class="fw-bold mb-3"><i class="fas fa-ticket-alt text-warning"></i> إنشاء كوبون خصم</h5><form method="POST"><input type="hidden" name="action" value="add_coupon"><div class="mb-3"><label class="small fw-bold">كود الكوبون (مثال: KSA20)</label><input type="text" name="code" class="form-control" required style="text-transform: uppercase;"></div><div class="mb-4"><label class="small fw-bold">نسبة الخصم المئوية (%)</label><input type="number" name="discount" class="form-control" placeholder="مثال: 15" required min="1" max="99"></div><button class="btn btn-warning w-100 fw-bold text-dark shadow-sm">تفعيل الكوبون</button></form></div></div></div>
-            <div class="col-md-7"><div class="card shadow-sm border-0"><div class="card-body"><h5 class="fw-bold mb-3">الكوبونات الفعالة</h5><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>كود الكوبون</th><th>نسبة الخصم</th><th>إجراءات</th></tr></thead><tbody>{% for c in coupons %}<tr><td class="fw-bold text-primary fs-5">{{ c.code }}</td><td><span class="badge bg-success fs-6">{{ c.discount }}%</span></td><td><form method="POST" onsubmit="return confirm('إلغاء هذا الكوبون؟');"><input type="hidden" name="action" value="delete_coupon"><input type="hidden" name="coupon_id" value="{{ c.id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted py-3 text-center fw-bold">لا توجد كوبونات فعالة حالياً</td></tr>{% endfor %}</tbody></table></div></div></div></div>
+            <div class="col-md-5 mb-4"><div class="card shadow-sm border-0 border-top border-4 border-warning"><div class="card-body"><h5 class="fw-bold mb-3"><i class="fas fa-ticket-alt text-warning"></i> إنشاء كوبون خصم</h5><form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="add_coupon"><div class="mb-3"><label class="small fw-bold">كود الكوبون (مثال: KSA20)</label><input type="text" name="code" class="form-control" required style="text-transform: uppercase;"></div><div class="mb-4"><label class="small fw-bold">نسبة الخصم المئوية (%)</label><input type="number" name="discount" class="form-control" placeholder="مثال: 15" required min="1" max="99"></div><button class="btn btn-warning w-100 fw-bold text-dark shadow-sm">تفعيل الكوبون</button></form></div></div></div>
+            <div class="col-md-7"><div class="card shadow-sm border-0"><div class="card-body"><h5 class="fw-bold mb-3">الكوبونات الفعالة</h5><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>كود الكوبون</th><th>نسبة الخصم</th><th>إجراءات</th></tr></thead><tbody>{% for c in coupons %}<tr><td class="fw-bold text-primary fs-5">{{ c.code }}</td><td><span class="badge bg-success fs-6">{{ c.discount }}%</span></td><td><form method="POST" onsubmit="return confirm('إلغاء هذا الكوبون؟');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_coupon"><input type="hidden" name="coupon_id" value="{{ c.id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted py-3 text-center fw-bold">لا توجد كوبونات فعالة حالياً</td></tr>{% endfor %}</tbody></table></div></div></div></div>
         </div>
     </div>
 
@@ -170,6 +176,7 @@
                     <div class="card-body">
                         <h5 class="fw-bold mb-3 border-bottom pb-2">⚙️ إعدادات المتجر والهوية والتخزين</h5>
                         <form method="POST" class="row g-3">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="save_settings">
                             {% if is_super_admin %}<div class="col-md-12 mb-4 p-3 bg-dark rounded border border-warning shadow-sm"><label class="small fw-bold text-warning"><i class="fas fa-crown"></i> إعدادات المنصة: شعار بوابة الدخول</label><div class="d-flex align-items-center gap-3 mt-2"><img src="{{ settings.get('platform_logo', platform_logo) }}" onerror="fixImg(this)" width="60" height="60" style="object-fit:cover; border-radius:50%; border:2px solid #ffc107; background:#fff;"><div class="flex-grow-1"><div class="upload-btn-wrapper mb-0"><button type="button" class="btn btn-outline-warning btn-sm w-100 fw-bold border-2 text-white"><i class="fas fa-cloud-upload-alt"></i> رفع الشعار</button><input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'platformLogoInput', 'platformLogoStatus', 'settingsSaveBtn')"></div><small id="platformLogoStatus" class="fw-bold d-block text-warning mb-1" style="font-size:0.8rem;"></small><input type="text" name="platform_logo" id="platformLogoInput" class="form-control form-control-sm border-warning bg-light" value="{{ settings.get('platform_logo', '') }}" placeholder="أو الصق الرابط المباشر"></div></div></div>{% endif %}
                             
@@ -228,6 +235,7 @@
                     <div class="card-body">
                         <h5 class="fw-bold mb-3 text-dark"><i class="fas fa-shield-alt text-warning"></i> كلمة المرور</h5>
                         <form method="POST" class="d-flex flex-column gap-3">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="change_password">
                             <div><label class="small fw-bold">الحالية</label><input type="password" name="old_password" class="form-control" required></div>
                             <div><label class="small fw-bold">الجديدة</label><input type="password" name="new_password" class="form-control" required></div>
@@ -250,6 +258,7 @@
                         <div class="row">
                             <div class="col-md-4 mb-3">
                                 <form method="POST" class="p-3 bg-light rounded border">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <input type="hidden" name="action" value="add_package">
                                     <label class="small fw-bold">اسم الباقة</label><input type="text" name="pkg_name" class="form-control mb-2" placeholder="مثال: VIP أو Pro" required>
                                     <label class="small fw-bold">السعر</label><input type="text" name="pkg_price" class="form-control mb-2" placeholder="مثال: 50$ شهرياً" required>
@@ -264,7 +273,8 @@
                                         <thead><tr><th>الباقة</th><th>السعر</th><th>الحد الأقصى</th><th>المميزات</th><th>إجراء</th></tr></thead>
                                         <tbody>
                                             {% for pkg in packages %}
-                                            <tr><td class="fw-bold">{{ pkg.name }}</td><td class="text-success fw-bold">{{ pkg.price }}</td><td>{{ pkg.max_products }} منتج</td><td><small>{{ pkg.features }}</small></td><td><form method="POST" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_package"><input type="hidden" name="pkg_id" value="{{ pkg._id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>
+                                            <tr><td class="fw-bold">{{ pkg.name }}</td><td class="text-success fw-bold">{{ pkg.price }}</td><td>{{ pkg.max_products }} منتج</td><td><small>{{ pkg.features }}</small></td><td><form method="POST" onsubmit="return confirm('حذف؟');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_package"><input type="hidden" name="pkg_id" value="{{ pkg._id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>
                                             {% else %}
                                             <tr><td colspan="5" class="text-center text-muted">لا توجد باقات.</td></tr>
                                             {% endfor %}
@@ -283,6 +293,7 @@
                     <div class="card-body">
                         <h5 class="fw-bold text-warning mb-3">➕ إضافة تاجر جديد</h5>
                         <form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="action" value="add_merchant">
                             <input type="text" name="name" class="form-control mb-3" placeholder="اسم التاجر" required>
                             <input type="text" name="slug" class="form-control mb-3" placeholder="رابط المتجر" required>
@@ -308,8 +319,10 @@
                                         <td><a href="/store/{{ m.store_slug }}" target="_blank" class="fw-bold">{{ m.store_slug }}</a></td>
                                         <td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td>
                                         <td>
-                                            <form method="POST" class="d-inline"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button></form>
-                                            {% if m.store_slug != 'admin-store' %}<form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>{% endif %}
+                                            <form method="POST" class="d-inline">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button></form>
+                                            {% if m.store_slug != 'admin-store' %}<form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button class="btn btn-sm btn-danger">حذف</button></form>{% endif %}
                                         </td>
                                     </tr>
                                     {% endfor %}
