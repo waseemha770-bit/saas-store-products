@@ -303,7 +303,7 @@
                                 <tbody>
                                     {% for m in merchants %}
                                     <tr>
-                                        <td>{{ m.username }}<br><small class="text-muted">Pass: {{ m.password }}</small></td>
+                                        <td>{{ m.username }}<br><small class="text-success"><i class="fas fa-lock"></i> مشفرة</small></td>
                                         <td><span class="badge bg-info text-dark">{{ m.get("package", "أساسية") }}</span></td>
                                         <td><a href="/store/{{ m.store_slug }}" target="_blank" class="fw-bold">{{ m.store_slug }}</a></td>
                                         <td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td>
