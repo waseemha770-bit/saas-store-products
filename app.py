@@ -1,4 +1,3 @@
-import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
 from datetime import datetime, timedelta
@@ -12,8 +11,11 @@ app = Flask(__name__)
 # ==========================================
 def send_telegram_alert(message):
     try:
+        import urllib.request, json
         url = "https://api.telegram.org/bot8843130010:AAE0z_PMlt9EoQi75z99cXece4RAzfRk2g4/sendMessage"
-        requests.post(url, json={"chat_id": "892385625", "text": message, "parse_mode": "HTML"}, timeout=3)
+        data = json.dumps({"chat_id": "892385625", "text": message, "parse_mode": "HTML"}).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(req, timeout=3) as response: pass
     except:
         pass
 
