@@ -1,7 +1,5 @@
-import os, urllib.parse, io, csv, json, urllib.request, urllib.error
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
-import database
-from datetime import datetime, timedelta
+import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
 
 app = Flask(__name__)
 
@@ -81,66 +79,113 @@ def proxy_upload():
         
     try:
         raw_b64 = b64_data.split(',')[1] if ',' in b64_data else b64_data
-        headers = {'User-Agent': 'Mozilla/5.0 Chrome/114.0.0.0 Safari/537.36', 'Content-Type': 'application/x-www-form-urlencoded'}
+        
+        # التمويه بأن الطلب قادم من متصفح جوجل كروم حقيقي لمنع الحظر
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
         
         if provider == 'imgbb':
-            if not api_key: return jsonify({"success": False, "error": "مفتاح مفقود"})
+            if not api_key: return jsonify({"success": False, "error": "مفتاح ImgBB مفقود في الإعدادات"})
             payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
             req = urllib.request.Request(f"https://api.imgbb.com/1/upload?key={api_key}", data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['data']['url']})
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['data']['url']})
+                
         elif provider == 'imgur':
-            if not api_key: return jsonify({"success": False, "error": "مفتاح مفقود"})
+            if not api_key: return jsonify({"success": False, "error": "مفتاح Imgur مفقود في الإعدادات"})
             payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
             headers['Authorization'] = f'Client-ID {api_key}'
             req = urllib.request.Request("https://api.imgur.com/3/image", data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['data']['link']})
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['data']['link']})
+                
         elif provider == 'cloudinary':
-            if not data.get('cloud_name') or not data.get('preset'): return jsonify({"success": False, "error": "بيانات ناقصة"})
-            payload = urllib.parse.urlencode({'file': b64_data, 'upload_preset': data.get('preset')}).encode('utf-8')
-            req = urllib.request.Request(f"https://api.cloudinary.com/v1_1/{data.get('cloud_name')}/image/upload", data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['secure_url']})
+            cloud_name = data.get('cloud_name')
+            preset = data.get('preset')
+            if not cloud_name or not preset: return jsonify({"success": False, "error": "إعدادات Cloudinary غير مكتملة"})
+            payload = urllib.parse.urlencode({'file': b64_data, 'upload_preset': preset}).encode('utf-8')
+            req = urllib.request.Request(f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload", data=payload, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['secure_url']})
+                
         elif provider == 'postimages':
+            if not api_key: return jsonify({"success": False, "error": "مفتاح Postimages مفقود"})
             payload = urllib.parse.urlencode({'file': raw_b64}).encode('utf-8')
             headers['Authorization'] = f'Bearer {api_key}'
             req = urllib.request.Request('https://postimages.org/api/upload', data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['url']})
+            with urllib.request.urlopen(req) as response:
+                res = json.loads(response.read().decode())
+                return jsonify({"success": True, "url": res['url']})
                 
-    except urllib.error.HTTPError as e: return jsonify({"success": False, "error": f"رفض المزود الطلب (رمز: {e.code})"})
-    except Exception as e: return jsonify({"success": False, "error": str(e)})
-    return jsonify({"success": False, "error": "غير مدعوم"})
+    except urllib.error.HTTPError as e:
+        err_msg = e.read().decode()
+        return jsonify({"success": False, "error": f"رفض المزود الطلب (رمز الخطأ: {e.code}). تأكد من صحة المفتاح."})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+        
+    return jsonify({"success": False, "error": "مزود خدمة غير مدعوم"})
 
 @app.route('/api/rate_product', methods=['POST'])
 def rate_product_api():
+    from flask import request, jsonify
     try:
         data = request.get_json()
-        pid, stars, old_stars = data.get('product_id'), int(data.get('rating', 0)), data.get('old_rating')
-        prod_col = database.db.products if hasattr(database, 'db') else database.products_col
+        pid = data.get('product_id')
+        stars = int(data.get('rating', 0))
+        old_stars = data.get('old_rating')  # جلب التقييم القديم إن وجد
+        
+        prod_col = None
+        if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
+        elif hasattr(database, 'products'): prod_col = database.products
+        elif hasattr(database, 'products_col'): prod_col = database.products_col
+        else: return jsonify({"success": False, "error": "db not found"})
+
         product = prod_col.find_one({"id": pid})
+        if not product:
+            try:
+                from bson.objectid import ObjectId
+                product = prod_col.find_one({"_id": ObjectId(pid)})
+            except: pass
+
         if product:
             cr = int(product.get('reviews', 0))
             c_rating = float(product.get('rating', 0))
-            if old_stars and cr > 0: n_rating = ((c_rating * cr) - int(old_stars) + stars) / cr; nr = cr
-            else: nr = cr + 1; n_rating = ((c_rating * cr) + stars) / nr
-            prod_col.update_one({"_id": product["_id"]}, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
+            
+            # الخوارزمية الرياضية الذكية لتعديل التقييم
+            if old_stars and cr > 0:
+                # إزالة التقييم القديم من المجموع الكلي، وإضافة الجديد، دون زيادة عدد المقيمين
+                total_sum = (c_rating * cr) - int(old_stars) + stars
+                nr = cr
+                n_rating = total_sum / nr if nr > 0 else stars
+            else:
+                # تقييم جديد تماماً
+                nr = cr + 1
+                n_rating = ((c_rating * cr) + stars) / nr
+                
+            update_query = {"_id": product["_id"]} if "_id" in product else {"id": pid}
+            prod_col.update_one(update_query, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
+            
             return jsonify({"success": True, "new_rating": round(n_rating, 1), "total_reviews": nr})
-    except: pass
+    except Exception as e:
+        print("Rate API Error:", str(e))
     return jsonify({"success": False}), 400
 
 @app.route('/api/undo_rate_product', methods=['POST'])
 def undo_rate_product_api():
-    try:
-        if hasattr(database, 'undo_rate_product') and database.undo_rate_product(request.json.get('product_id'), request.json.get('stars')): return jsonify({"success": True})
-    except: pass
+    if hasattr(database, 'undo_rate_product') and database.undo_rate_product(request.json.get('product_id'), request.json.get('stars')): return jsonify({"success": True})
     return jsonify({"success": False}), 400
 
 @app.route('/api/apply_coupon/<slug>', methods=['POST'])
 def apply_coupon(slug):
     user = database.get_user_by_slug(slug)
     if not user: return jsonify({"error": "Store not found"}), 404
-    try:
-        coupon = database.validate_coupon(user['id'], request.json.get('code', '')) if hasattr(database, 'validate_coupon') else None
-        if coupon: return jsonify({"success": True, "discount": coupon['discount']})
-    except: pass
+    coupon = database.validate_coupon(user['id'], request.json.get('code', '')) if hasattr(database, 'validate_coupon') else None
+    if coupon: return jsonify({"success": True, "discount": coupon['discount']})
     return jsonify({"success": False, "message": "الكوبون غير صالح"})
 
 @app.route('/api/checkout/<slug>', methods=['POST'])
@@ -148,11 +193,17 @@ def checkout(slug):
     user = database.get_user_by_slug(slug)
     if not user: return jsonify({"error": "Store not found"}), 404
     data = request.json; settings = database.get_settings(user.get('id')); address = data.get('address', 'غير مسجل'); payment = data.get('payment', 'غير مسجل')
-    order_id = database.create_order(user.get('id'), data['name'], data['phone'], address, payment, data['cart'], data['final_total'] if 'final_total' in data else data.get('total', 0), data.get('discount_info', '')) if hasattr(database, 'create_order') else "ERROR"
+    
+    final_tot = data.get('final_total', data.get('total', 0))
+    if hasattr(database, 'create_order'):
+        order_id = database.create_order(user.get('id'), data['name'], data['phone'], address, payment, data['cart'], final_tot, data.get('discount_info', ''))
+    else:
+        order_id = "ORD-0000"
+
     msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {address}\n💳 *الدفع:* {payment}\n\n🛍️ *المنتجات:*\n"
     for item in data['cart']: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
     if data.get('discount_info'): msg += f"\n🎟️ *الخصم:* {data['discount_info']}"
-    msg += f"\n💰 *الإجمالي النهائي:* {data.get('final_total', data.get('total', 0))} {settings.get('currency', 'ريال')}\n\n*()*"
+    msg += f"\n💰 *الإجمالي النهائي:* {final_tot} {settings.get('currency', 'ريال')}\n\n*()*"
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
 
 @app.route('/export/orders')
@@ -206,6 +257,9 @@ def dashboard():
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
+        elif action == 'edit_merchant_info' and is_super_admin and hasattr(database, 'edit_merchant_info'):
+            if database.edit_merchant_info(request.form.get('user_id'), request.form.get('new_slug', '').strip(), request.form.get('new_package', 'أساسية')): flash("تم تحديث بيانات التاجر بنجاح!", "success")
+            else: flash("الرابط الجديد محجوز لتاجر آخر!", "danger")
         return redirect(url_for('dashboard'))
     
     orders = database.get_orders(session['user_id'])
@@ -227,6 +281,7 @@ def dashboard():
         except: return 0.0
 
     completed_orders = [o for o in orders if o.get('status') == 'تم التوصيل 🟢']
+    canceled_orders = [o for o in orders if o.get('status') == 'ملغي 🔴']
     total_sales = sum(clean_total(o.get('total')) for o in orders if o.get('status') != 'ملغي 🔴')
     net_sales = sum(clean_total(o.get('total')) for o in completed_orders)
     
