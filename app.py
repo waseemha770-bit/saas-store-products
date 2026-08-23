@@ -1,6 +1,9 @@
 import requests
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
+from datetime import datetime, timedelta
+from flask_session import Session
+from flask_wtf.csrf import CSRFProtect
 
 app = Flask(__name__)
 
@@ -9,13 +12,29 @@ app = Flask(__name__)
 # ==========================================
 def send_telegram_alert(message):
     try:
-        import requests
         url = "https://api.telegram.org/bot8843130010:AAE0z_PMlt9EoQi75z99cXece4RAzfRk2g4/sendMessage"
         requests.post(url, json={"chat_id": "892385625", "text": message, "parse_mode": "HTML"}, timeout=3)
     except:
         pass
 
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
+
+# تفعيل حماية النماذج واستثناء مسارات الـ API
+csrf = CSRFProtect(app)
+csrf.exempt("api_.*")
+csrf.exempt("proxy_upload")
+csrf.exempt("apply_coupon")
+csrf.exempt("checkout")
+
+# إعداد الجلسات المخزنة في MongoDB لتجنب مشاكل Vercel Serverless
+app.config['SESSION_TYPE'] = 'mongodb'
+app.config['SESSION_MONGODB'] = database.client
+app.config['SESSION_MONGODB_DB'] = 'tajergo_db'
+app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
+app.config['SESSION_PERMANENT'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+Session(app)
+
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
 @app.context_processor
@@ -43,9 +62,6 @@ def view_store_logic(slug):
     user = database.get_user_by_slug(slug)
     if not user: return "المتجر غير موجود أو تم إيقافه", 404
     products = database.get_products(user.get('id'))
-    for p in products:
-        p['rating'] = round(p.get('ratings_sum', 0) / p.get('ratings_count', 1), 1) if p.get('ratings_count', 0) > 0 else 0
-        p['rating_count'] = p.get('ratings_count', 0)
     return render_template('store.html', user=user, settings=database.get_settings(user.get('id')), products=products)
 
 @app.route('/')
@@ -129,56 +145,6 @@ def proxy_upload():
         return jsonify({"success": False, "error": str(e)})
         
     return jsonify({"success": False, "error": "مزود خدمة غير مدعوم"})
-
-@app.route('/api/rate_product', methods=['POST'])
-def rate_product_api():
-    from flask import request, jsonify
-    try:
-        data = request.get_json()
-        pid = data.get('product_id')
-        stars = int(data.get('rating', 0))
-        old_stars = data.get('old_rating')  # جلب التقييم القديم إن وجد
-        
-        prod_col = None
-        if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
-        elif hasattr(database, 'products'): prod_col = database.products
-        elif hasattr(database, 'products_col'): prod_col = database.products_col
-        else: return jsonify({"success": False, "error": "db not found"})
-
-        product = prod_col.find_one({"id": pid})
-        if not product:
-            try:
-                from bson.objectid import ObjectId
-                product = prod_col.find_one({"_id": ObjectId(pid)})
-            except: pass
-
-        if product:
-            cr = int(product.get('reviews', 0))
-            c_rating = float(product.get('rating', 0))
-            
-            # الخوارزمية الرياضية الذكية لتعديل التقييم
-            if old_stars and cr > 0:
-                # إزالة التقييم القديم من المجموع الكلي، وإضافة الجديد، دون زيادة عدد المقيمين
-                total_sum = (c_rating * cr) - int(old_stars) + stars
-                nr = cr
-                n_rating = total_sum / nr if nr > 0 else stars
-            else:
-                # تقييم جديد تماماً
-                nr = cr + 1
-                n_rating = ((c_rating * cr) + stars) / nr
-                
-            update_query = {"_id": product["_id"]} if "_id" in product else {"id": pid}
-            prod_col.update_one(update_query, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
-            
-            return jsonify({"success": True, "new_rating": round(n_rating, 1), "total_reviews": nr})
-    except Exception as e:
-        print("Rate API Error:", str(e))
-    return jsonify({"success": False}), 400
-
-@app.route('/api/undo_rate_product', methods=['POST'])
-def undo_rate_product_api():
-    if database.undo_rate_product(request.json.get('product_id'), request.json.get('stars')): return jsonify({"success": True})
-    return jsonify({"success": False}), 400
 
 @app.route('/api/apply_coupon/<slug>', methods=['POST'])
 def apply_coupon(slug):
