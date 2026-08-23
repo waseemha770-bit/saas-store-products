@@ -3,13 +3,13 @@ import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
+app.secret_key = os.getenv('SECRET_KEY')
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
 def send_telegram_alert(message):
     try:
-        url = "https://api.telegram.org/bot8843130010:AAE0z_PMlt9EoQi75z99cXece4RAzfRk2g4/sendMessage"
-        data = json.dumps({"chat_id": "892385625", "text": message, "parse_mode": "HTML"}).encode('utf-8')
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN"); url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        data = json.dumps({"chat_id": os.getenv("TELEGRAM_CHAT_ID"), "text": message, "parse_mode": "HTML"}).encode('utf-8')
         req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
         with urllib.request.urlopen(req, timeout=3) as response: pass
     except: pass

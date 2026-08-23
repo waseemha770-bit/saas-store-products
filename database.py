@@ -3,7 +3,7 @@ import uuid, os
 from datetime import datetime
 
 # الاتصال بقاعدة البيانات
-MONGO_URI = os.getenv("MONGO_URI") or "mongodb+srv://tajeradmin:tajerpassword123@cluster0.f2rb036.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGO_URI = os.getenv("MONGO_URI")
 client = MongoClient(MONGO_URI)
 db = client['tajergo_db']
 
