@@ -19,7 +19,7 @@ def send_telegram_alert(message):
     except:
         pass
 
-app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
+app.secret_key = os.getenv('SECRET_KEY', 'tajergo_super_secure_key_2026_fallback_12345')
 
 # تفعيل حماية النماذج واستثناء مسارات الـ API
 csrf = CSRFProtect(app)
@@ -30,7 +30,14 @@ csrf.exempt("checkout")
 
 # إعداد الجلسات المخزنة في MongoDB لتجنب مشاكل Vercel Serverless
 app.config['SESSION_TYPE'] = 'mongodb'
-app.config['SESSION_MONGODB'] = database.client
+
+# تأمين جلب عميل قاعدة البيانات
+try:
+    app.config['SESSION_MONGODB'] = database.client
+except AttributeError:
+    # تعطيل جلسات MongoDB والعودة للجلسات المحلية إذا فشل الاتصال لحماية السيرفر
+    app.config['SESSION_TYPE'] = 'filesystem'
+
 app.config['SESSION_MONGODB_DB'] = 'tajergo_db'
 app.config['SESSION_MONGODB_COLLECT'] = 'sessions'
 app.config['SESSION_PERMANENT'] = True
