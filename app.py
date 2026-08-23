@@ -1,19 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# ==========================================
-# نظام إشعارات التلجرام (Super Admin)
-# ==========================================
 def send_telegram_alert(message):
     try:
         url = "https://api.telegram.org/bot8843130010:AAE0z_PMlt9EoQi75z99cXece4RAzfRk2g4/sendMessage"
         data = json.dumps({"chat_id": "892385625", "text": message, "parse_mode": "HTML"}).encode('utf-8')
         req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
         with urllib.request.urlopen(req, timeout=3) as response: pass
-    except:
-        pass
+    except: pass
 
 app.secret_key = os.getenv('SECRET_KEY') or 'tajergo_super_secure_key_2026'
 MAIN_DOMAIN = "saas-store-products.vercel.app"
@@ -63,9 +60,6 @@ def pwa_manifest(slug):
 @app.route('/sw.js')
 def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
 
-# ==============================================================
-# بروكسي الرفع القوي والمموه لتجاوز حظر الاستضافات وحظر البوتات
-# ==============================================================
 @app.route('/api/proxy_upload', methods=['POST'])
 def proxy_upload():
     if 'user_id' not in session: return jsonify({"success": False, "error": "جلسة غير مصرحة"}), 401
@@ -73,118 +67,77 @@ def proxy_upload():
     provider = data.get('provider')
     api_key = data.get('api_key')
     b64_data = data.get('image_base64')
-    
-    if not provider or not b64_data:
-        return jsonify({"success": False, "error": "بيانات غير مكتملة"})
-        
+    if not provider or not b64_data: return jsonify({"success": False, "error": "بيانات غير مكتملة"})
     try:
         raw_b64 = b64_data.split(',')[1] if ',' in b64_data else b64_data
-        
-        # التمويه بأن الطلب قادم من متصفح جوجل كروم حقيقي لمنع الحظر
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
-            'Content-Type': 'application/x-www-form-urlencoded'
-        }
+        headers = {'User-Agent': 'Mozilla/5.0 Chrome/114.0.0.0 Safari/537.36', 'Content-Type': 'application/x-www-form-urlencoded'}
         
         if provider == 'imgbb':
-            if not api_key: return jsonify({"success": False, "error": "مفتاح ImgBB مفقود في الإعدادات"})
             payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
             req = urllib.request.Request(f"https://api.imgbb.com/1/upload?key={api_key}", data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response:
-                res = json.loads(response.read().decode())
-                return jsonify({"success": True, "url": res['data']['url']})
-                
+            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['data']['url']})
         elif provider == 'imgur':
-            if not api_key: return jsonify({"success": False, "error": "مفتاح Imgur مفقود في الإعدادات"})
             payload = urllib.parse.urlencode({'image': raw_b64}).encode('utf-8')
             headers['Authorization'] = f'Client-ID {api_key}'
             req = urllib.request.Request("https://api.imgur.com/3/image", data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response:
-                res = json.loads(response.read().decode())
-                return jsonify({"success": True, "url": res['data']['link']})
-                
+            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['data']['link']})
         elif provider == 'cloudinary':
-            cloud_name = data.get('cloud_name')
-            preset = data.get('preset')
-            if not cloud_name or not preset: return jsonify({"success": False, "error": "إعدادات Cloudinary غير مكتملة"})
-            payload = urllib.parse.urlencode({'file': b64_data, 'upload_preset': preset}).encode('utf-8')
-            req = urllib.request.Request(f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload", data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response:
-                res = json.loads(response.read().decode())
-                return jsonify({"success": True, "url": res['secure_url']})
-                
+            payload = urllib.parse.urlencode({'file': b64_data, 'upload_preset': data.get('preset')}).encode('utf-8')
+            req = urllib.request.Request(f"https://api.cloudinary.com/v1_1/{data.get('cloud_name')}/image/upload", data=payload, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['secure_url']})
         elif provider == 'postimages':
-            if not api_key: return jsonify({"success": False, "error": "مفتاح Postimages مفقود"})
             payload = urllib.parse.urlencode({'file': raw_b64}).encode('utf-8')
             headers['Authorization'] = f'Bearer {api_key}'
             req = urllib.request.Request('https://postimages.org/api/upload', data=payload, headers=headers, method='POST')
-            with urllib.request.urlopen(req) as response:
-                res = json.loads(response.read().decode())
-                return jsonify({"success": True, "url": res['url']})
+            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['url']})
                 
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode()
-        return jsonify({"success": False, "error": f"رفض المزود الطلب (رمز الخطأ: {e.code}). تأكد من صحة المفتاح."})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-        
-    return jsonify({"success": False, "error": "مزود خدمة غير مدعوم"})
+    except urllib.error.HTTPError as e: return jsonify({"success": False, "error": f"مرفوض من المزود (رمز: {e.code})"})
+    except Exception as e: return jsonify({"success": False, "error": str(e)})
+    return jsonify({"success": False, "error": "غير مدعوم"})
 
+# 🛡️ نظام التقييم الذكي القائم على الـ IP لمنع التلاعب
 @app.route('/api/rate_product', methods=['POST'])
 def rate_product_api():
-    from flask import request, jsonify
     try:
         data = request.get_json()
-        pid = data.get('product_id')
-        stars = int(data.get('rating', 0))
-        old_stars = data.get('old_rating')  # جلب التقييم القديم إن وجد
+        pid, stars = data.get('product_id'), int(data.get('rating', 0))
+        if stars < 1 or stars > 5: return jsonify({"success": False}), 400
         
-        prod_col = None
-        if hasattr(database, 'db') and hasattr(database.db, 'products'): prod_col = database.db.products
-        elif hasattr(database, 'products'): prod_col = database.products
-        elif hasattr(database, 'products_col'): prod_col = database.products_col
-        else: return jsonify({"success": False, "error": "db not found"})
+        # التقاط الـ IP في بيئة Vercel
+        ip_addr = request.headers.get('X-Forwarded-For', request.remote_addr)
+        if ip_addr: ip_addr = ip_addr.split(',')[0].strip()
+        else: ip_addr = 'unknown'
 
+        prod_col = database.db.products
         product = prod_col.find_one({"id": pid})
-        if not product:
-            try:
-                from bson.objectid import ObjectId
-                product = prod_col.find_one({"_id": ObjectId(pid)})
-            except: pass
-
         if product:
-            cr = int(product.get('reviews', 0))
-            c_rating = float(product.get('rating', 0))
-            
-            # الخوارزمية الرياضية الذكية لتعديل التقييم
-            if old_stars and cr > 0:
-                # إزالة التقييم القديم من المجموع الكلي، وإضافة الجديد، دون زيادة عدد المقيمين
-                total_sum = (c_rating * cr) - int(old_stars) + stars
-                nr = cr
-                n_rating = total_sum / nr if nr > 0 else stars
-            else:
-                # تقييم جديد تماماً
-                nr = cr + 1
-                n_rating = ((c_rating * cr) + stars) / nr
-                
-            update_query = {"_id": product["_id"]} if "_id" in product else {"id": pid}
-            prod_col.update_one(update_query, {"$set": {"rating": round(n_rating, 1), "reviews": nr}})
-            
-            return jsonify({"success": True, "new_rating": round(n_rating, 1), "total_reviews": nr})
-    except Exception as e:
-        print("Rate API Error:", str(e))
-    return jsonify({"success": False}), 400
+            rated_ips = product.get('rated_ips', {})
+            if not isinstance(rated_ips, dict): rated_ips = {}
 
-@app.route('/api/undo_rate_product', methods=['POST'])
-def undo_rate_product_api():
-    if hasattr(database, 'undo_rate_product') and database.undo_rate_product(request.json.get('product_id'), request.json.get('stars')): return jsonify({"success": True})
+            old_stars = rated_ips.get(ip_addr)
+            cr = int(product.get('ratings_count', 0))
+            c_sum = int(product.get('ratings_sum', 0))
+
+            if old_stars:
+                new_sum = c_sum - old_stars + stars
+                new_count = cr
+            else:
+                new_sum = c_sum + stars
+                new_count = cr + 1
+
+            rated_ips[ip_addr] = stars
+            n_rating = new_sum / new_count if new_count > 0 else stars
+
+            prod_col.update_one({"_id": product["_id"]}, {"$set": {"rating": round(n_rating, 1), "ratings_count": new_count, "ratings_sum": new_sum, "rated_ips": rated_ips}})
+            return jsonify({"success": True, "new_rating": round(n_rating, 1), "total_reviews": new_count})
+    except: pass
     return jsonify({"success": False}), 400
 
 @app.route('/api/apply_coupon/<slug>', methods=['POST'])
 def apply_coupon(slug):
     user = database.get_user_by_slug(slug)
     if not user: return jsonify({"error": "Store not found"}), 404
-    coupon = database.validate_coupon(user['id'], request.json.get('code', '')) if hasattr(database, 'validate_coupon') else None
+    coupon = database.validate_coupon(user['id'], request.json.get('code', ''))
     if coupon: return jsonify({"success": True, "discount": coupon['discount']})
     return jsonify({"success": False, "message": "الكوبون غير صالح"})
 
@@ -192,18 +145,19 @@ def apply_coupon(slug):
 def checkout(slug):
     user = database.get_user_by_slug(slug)
     if not user: return jsonify({"error": "Store not found"}), 404
-    data = request.json; settings = database.get_settings(user.get('id')); address = data.get('address', 'غير مسجل'); payment = data.get('payment', 'غير مسجل')
-    
-    final_tot = data.get('final_total', data.get('total', 0))
-    if hasattr(database, 'create_order'):
-        order_id = database.create_order(user.get('id'), data['name'], data['phone'], address, payment, data['cart'], final_tot, data.get('discount_info', ''))
-    else:
-        order_id = "ORD-0000"
+    data = request.json
+    settings = database.get_settings(user.get('id'))
+    address = data.get('address', 'غير مسجل')
+    payment = data.get('payment', 'غير مسجل')
+    coupon_code = data.get('coupon_code', '').strip()
+
+    # إنشاء الطلب بشكل آمن 100% في السيرفر
+    order_id, real_total, secure_cart, discount_info = database.create_secure_order(user.get('id'), data['name'], data['phone'], address, payment, data['cart'], coupon_code)
 
     msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {address}\n💳 *الدفع:* {payment}\n\n🛍️ *المنتجات:*\n"
-    for item in data['cart']: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
-    if data.get('discount_info'): msg += f"\n🎟️ *الخصم:* {data['discount_info']}"
-    msg += f"\n💰 *الإجمالي النهائي:* {final_tot} {settings.get('currency', 'ريال')}\n\n*()*"
+    for item in secure_cart: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
+    if discount_info: msg += f"\n🎟️ *الخصم:* {discount_info}"
+    msg += f"\n💰 *الإجمالي النهائي:* {real_total} {settings.get('currency', 'ريال')}\n\n*()*"
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
 
 @app.route('/export/orders')
@@ -234,8 +188,8 @@ def dashboard():
         elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
-        elif action == 'add_coupon' and hasattr(database, 'add_coupon'): database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
-        elif action == 'delete_coupon' and hasattr(database, 'delete_coupon'): database.delete_coupon(request.form.get('coupon_id'), session['user_id']); flash("تم حذف الكوبون", "danger")
+        elif action == 'add_coupon': database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
+        elif action == 'delete_coupon': database.delete_coupon(request.form.get('coupon_id'), session['user_id']); flash("تم حذف الكوبون", "danger")
         elif action == 'change_password':
             old_p, new_p, confirm_p = request.form.get('old_password', ''), request.form.get('new_password', ''), request.form.get('confirm_password', '')
             if new_p != confirm_p: flash("كلمة المرور غير متطابقة", "danger")
@@ -244,20 +198,25 @@ def dashboard():
             settings_data = {
                 'store_name': request.form.get('store_name'), 'store_desc': request.form.get('store_desc'), 'whatsapp': request.form.get('whatsapp'), 'currency': request.form.get('currency'), 'theme_color': request.form.get('theme_color'), 'font_family': request.form.get('font_family'), 'header_size': request.form.get('header_size'), 
                 'facebook': request.form.get('facebook'), 'instagram': request.form.get('instagram'), 'tiktok': request.form.get('tiktok'), 'telegram': request.form.get('telegram', '').strip(), 
-                'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'), 'logo_url': request.form.get('logo_url', '').strip(), 'img_provider': request.form.get('img_provider', 'imgbb'), 'img_api_key': request.form.get('img_api_key', '').strip(), 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip()
+                'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'), 'logo_url': request.form.get('logo_url', '').strip(), 'img_provider': request.form.get('img_provider', 'imgbb'), 'img_api_key': request.form.get('img_api_key', '').strip(), 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip(), 'wallet_provider': request.form.get('wallet_provider', ''), 'wallet_merchant_id': request.form.get('wallet_merchant_id', '').strip(), 'wallet_api_key': request.form.get('wallet_api_key', '').strip(), 'wallet_secret': request.form.get('wallet_secret', '').strip()
             }
             if is_super_admin: settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
             database.update_settings(session['user_id'], settings_data); flash("تم الحفظ بنجاح", "success")
-        elif action == 'add_package' and is_super_admin and hasattr(database, 'add_package'): database.add_package(request.form.get('pkg_name'), request.form.get('pkg_price'), request.form.get('pkg_max'), request.form.get('pkg_features')); flash("تم إضافة الباقة", "success")
+        elif action == 'add_package' and is_super_admin: database.add_package(request.form.get('pkg_name'), request.form.get('pkg_price'), request.form.get('pkg_max'), request.form.get('pkg_features')); flash("تمت إضافة الباقة بنجاح", "success")
+        elif action == 'delete_package' and is_super_admin: database.delete_package(request.form.get('pkg_id')); flash("تم حذف الباقة", "danger")
         elif action == 'add_merchant' and is_super_admin:
             slug = request.form.get('slug', '').strip()
             if database.create_new_merchant(request.form.get('name'), slug, request.form.get('password', '').strip()):
-                send_telegram_alert(f"🎉 <b>تاجر جديد انضم لمنصتك!</b>\n\n👤 <b>الاسم:</b> {request.form.get('name')}\n🔗 <b>الرابط:</b> {slug}\n🔑 <b>كلمة المرور:</b> {request.form.get('password', '').strip()}")
-                flash("تم إنشاء المتجر بنجاح", "success")
+                new_user = database.users_col.find_one({"store_slug": slug})
+                if new_user:
+                    database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
+                    database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo! هذا منتج تجريبي.", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo+Product", 10)
+                send_telegram_alert(f"🎉 <b>تاجر جديد انضم لمنصتك!</b>\n\n👤 <b>اسم التاجر:</b> {request.form.get('name')}\n🔗 <b>رابط المتجر:</b> {slug}\n📦 <b>الباقة:</b> {request.form.get('package', 'أساسية')}\n🔑 <b>كلمة المرور:</b> {request.form.get('password', '').strip()}")
+                flash("تم إنشاء المتجر بنجاح وتحديد الباقة!", "success")
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
-        elif action == 'edit_merchant_info' and is_super_admin and hasattr(database, 'edit_merchant_info'):
+        elif action == 'edit_merchant_info' and is_super_admin:
             if database.edit_merchant_info(request.form.get('user_id'), request.form.get('new_slug', '').strip(), request.form.get('new_package', 'أساسية')): flash("تم تحديث بيانات التاجر بنجاح!", "success")
             else: flash("الرابط الجديد محجوز لتاجر آخر!", "danger")
         return redirect(url_for('dashboard'))
@@ -265,38 +224,60 @@ def dashboard():
     orders = database.get_orders(session['user_id'])
     products = database.get_products(session['user_id'])
     settings = database.get_settings(session['user_id'])
+    coupons = database.get_coupons(session['user_id'])
     
-    coupons = database.get_coupons(session['user_id']) if hasattr(database, 'get_coupons') else []
-
-    # خوارزمية الذكاء المتقدمة
-    from datetime import datetime, timedelta
-    now = datetime.now()
     def parse_date(d):
         if isinstance(d, datetime): return d
         try: return datetime.strptime(str(d), '%Y-%m-%d %H:%M:%S.%f')
-        except: return now
-        
+        except: return datetime.now()
     def clean_total(t):
         try: return float(str(t).replace(',', '').strip())
         except: return 0.0
 
+    now = datetime.now()
     completed_orders = [o for o in orders if o.get('status') == 'تم التوصيل 🟢']
     canceled_orders = [o for o in orders if o.get('status') == 'ملغي 🔴']
     total_sales = sum(clean_total(o.get('total')) for o in orders if o.get('status') != 'ملغي 🔴')
     net_sales = sum(clean_total(o.get('total')) for o in completed_orders)
+    avg_order_value = net_sales / len(completed_orders) if completed_orders else 0
+    completion_rate = (len(completed_orders) / len(orders) * 100) if orders else 0
     
-    this_month_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).month == now.month)
+    customers_map, product_sales = {}, {}
+    for o in completed_orders:
+        phone = o.get('customer_phone', 'غير معروف')
+        name = o.get('customer_name', 'عميل')
+        if phone not in customers_map: customers_map[phone] = {'name': name, 'spent': 0, 'orders': 0}
+        customers_map[phone]['spent'] += clean_total(o.get('total'))
+        customers_map[phone]['orders'] += 1
+        for item in o.get('cart_items', []):
+            p_name = item.get('name')
+            qty = item.get('qty', 1)
+            product_sales[p_name] = product_sales.get(p_name, 0) + qty
+            
+    top_customers = sorted(customers_map.values(), key=lambda x: x['spent'], reverse=True)[:5]
+    sorted_products = sorted(product_sales.items(), key=lambda x: x[1], reverse=True)
+    best_sellers = sorted_products[:5]
+    least_sellers = sorted_products[-5:] if sorted_products else []
+    least_sellers.reverse()
+    
+    this_month_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).month == now.month and parse_date(o.get('date')).year == now.year)
     last_month = now.replace(day=1) - timedelta(days=1)
-    last_month_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).month == last_month.month)
+    last_month_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).month == last_month.month and parse_date(o.get('date')).year == last_month.year)
     growth_rate = ((this_month_sales - last_month_sales) / last_month_sales * 100) if last_month_sales > 0 else (100 if this_month_sales > 0 else 0)
     
-    adv_stats = {'total_sales': total_sales, 'net_sales': net_sales, 'growth_rate': growth_rate}
+    today_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).date() == now.date())
+    weekly_sales = sum(clean_total(o.get('total')) for o in completed_orders if parse_date(o.get('date')).date() >= (now.date() - timedelta(days=7)))
+    
+    daily_chart = { (now - timedelta(days=i)).strftime('%Y-%m-%d'): 0 for i in range(6, -1, -1) }
+    for o in completed_orders:
+        d_str = parse_date(o.get('date')).strftime('%Y-%m-%d')
+        if d_str in daily_chart: daily_chart[d_str] += clean_total(o.get('total'))
+            
+    adv_stats = { 'total_sales': total_sales, 'net_sales': net_sales, 'total_orders': len(orders), 'completed_orders': len(completed_orders), 'canceled_orders': len(canceled_orders), 'avg_order_value': avg_order_value, 'customers_count': len(customers_map), 'top_customers': top_customers, 'best_sellers': best_sellers, 'least_sellers': least_sellers, 'this_month_sales': this_month_sales, 'last_month_sales': last_month_sales, 'today_sales': today_sales, 'weekly_sales': weekly_sales, 'growth_rate': growth_rate, 'completion_rate': completion_rate, 'delivery_fees': 0.0, 'chart_labels': list(daily_chart.keys()), 'chart_data': list(daily_chart.values()) }
     status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
     for o in orders: status_counts[o.get('status', 'جديد 🟡')] += 1
-
-    packages = database.get_packages() if hasattr(database, 'get_packages') else []
     
-    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=packages, store_slug=session['store_slug'], is_super_admin=is_super_admin)
+    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'_id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
