@@ -140,28 +140,82 @@
         </div>
     </div>
     <div class="tab-pane fade" id="orders">
-<div class="row mb-4" style="display:none;"><div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الطلبات</h6><h3 class="mb-0">{{ stats.total_orders }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الأرباح</h6><h3 class="mb-0">{{ stats.total_revenue }} <small>{{ settings.currency }}</small></h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">جديدة</h6><h3 class="mb-0">{{ stats.status_counts['جديد 🟡'] }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-info text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">تجهيز</h6><h3 class="mb-0">{{ stats.status_counts['قيد التجهيز 🔵'] }}</h3></div></div></div></div><div class="row"><div class="col-md-4 mb-4" style="display:none;"><div class="card shadow-sm border-0 h-100"><div class="card-body"><canvas id="orderChart" style="max-height: 250px;"></canvas></div></div></div><div class="col-md-12 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a><div class="table-responsive" style="max-height: 400px;"><table class="table table-bordered table-striped text-center align-middle" style="font-size:0.9rem;"><thead>
-        <tr class="text-muted small align-middle">
-            <th class="py-3">رقم الطلب</th>
-            <th class="py-3">العميل والهاتف</th>
-            <th class="py-3">المنتجات</th>
-            <th class="py-3">الإجمالي</th>
-            <th class="py-3">الحالة</th>
-            <th class="py-3 text-primary">المندوب المسؤول</th>
-            <th class="py-3 text-center">الإجراءات</th>
-        </tr>
-    </thead><tbody>{% for o in orders %}<tr><td>
-        <span class="fw-bold">{{ o.order_id }}</span><br>
-        <a href="/track/{{ o.order_id }}" target="_blank" class="badge bg-primary-subtle text-primary border border-primary text-decoration-none mt-1 py-1 px-2" style="font-size:0.75rem;">
-            <i class="fas fa-external-link-alt me-1"></i> تتبع
-        </a>
-    </td>
+<div class="row mb-4" style="display:none;"><div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الطلبات</h6><h3 class="mb-0">{{ stats.total_orders }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الأرباح</h6><h3 class="mb-0">{{ stats.total_revenue }} <small>{{ settings.currency }}</small></h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">جديدة</h6><h3 class="mb-0">{{ stats.status_counts['جديد 🟡'] }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-info text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">تجهيز</h6><h3 class="mb-0">{{ stats.status_counts['قيد التجهيز 🔵'] }}</h3></div></div></div></div><div class="row"><div class="col-md-4 mb-4" style="display:none;"><div class="card shadow-sm border-0 h-100"><div class="card-body"><canvas id="orderChart" style="max-height: 250px;"></canvas></div></div></div><div class="col-md-12 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a>
+<div class="table-responsive bg-white rounded-4 shadow-sm border p-2">
+    <table class="table table-hover align-middle mb-0 text-nowrap">
+        <thead class="table-light">
+            <tr class="text-secondary small fw-bold">
+                <th class="py-3 px-3">رقم الطلب</th>
+                <th class="py-3">العميل والتواصل</th>
+                <th class="py-3">المنتجات</th>
+                <th class="py-3">طريقة الدفع</th>
+                <th class="py-3">الإجمالي</th>
+                <th class="py-3">الحالة</th>
+                <th class="py-3 text-primary"><i class="fas fa-motorcycle me-1"></i> المندوب المسؤول</th>
+                <th class="py-3 text-center px-3">الإجراءات</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if orders %}
+                {% for o in orders %}
+                <tr>
+                    <!-- 1. رقم الطلب والتاريخ -->
+                    <td class="px-3">
+                        <span class="fw-bold text-dark d-block">{{ o.order_id }}</span>
+                        <small class="text-muted" style="font-size: 0.75rem;">{{ o.created_at if o.created_at else '' }}</small>
+                    </td>
 
+                    <!-- 2. العميل والتواصل -->
                     <td>
-                        <select class="form-select form-select-sm rounded-pill border-primary border-opacity-25 shadow-sm" 
-                                style="min-width: 140px; font-size: 0.82rem; font-weight: 600;" 
+                        <div class="fw-bold text-dark">{{ o.customer_name }}</div>
+                        <a href="tel:{{ o.customer_phone }}" class="text-decoration-none text-muted small d-block">
+                            <i class="fas fa-phone-alt text-success me-1"></i>{{ o.customer_phone }}
+                        </a>
+                        {% if o.customer_address %}
+                        <small class="text-muted d-block text-truncate" style="max-width: 180px;">
+                            <i class="fas fa-map-marker-alt text-danger me-1"></i>{{ o.customer_address }}
+                        </small>
+                        {% endif %}
+                    </td>
+
+                    <!-- 3. المنتجات -->
+                    <td>
+                        <div class="small text-muted" style="max-height: 80px; overflow-y: auto;">
+                            {% if o.cart %}
+                                {% for it in o.cart %}
+                                    <div>• {{ it.name }} <span class="badge bg-light text-dark">x{{ it.qty or 1 }}</span></div>
+                                {% endfor %}
+                            {% else %}
+                                <span>{{ o.items if o.items else '-' }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- 4. طريقة الدفع -->
+                    <td>
+                        <span class="badge bg-light text-secondary border px-2 py-1 small">
+                            {{ o.payment_method if o.payment_method else (o.payment if o.payment else 'كاش') }}
+                        </span>
+                    </td>
+
+                    <!-- 5. الإجمالي -->
+                    <td>
+                        <span class="fw-bold text-success">{{ o.total }}</span>
+                    </td>
+
+                    <!-- 6. حالة الطلب -->
+                    <td>
+                        <span class="badge {% if 'تم التوصيل' in o.status or 'مدفوع' in o.status %}bg-success{% elif 'مع المندوب' in o.status %}bg-primary{% else %}bg-warning text-dark{% endif %} px-2 py-1 rounded-pill small">
+                            {{ o.status }}
+                        </span>
+                    </td>
+
+                    <!-- 7. المندوب المسؤول (العمود الجديد) -->
+                    <td>
+                        <select class="form-select form-select-sm rounded-pill border-primary border-opacity-50 shadow-sm fw-bold" 
+                                style="min-width: 150px; font-size: 0.8rem;" 
                                 onchange="assignOrderToDriver('{{ o.order_id }}', this)">
-                            <option value="">{% if o.driver_name %}🚚 {{ o.driver_name }}{% else %}-- تعيين مندوب --{% endif %}</option>
+                            <option value="">{% if o.driver_name %}🛵 {{ o.driver_name }}{% else %}-- تعيين مندوب --{% endif %}</option>
                             {% if drivers %}
                                 {% for d in drivers %}
                                 <option value="{{ d.phone }}" data-name="{{ d.name }}" data-phone="{{ d.phone }}" {% if o.driver_phone == d.phone %}selected{% endif %}>
@@ -173,7 +227,32 @@
                             {% endif %}
                         </select>
                     </td>
-<td class="text-start">👤 {{ o.customer_name }}<br>📞 {{ o.customer_phone }}</td><td class="text-start">{% for i in o.cart_items %} ▪️ {{ i.name }} (x{{ i.qty }})<br> {% endfor %}{% if o.get('discount_info') %}<span class="badge bg-warning text-dark mt-1">{{ o.discount_info }}</span>{% endif %}</td><td class="fw-bold text-success">{{ o.total }}</td><td><form method="POST"><input type="hidden" name="action" value="update_order_status"><input type="hidden" name="order_id" value="{{ o.order_id }}"><select name="new_status" class="form-select form-select-sm fw-bold" onchange="this.form.submit()"><option value="جديد 🟡" {% if o.get('status') == 'جديد 🟡' %}selected{% endif %}>جديد 🟡</option><option value="مدفوع 🟢" {% if o.get('status') == 'مدفوع 🟢' %}selected{% endif %}>مدفوع 🟢</option><option value="قيد التجهيز 🔵" {% if o.get('status') == 'قيد التجهيز 🔵' %}selected{% endif %}>تجهيز 🔵</option><option value="تم التوصيل 🟢" {% if o.get('status') == 'تم التوصيل 🟢' %}selected{% endif %}>توصيل 🟢</option><option value="ملغي 🔴" {% if o.get('status') == 'ملغي 🔴' %}selected{% endif %}>ملغي 🔴</option></select></form></td></tr>{% endfor %}</tbody></table></div></div></div></div></div></div>
+
+                    <!-- 8. الإجراءات -->
+                    <td class="text-center px-3">
+                        <div class="d-flex justify-content-center gap-1">
+                            <a href="/track/{{ o.order_id }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-2" title="تتبع الطلب">
+                                <i class="fas fa-truck-fast"></i>
+                            </a>
+                            <a href="https://wa.me/{{ o.customer_phone }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2" title="مراسلة العميل">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <i class="fas fa-box-open fs-1 mb-2 opacity-50 d-block"></i>
+                        لا توجد طلبات مسجلة حتى الآن
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+</div></div></div></div></div>
 
             <div class="tab-pane fade" id="products"><div class="card shadow-sm border-0 mb-4 border-top border-4 border-primary"><div class="card-body"><h5 class="fw-bold mb-3"><i class="fas fa-plus-circle text-primary"></i> إضافة منتج</h5><form method="POST" class="row g-3" id="addProductForm"><input type="hidden" name="action" value="add_product"><div class="col-md-4"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" required></div><div class="col-md-4"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" required></div><div class="col-md-4"><label class="small fw-bold">الكمية</label><input name="stock" type="number" class="form-control" required></div><div class="col-md-6"><label class="small fw-bold">التصنيف</label><input type="hidden" name="cat" id="finalCategory" required><select class="form-select" id="categorySelect" onchange="handleCategoryChange(this)" required><option value="" disabled selected>-- اختر تصنيفاً --</option>{% for c in cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}<option value="إلكترونيات وجوالات">إلكترونيات وجوالات</option><option value="ملابس وأزياء">ملابس وأزياء</option><option value="NEW_CATEGORY" class="fw-bold text-primary">➕ تصنيف جديد...</option></select><input type="text" id="newCategoryInput" class="form-control mt-2" placeholder="التصنيف الجديد" style="display: none;" oninput="updateFinalCategory()"></div><div class="col-md-6"><label class="small fw-bold">صورة المنتج</label><div class="upload-btn-wrapper"><button type="button" class="btn btn-outline-primary w-100 fw-bold border-2" style="padding:8px;"><i class="fas fa-cloud-upload-alt"></i> رفع للسحابة</button><input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'newProductImg', 'newProductStatus', 'submitProductBtn')"></div><small id="newProductStatus" class="fw-bold d-block text-secondary text-center mb-1" style="font-size:0.8rem;"></small><div class="divider-text" style="font-size:0.8rem;">أو أدخل الرابط يدوياً</div><input type="text" name="img" id="newProductImg" class="form-control" placeholder="https://..."></div><div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control"></div><div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm" type="button" id="submitProductBtn" onclick="submitProductForm()">حفظ ونشر</button></div></form></div></div><div class="card shadow-sm border-0 mb-4"><div class="card-body">
 <h5 class="fw-bold mb-3"><i class="fas fa-box"></i> المنتجات الحالية</h5>
