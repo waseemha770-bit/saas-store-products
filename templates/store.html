@@ -72,9 +72,7 @@
 <body>
     <div class="hero-section"><div class="container d-flex flex-column align-items-center justify-content-center">
 
-<a href="/track" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold me-2 shadow-sm" style="font-size: 0.85rem;">
-    <i class="fas fa-truck-fast"></i> تتبع طلبك
-</a>
+
 
         {% if settings.get('logo_url') and settings.logo_url.strip() != '' %}<img src="{{ settings.logo_url }}" onerror="fixImg(this)" class="store-logo" alt="شعار المتجر">{% else %}<div class="store-logo d-flex align-items-center justify-content-center bg-white text-primary" style="font-size: 2.5rem; width: 100px; height: 100px;"><i class="fas fa-store"></i></div>{% endif %}
         <h1 class="fw-bold hero-title">{{ settings.store_name }}</h1><p class="lead mb-0 mt-2" style="opacity: 0.9; font-weight: 600;">{{ settings.store_desc }}</p>
@@ -347,5 +345,18 @@
     document.querySelectorAll('.modal-star').forEach(star => { star.addEventListener('click', function() { selectedRating = parseInt(this.getAttribute('data-val')); document.querySelectorAll('.modal-star').forEach(s => { if(parseInt(s.getAttribute('data-val')) <= selectedRating) { s.classList.add('star-selected'); s.setAttribute('fill', '#ffc107'); } else { s.classList.remove('star-selected'); s.setAttribute('fill', '#e4e5e9'); } }); let btn = document.getElementById('confirmRatingBtn'); btn.disabled = false; if(previousRating && selectedRating === previousRating) { btn.disabled = true; } }); });
     document.getElementById('confirmRatingBtn').addEventListener('click', function() { if(selectedRating === 0 || !currentRatingProductId) return; let pid = currentRatingProductId; let btn = this; btn.disabled = true; btn.innerHTML = 'جاري الحفظ...'; let payload = { product_id: pid, rating: selectedRating }; if (previousRating) { payload.old_rating = previousRating; } fetch('/api/rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }).then(r => r.json()).then(data => { if(data.success) { localStorage.setItem('rated_val_' + pid, selectedRating); let msg = document.getElementById('ratingModalMessage'); msg.innerText = previousRating ? 'تم التحديث بنجاح!' : 'تم التقييم بنجاح!'; msg.classList.remove('d-none'); btn.classList.add('d-none'); document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1); document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ')'; let svgStars = ''; let newRate = Math.round(data.new_rating); for(let i=1; i<=5; i++){ let color = (newRate >= i) ? '#ffc107' : '#e4e5e9'; svgStars += `<svg width="15" height="15" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`; } document.getElementById('display-stars-' + pid).innerHTML = svgStars; setTimeout(() => { ratingModal.hide(); }, 1500); } else { btn.innerText = 'حدث خطأ'; btn.disabled = false; } }).catch(err => { btn.innerText = 'فشل الاتصال'; btn.disabled = false; }); });
     </script>
+
+<!-- تذييل المتجر الرسمي (Official Store Footer) -->
+<footer class="mt-5 py-4 bg-white border-top text-center">
+    <div class="container">
+        <div class="d-flex flex-wrap justify-content-center align-items-center gap-3 my-2">
+            <a href="/track" class="text-decoration-none text-secondary fw-bold small px-3 py-2 rounded-pill bg-light border">
+                <i class="fas fa-truck-fast text-primary me-1"></i> تتبع حالة طلبك
+            </a>
+        </div>
+        <p class="text-muted small mb-0 mt-2">جميع الحقوق محفوظة &copy; {{ settings.name if settings else 'متجرنا' }}</p>
+    </div>
+</footer>
+
 </body>
 </html>
