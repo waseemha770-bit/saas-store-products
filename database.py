@@ -462,3 +462,42 @@ def get_store_orders_enhanced(store_id):
         
     return orders
 
+
+
+def check_product_limit(store_id):
+    """التحقق من تجاوز التاجر للحد الأقصى للمنتجات بناءً على باقته"""
+    try:
+        user = users_col.find_one({"id": store_id})
+        if not user: 
+            return False, "حساب المتجر غير موجود."
+            
+        # استثناء المتجر الرئيسي (المدير) من القيود
+        if user.get("store_slug") == "admin-store":
+            return True, ""
+            
+        pkg_name = user.get("package", "أساسية")
+        
+        # جلب بيانات الباقة من قاعدة البيانات
+        try:
+            pkg = db.packages.find_one({"name": pkg_name})
+        except:
+            pkg = None
+            
+        # معالجة الحد الأقصى (في حال كتب المدير "لامحدود" نصياً بدلاً من رقم)
+        max_str = str(pkg.get("max_products", 20)) if pkg else "20"
+        try:
+            max_prods = int(max_str)
+        except ValueError:
+            max_prods = 9999999 # رقم لا نهائي في حال الباقة المفتوحة
+            
+        # حساب العدد الفعلي للمنتجات الحالية في متجر التاجر
+        current_count = products_col.count_documents({"store_id": store_id})
+        
+        if current_count >= max_prods:
+            return False, f"عذراً! باقتك الحالية ({pkg_name}) تسمح بإضافة {max_prods} منتج كحد أقصى. يرجى ترقية باقتك لإضافة المزيد."
+            
+        return True, ""
+    except Exception as e:
+        print("Package Limit Check Error:", e)
+        return True, "" # في حال الخطأ التقني نسمح بالمرور كي لا يتوقف المتجر
+
