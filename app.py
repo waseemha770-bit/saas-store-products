@@ -269,7 +269,7 @@ def dashboard():
         except: return 0.0
 
     now = datetime.now()
-    completed_orders = [o for o in orders if o.get('status') == 'تم التوصيل 🟢']
+    completed_orders = [o for o in orders if o.get('status') in ['تم التوصيل 🟢', 'مدفوع 🟢']]
     canceled_orders = [o for o in orders if o.get('status') == 'ملغي 🔴']
     total_sales = sum(clean_total(o.get('total')) for o in orders if o.get('status') != 'ملغي 🔴')
     net_sales = sum(clean_total(o.get('total')) for o in completed_orders)
