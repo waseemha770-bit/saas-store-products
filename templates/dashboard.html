@@ -179,12 +179,13 @@
                     <!-- 3. المنتجات -->
                     <td class="text-start">
                         <div class="small" style="max-height: 100px; overflow-y: auto; line-height: 1.6;">
-                            {% if o.final_products %}
-                                {% for item in o.final_products %}
+                            {% set products = o.get('final_products') %}
+                            {% if products %}
+                                {% for item in products %}
                                     <div class="text-dark fw-bold">{{ item }}</div>
                                 {% endfor %}
                             {% else %}
-                                <div class="text-muted small">جاري المعالجة...</div>
+                                <div class="text-danger fw-bold small">يرجى تحديث الصفحة</div>
                             {% endif %}
                         </div>
                     </td>

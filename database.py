@@ -345,3 +345,71 @@ def resolve_order_items(order, store_id=None):
         results.append(f"طلب {order.get('order_id', '')}")
 
     return results
+
+
+def get_store_orders_enhanced(store_id):
+    """دالة مطورة وذكية لجلب الطلبات مع مطابقة أسماء المنتجات"""
+    orders = list(orders_col.find({"store_id": store_id}).sort('_id', -1))
+    
+    # 1. جلب خريطة المنتجات لمطابقتها مع الأكواد
+    prods = list(products_col.find({"store_id": store_id}))
+    prod_map = {}
+    for p in prods:
+        name = p.get('name') or p.get('title')
+        if name:
+            if '_id' in p: prod_map[str(p['_id'])] = name
+            if 'id' in p: prod_map[str(p['id'])] = name
+            
+    import json
+    for o in orders:
+        if '_id' in o: o['_id'] = str(o['_id'])
+        
+        final_list = []
+        cart = o.get('cart')
+        
+        # 2. فك السلة لو كانت نصاً
+        if isinstance(cart, str):
+            try: cart = json.loads(cart)
+            except: 
+                if cart.strip(): final_list.append(f"▪️ {cart.strip()}")
+        
+        # تحويل القاموس لمصفوفة إن وجد
+        if isinstance(cart, dict):
+            cart = [cart]
+            
+        # 3. قراءة المصفوفة بدقة
+        if isinstance(cart, list):
+            for item in cart:
+                if isinstance(item, dict):
+                    name = item.get('name') or item.get('title') or item.get('product_name')
+                    # المطابقة عبر ID في حال غياب الاسم
+                    if not name or name == 'منتج':
+                        pid = str(item.get('id') or item.get('_id') or item.get('product_id') or '')
+                        if pid in prod_map:
+                            name = prod_map[pid]
+                            
+                    if not name or name == 'منتج':
+                        name = "منتج غير مسجل"
+                        
+                    qty = item.get('qty') or item.get('quantity') or 1
+                    final_list.append(f"▪️ {name} (x{qty})")
+                elif isinstance(item, str) and item.strip():
+                    final_list.append(f"▪️ {item.strip()}")
+                    
+        # 4. قراءة الحقول القديمة (دعم الإصدارات السابقة للطلبات)
+        if not final_list:
+            legacy = o.get('product_name') or o.get('item_name') or o.get('items')
+            if isinstance(legacy, str) and legacy.strip():
+                if '▪️' not in legacy:
+                    final_list.append(f"▪️ {legacy} (x{o.get('qty', 1)})")
+                else:
+                    final_list.append(legacy)
+                    
+        # 5. خطة الطوارئ
+        if not final_list:
+            final_list.append("▪️ منتج غير محدد")
+            
+        o['final_products'] = final_list
+        
+    return orders
+
