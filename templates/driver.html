@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة المندوب - {{ driver.name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f0f4f8; }
+        .driver-header { background: linear-gradient(135deg, #0d6efd, #0b5ed7); color: white; border-radius: 0 0 25px 25px; }
+        .task-card { border-radius: 18px; border: none; box-shadow: 0 5px 20px rgba(0,0,0,0.06); transition: 0.2s; }
+        .action-btn { border-radius: 12px; padding: 10px; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="driver-header p-4 shadow-sm text-center mb-4">
+        <h4 class="fw-bold mb-1"><i class="fas fa-motorcycle me-2"></i> بوابة المندوب</h4>
+        <p class="mb-0 small opacity-75">المندوب: <strong>{{ driver.name }}</strong> | {{ driver.phone }}</p>
+    </div>
+
+    <div class="container pb-5" style="max-width: 650px;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-dark mb-0">مهام التوصيل الحالية</h5>
+            <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">{{ orders|length }} طلب</span>
+        </div>
+
+        {% if orders %}
+            {% for o in orders %}
+            <div class="card task-card mb-4 bg-white p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold text-primary fs-6">{{ o.order_id }}</span>
+                    <span class="badge bg-warning text-dark px-3 py-1">{{ o.status }}</span>
+                </div>
+                
+                <h6 class="fw-bold text-dark mb-1"><i class="fas fa-user text-secondary me-1"></i> {{ o.customer_name }}</h6>
+                <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> {{ o.customer_address or 'العنوان غير محدد' }}</p>
+                
+                <div class="bg-light p-2 rounded-3 mb-3 d-flex justify-content-between align-items-center">
+                    <span class="small fw-bold text-secondary">المبلغ للتحصيل:</span>
+                    <span class="fw-bold text-success fs-5">{{ o.total }}</span>
+                </div>
+
+                <!-- أزرار الإجراءات الميدانية -->
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <a href="tel:{{ o.customer_phone }}" class="btn btn-outline-primary action-btn w-100">
+                            <i class="fas fa-phone-alt me-1"></i> اتصال
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="https://wa.me/{{ o.customer_phone }}" target="_blank" class="btn btn-outline-success action-btn w-100">
+                            <i class="fab fa-whatsapp me-1"></i> واتساب
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ o.customer_address }}" target="_blank" class="btn btn-outline-secondary action-btn w-100">
+                            <i class="fas fa-location-arrow me-1"></i> الخريطة
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <form method="POST" action="/driver/complete/{{ o.order_id }}">
+                            <input type="hidden" name="token" value="{{ driver.token }}">
+                            <button type="submit" class="btn btn-success action-btn w-100" onclick="return confirm('تأكيد استلام المبلغ وتسليم الطلب للعميل؟')">
+                                <i class="fas fa-check-circle me-1"></i> تم التسليم
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-5 bg-white rounded-4 shadow-sm p-4">
+                <i class="fas fa-clipboard-check fs-1 text-success mb-3 opacity-50"></i>
+                <h5 class="fw-bold text-secondary">لا توجد طلبات معلقة حالياً</h5>
+                <p class="text-muted small">سيتم إشعارك فور إسناد طلبات توصيل جديدة لك.</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
