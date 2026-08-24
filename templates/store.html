@@ -71,6 +71,11 @@
 </head>
 <body>
     <div class="hero-section"><div class="container d-flex flex-column align-items-center justify-content-center">
+
+<a href="/track" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold me-2 shadow-sm" style="font-size: 0.85rem;">
+    <i class="fas fa-truck-fast"></i> تتبع طلبك
+</a>
+
         {% if settings.get('logo_url') and settings.logo_url.strip() != '' %}<img src="{{ settings.logo_url }}" onerror="fixImg(this)" class="store-logo" alt="شعار المتجر">{% else %}<div class="store-logo d-flex align-items-center justify-content-center bg-white text-primary" style="font-size: 2.5rem; width: 100px; height: 100px;"><i class="fas fa-store"></i></div>{% endif %}
         <h1 class="fw-bold hero-title">{{ settings.store_name }}</h1><p class="lead mb-0 mt-2" style="opacity: 0.9; font-weight: 600;">{{ settings.store_desc }}</p>
     </div></div>
