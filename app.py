@@ -89,7 +89,19 @@ def proxy_upload():
             headers['Authorization'] = f'Bearer {api_key}'
             req = urllib.request.Request('https://postimages.org/api/upload', data=payload, headers=headers, method='POST')
             with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['url']})
-                
+        elif provider == 'freeimagehost':
+            payload = urllib.parse.urlencode({'key': api_key, 'source': raw_b64, 'format': 'json', 'action': 'upload'}).encode('utf-8')
+            req = urllib.request.Request('https://freeimage.host/api/1/upload', data=payload, headers=headers, method='POST')
+            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": json.loads(response.read().decode())['image']['url']})
+        elif provider == 'catbox':
+            import base64
+            file_data = base64.b64decode(raw_b64)
+            boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
+            body = (f'--{boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n--{boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n').encode('utf-8') + file_data + f'\r\n--{boundary}--\r\n'.encode('utf-8')
+            catbox_headers = {'Content-Type': f'multipart/form-data; boundary={boundary}', 'User-Agent': 'Mozilla/5.0'}
+            req = urllib.request.Request('https://catbox.moe/user/api.php', data=body, headers=catbox_headers, method='POST')
+            with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": response.read().decode('utf-8').strip()})
+            
     except urllib.error.HTTPError as e: return jsonify({"success": False, "error": f"مرفوض من المزود (رمز: {e.code})"})
     except Exception as e: return jsonify({"success": False, "error": str(e)})
     return jsonify({"success": False, "error": "غير مدعوم"})
@@ -189,7 +201,7 @@ def dashboard():
                 'tiktok': request.form.get('tiktok'), 'telegram': request.form.get('telegram', '').strip(), 
                 'custom_domain': request.form.get('custom_domain', '').replace('https://', '').replace('http://', '').strip('/'), 
                 'logo_url': request.form.get('logo_url', '').strip(), 
-                'img_provider': request.form.get('img_provider', 'imgbb'), 
+                'img_provider': request.form.get('img_provider', 'catbox'), 
                 'img_api_key': request.form.get('img_api_key', '').strip(), 
                 'cloudinary_name': request.form.get('cloudinary_name', '').strip(), 
                 'cloudinary_preset': request.form.get('cloudinary_preset', '').strip(), 
@@ -214,6 +226,10 @@ def dashboard():
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
         elif action == 'delete_merchant' and is_super_admin: database.delete_user(request.form.get('user_id'))
+        elif action == 'edit_merchant_info' and is_super_admin:
+            if database.edit_merchant_info(request.form.get('user_id'), request.form.get('new_slug', '').strip(), request.form.get('new_package', 'أساسية')): flash("تم تحديث التاجر", "success")
+            else: flash("الرابط محجوز!", "danger")
+            
         return redirect(url_for('dashboard'))
     
     orders = database.get_orders(session['user_id'])
@@ -221,7 +237,6 @@ def dashboard():
     settings = database.get_settings(session['user_id'])
     coupons = database.get_coupons(session['user_id'])
     
-    # --- استعادة الإحصائيات المتقدمة والرسوم البيانية ---
     def parse_date(d):
         if isinstance(d, datetime): return d
         try: return datetime.strptime(str(d), '%Y-%m-%d %H:%M:%S.%f')
