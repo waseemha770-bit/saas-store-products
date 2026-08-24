@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تتبع الطلب - {{ order.order_id if order else 'البحث عن طلب' }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Cairo', sans-serif; background-color: #f4f7fb; color: #333; }
+        .track-card { border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .stepper { display: flex; justify-content: space-between; position: relative; margin: 30px 0; }
+        .stepper::before { content: ''; position: absolute; top: 22px; left: 10%; right: 10%; height: 4px; background: #e0e0e0; z-index: 1; }
+        .stepper-progress { position: absolute; top: 22px; right: 10%; height: 4px; background: #198754; z-index: 2; transition: width 0.5s ease; }
+        .step-item { position: relative; z-index: 3; text-align: center; width: 25%; }
+        .step-icon { width: 48px; height: 48px; border-radius: 50%; background: #e0e0e0; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 1.2rem; transition: all 0.3s ease; }
+        .step-item.active .step-icon { background: #0d6efd; box-shadow: 0 0 0 6px rgba(13,110,253,0.2); }
+        .step-item.completed .step-icon { background: #198754; }
+        .step-item.canceled .step-icon { background: #dc3545; }
+        .step-label { font-size: 0.85rem; font-weight: 700; color: #6c757d; }
+        .step-item.active .step-label { color: #0d6efd; }
+        .step-item.completed .step-label { color: #198754; }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 col-md-9">
+                <div class="card track-card bg-white p-4">
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold text-dark">📦 تتبع حالة الطلب</h4>
+                        <p class="text-muted small">أدخل رقم طلبك لمعرفة مكانه وحالته الحالية</p>
+                        
+                        <form method="GET" action="/track" class="input-group shadow-sm rounded-pill overflow-hidden mt-3">
+                            <input type="text" name="order_id" class="form-control border-0 px-4" placeholder="مثال: ORD-12345" value="{{ order.order_id if order else '' }}" required>
+                            <button class="btn btn-primary px-4 fw-bold" type="submit">بحث</button>
+                        </form>
+                    </div>
+
+                    {% if error %}
+                        <div class="alert alert-danger text-center fw-bold rounded-4">{{ error }}</div>
+                    {% endif %}
+
+                    {% if order %}
+                        <hr class="my-4">
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-0">رقم الطلب: <span class="text-primary">{{ order.order_id }}</span></h6>
+                                <small class="text-muted">{{ order.date.strftime('%Y-%m-%d %I:%M %p') if order.date else '' }}</small>
+                            </div>
+                            <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ order.status }}</span>
+                        </div>
+
+                        <!-- Stepper Calculations -->
+                        {% set st = order.get('status', 'جديد 🟡') %}
+                        {% if 'ملغي' in st %}
+                            <div class="alert alert-danger text-center fw-bold rounded-4 my-3"><i class="fas fa-times-circle"></i> تم إلغاء هذا الطلب</div>
+                        {% else %}
+                            {% set step_num = 1 %}
+                            {% if 'مدفوع' in st %}{% set step_num = 2 %}{% endif %}
+                            {% if 'تجهيز' in st %}{% set step_num = 3 %}{% endif %}
+                            {% if 'توصيل' in st %}{% set step_num = 4 %}{% endif %}
+
+                            <div class="stepper">
+                                <div class="stepper-progress" style="width: {{ (step_num - 1) * 33.33 }}%;"></div>
+                                <div class="step-item {% if step_num >= 1 %}completed{% endif %}">
+                                    <div class="step-icon"><i class="fas fa-file-invoice"></i></div>
+                                    <div class="step-label">تم الطلب</div>
+                                </div>
+                                <div class="step-item {% if step_num >= 2 %}completed{% elif step_num == 1 %}active{% endif %}">
+                                    <div class="step-icon"><i class="fas fa-wallet"></i></div>
+                                    <div class="step-label">تأكيد الدفع</div>
+                                </div>
+                                <div class="step-item {% if step_num >= 3 %}completed{% elif step_num == 2 %}active{% endif %}">
+                                    <div class="step-icon"><i class="fas fa-box-open"></i></div>
+                                    <div class="step-label">التجهيز</div>
+                                </div>
+                                <div class="step-item {% if step_num >= 4 %}completed{% elif step_num == 3 %}active{% endif %}">
+                                    <div class="step-icon"><i class="fas fa-truck-fast"></i></div>
+                                    <div class="step-label">تم التوصيل</div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- تفاصيل المنتجات -->
+                        <div class="bg-light p-3 rounded-4 mb-3">
+                            <h6 class="fw-bold mb-2 text-secondary">ملخص المشتريات:</h6>
+                            <ul class="list-unstyled mb-0">
+                                {% for item in order.get('cart_items', []) %}
+                                    <li class="d-flex justify-content-between py-1 border-bottom border-light">
+                                        <span>{{ item.name }} (x{{ item.qty }})</span>
+                                        <span class="fw-bold">{{ item.price }}</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                            <div class="d-flex justify-content-between pt-2 fw-bold text-success fs-5">
+                                <span>الإجمالي النهائي:</span>
+                                <span>{{ order.total }}</span>
+                            </div>
+                        </div>
+
+                        <!-- معلومات التوصيل -->
+                        <div class="small text-muted mb-4">
+                            <div><i class="fas fa-user me-1"></i> <strong>المستلم:</strong> {{ order.customer_name }}</div>
+                            <div><i class="fas fa-map-marker-alt me-1"></i> <strong>العنوان:</strong> {{ order.customer_address }}</div>
+                            <div><i class="fas fa-credit-card me-1"></i> <strong>الدفع:</strong> {{ order.payment_info }}</div>
+                        </div>
+
+                        {% if settings and settings.whatsapp %}
+                            <div class="text-center">
+                                <a href="https://wa.me/{{ settings.whatsapp }}?text={{ ('استفسار بخصوص الطلب: ' ~ order.order_id)|urlencode }}" class="btn btn-outline-success btn-sm rounded-pill px-4 fw-bold" target="_blank">
+                                    <i class="fab fa-whatsapp"></i> تواصل مع المتجر بخصوص الطلب
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -181,6 +181,21 @@ def checkout(slug):
     
     import urllib.parse
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
+
+@app.route('/track', methods=['GET'])
+@app.route('/track/<order_id>', methods=['GET'])
+def track_order(order_id=None):
+    search_id = order_id or request.args.get('order_id', '').strip()
+    if not search_id:
+        return render_template('track.html', order=None)
+    
+    order = database.orders_col.find_one({"order_id": search_id})
+    if not order:
+        return render_template('track.html', order=None, error="لم يتم العثور على طلب بهذا الرقم، يرجى التأكد من الرقم والمحاولة مجدداً.")
+    
+    settings = database.get_settings(order.get('store_id'))
+    return render_template('track.html', order=order, settings=settings)
+
 @app.route('/export/orders')
 def export_orders():
     if 'user_id' not in session: return redirect(url_for('login'))
