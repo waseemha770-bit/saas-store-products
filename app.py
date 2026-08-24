@@ -445,3 +445,14 @@ def api_delete_driver(token):
     if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
     database.drivers_col.delete_one({"token": token, "store_id": session.get('user_id')})
     return jsonify({"success": True})
+
+
+@app.route('/api/orders/update-status', methods=['POST'])
+def api_update_order_status():
+    if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
+    data = request.json
+    database.orders_col.update_one(
+        {"order_id": data['order_id'], "store_id": session.get('user_id')},
+        {"$set": {"status": data['status']}}
+    )
+    return jsonify({"success": True})
