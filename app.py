@@ -185,17 +185,23 @@ def checkout(slug):
 @app.route('/track', methods=['GET'])
 @app.route('/track/<order_id>', methods=['GET'])
 def track_order(order_id=None):
-    search_id = order_id or request.args.get('order_id', '').strip()
-    if not search_id:
+    search_query = (order_id or request.args.get('order_id', '')).strip().replace('#', '')
+    if not search_query:
         return render_template('track.html', order=None)
     
-    order = database.orders_col.find_one({"order_id": search_id})
+    # البحث برقم الطلب (مع تجاهل حالة الأحرف) أو برقم هاتف العميل
+    order = database.orders_col.find_one({
+        "$or": [
+            {"order_id": {"$regex": f"^{re.escape(search_query)}$", "$options": "i"}},
+            {"customer_phone": search_query}
+        ]
+    })
+    
     if not order:
-        return render_template('track.html', order=None, error="لم يتم العثور على طلب بهذا الرقم، يرجى التأكد من الرقم والمحاولة مجدداً.")
+        return render_template('track.html', order=None, search_query=search_query, error="لم يتم العثور على أي طلب مطابق لهذا الرقم. يرجى التأكد من رقم الطلب أو رقم الهاتف.")
     
     settings = database.get_settings(order.get('store_id'))
-    return render_template('track.html', order=order, settings=settings)
-
+    return render_template('track.html', order=order, settings=settings, search_query=search_query)
 @app.route('/export/orders')
 def export_orders():
     if 'user_id' not in session: return redirect(url_for('login'))
