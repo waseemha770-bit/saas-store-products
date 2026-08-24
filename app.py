@@ -1,7 +1,8 @@
+import os
 import requests
 import threading
 
-TELEGRAM_BOT_TOKEN = 'YOUR_TOKEN_HERE' # سيتم استبداله لاحقاً
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '') # يتم قراءته بأمان من Vercel Environment Variables # سيتم استبداله لاحقاً
 
 
 def extract_clean_products(order):
