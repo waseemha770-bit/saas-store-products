@@ -258,7 +258,7 @@ def checkout(slug):
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     import urllib.parse
-        wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.quote(msg)}"
+        wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.urllib.parse.urllib.parse.quote(msg)}"
     
     
         # --- Telegram Notification Hook ---
@@ -586,68 +586,3 @@ def send_telegram_order(chat_id, order_data, store_name, currency="ريال"):
         requests.post(url, json=payload, timeout=5)
     except Exception as e:
         print("Telegram Error:", e)
-
-
-@app.route('/api/checkout/<store_slug>', methods=['POST'])
-def checkout(store_slug):
-    try:
-        import urllib.parse
-        data = request.json
-        if not data:
-            return jsonify({"success": False, "error": "لا توجد بيانات."}), 400
-
-        user_data = database.users_col.find_one({'store_slug': store_slug})
-        if not user_data:
-            return jsonify({"success": False, "error": "المتجر غير موجود."}), 404
-
-        settings = user_data.get('settings', {})
-        wa_phone = settings.get('whatsapp', '')
-        currency = settings.get('currency', 'ريال')
-
-        customer_name = data.get('name', 'غير محدد')
-        customer_phone = data.get('phone', 'غير محدد')
-        customer_address = data.get('address', 'غير محدد')
-        payment_info = data.get('payment', 'الدفع عند الاستلام')
-        discount_info = data.get('discount_info', '')
-        cart = data.get('cart', [])
-        final_total = data.get('final_total', 0)
-
-        # حفظ الطلب في قاعدة البيانات إذا أردت لاحقاً
-        
-        # بناء رسالة واتساب
-        wa_text = f"مرحباً، أود تأكيد هذا الطلب:\n\n"
-        wa_text += f"👤 الاسم: {customer_name}\n"
-        wa_text += f"📞 الهاتف: {customer_phone}\n"
-        wa_text += f"📍 العنوان: {customer_address}\n"
-        wa_text += f"💳 الدفع: {payment_info}\n"
-        
-        if discount_info:
-            wa_text += f"🏷️ الخصم: {discount_info}\n"
-        
-        wa_text += "\n🛍️ المنتجات المطلوبة:\n"
-        for item in cart:
-            wa_text += f"- {item.get('name')} (الكمية: {item.get('qty')})\n"
-        
-        wa_text += f"\n💰 الإجمالي النهائي: {final_total} {currency}"
-        
-        # التشفير الآمن باستخدام urllib.parse
-        encoded_text = urllib.parse.quote(wa_text)
-        wa_link = f"https://wa.me/{wa_phone}?text={encoded_text}"
-        
-        # --- Telegram Notification Hook ---
-        try:
-            import threading
-            tg_settings = user_data.get('settings', {})
-            if tg_settings.get('enable_telegram') and tg_settings.get('telegram_chat_id'):
-                s_name = tg_settings.get('store_name', user_data.get('store_slug', 'متجرك'))
-                curr = tg_settings.get('currency', 'ريال')
-                threading.Thread(target=send_telegram_order, args=(tg_settings['telegram_chat_id'], data, s_name, curr)).start()
-        except Exception as tg_err:
-            print("TG Hook err:", tg_err)
-        # ----------------------------------
-
-        return jsonify({"success": True, "wa_link": wa_link, "whatsapp_url": wa_link})
-
-    except Exception as e:
-        print("Checkout Final Error:", e)
-        return jsonify({"success": False, "error": str(e)}), 500
