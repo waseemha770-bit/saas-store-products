@@ -170,8 +170,25 @@ def validate_coupon(user_id, code):
 
 def get_packages(): 
     return list(packages_col.find())
-def add_package(name, price, max_products, features): 
-    packages_col.insert_one({'name': name, 'price': price, 'max_products': int(max_products), 'features': features})
+def add_package(name, price, max_products, features):
+    try:
+        import re as regex_lib
+        # استخراج الأرقام فقط لضمان تحويلها لـ int
+        val = str(max_products)
+        clean_str = regex_lib.sub(r'\D', '', val)
+        clean_max = int(clean_str) if clean_str else 999999
+    except:
+        clean_max = 20
+
+    db.packages.insert_one({
+        "name": str(name).strip(),
+        "price": str(price).strip(),
+        "max_products": clean_max,
+        "pkg_max": clean_max,
+        "features": str(features).strip()
+    })
+
+
 def delete_package(pkg_id):
     from bson.objectid import ObjectId
     packages_col.delete_one({'_id': ObjectId(pkg_id)})
@@ -504,13 +521,9 @@ def check_product_limit(store_id):
 
 
 def check_merchant_product_limit(user_id):
-    """
-    محرك الفحص الصارم لحدود الباقات:
-    يُرجع (can_add: bool, current_count: int, max_limit: int, pkg_name: str, message: str)
-    """
     try:
+        import re as regex_lib
         from bson.objectid import ObjectId
-        # 1. جلب بيانات المستخدم
         user = users_col.find_one({"id": user_id})
         if not user:
             try:
@@ -523,40 +536,28 @@ def check_merchant_product_limit(user_id):
 
         pkg_name = str(user.get("package", "أساسية")).strip()
         
-        # 2. البحث عن الباقة ومطابقتها
-        all_pkgs = list(db.packages.find())
-        target_pkg = None
-        for p in all_pkgs:
-            if str(p.get("name", "")).strip().lower() == pkg_name.lower():
-                target_pkg = p
-                break
+        # البحث في قاعدة البيانات بمطابقة مرنة
+        target_pkg = db.packages.find_one({"name": {"$regex": f"^{regex_lib.escape(pkg_name)}$", "$options": "i"}})
 
-        # 3. استخراج الحد الأقصى للمنتجات بدقة
-        max_limit = 20 # القيمة الافتراضية
         if target_pkg:
-            raw_val = target_pkg.get("max_products") or target_pkg.get("pkg_max") or target_pkg.get("max") or 20
+            raw_val = target_pkg.get("max_products") if target_pkg.get("max_products") is not None else target_pkg.get("pkg_max", 20)
             try:
-                # استخراج الأرقام فقط من القيمة لتجنب أخطاء النصوص
-                digits_only = re.sub(r'\D', '', str(raw_val))
-                if digits_only:
-                    max_limit = int(digits_only)
-                else:
-                    max_limit = 999999 # في حال كتب "غير محدود"
+                max_limit = int(raw_val)
             except:
                 max_limit = 20
-        elif pkg_name in ["غير محدود", "VIP", "مفتوح"]:
-            max_limit = 999999
+        else:
+            # إذا لم توجد الباقة في الجدول، نأخذ حداً صغيراً بدلاً من 20
+            max_limit = 5
 
-        # 4. حساب العدد الفعلي لمنتجات التاجر
         current_prods = get_products(user_id)
         current_count = len(current_prods) if current_prods else 0
 
-        # 5. اتخاذ قرار المنع أو السماح
         if current_count >= max_limit:
-            err_msg = f"⚠️ تم الوصول للحد الأقصى! باقتك الحالية ({pkg_name}) تسمح بـ {max_limit} منتج فقط (لديك حالياً {current_count} منتج). يرجى الترقية لإضافة المزيد."
+            err_msg = f"⚠️ تم الوصول للحد الأقصى! باقتك ({pkg_name}) تسمح بـ {max_limit} منتج فقط (لديك حالياً {current_count} منتج)."
             return False, current_count, max_limit, pkg_name, err_msg
 
         return True, current_count, max_limit, pkg_name, ""
     except Exception as e:
-        print("Package Limit Checker Exception:", e)
+        print("Limit Error:", e)
         return True, 0, 999999, "خطأ", ""
+
