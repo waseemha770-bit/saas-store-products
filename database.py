@@ -501,3 +501,62 @@ def check_product_limit(store_id):
         print("Package Limit Check Error:", e)
         return True, "" # في حال الخطأ التقني نسمح بالمرور كي لا يتوقف المتجر
 
+
+
+def check_merchant_product_limit(user_id):
+    """
+    محرك الفحص الصارم لحدود الباقات:
+    يُرجع (can_add: bool, current_count: int, max_limit: int, pkg_name: str, message: str)
+    """
+    try:
+        from bson.objectid import ObjectId
+        # 1. جلب بيانات المستخدم
+        user = users_col.find_one({"id": user_id})
+        if not user:
+            try:
+                user = users_col.find_one({"_id": ObjectId(str(user_id))})
+            except:
+                pass
+
+        if not user:
+            return True, 0, 999999, "عامة", ""
+
+        pkg_name = str(user.get("package", "أساسية")).strip()
+        
+        # 2. البحث عن الباقة ومطابقتها
+        all_pkgs = list(db.packages.find())
+        target_pkg = None
+        for p in all_pkgs:
+            if str(p.get("name", "")).strip().lower() == pkg_name.lower():
+                target_pkg = p
+                break
+
+        # 3. استخراج الحد الأقصى للمنتجات بدقة
+        max_limit = 20 # القيمة الافتراضية
+        if target_pkg:
+            raw_val = target_pkg.get("max_products") or target_pkg.get("pkg_max") or target_pkg.get("max") or 20
+            try:
+                # استخراج الأرقام فقط من القيمة لتجنب أخطاء النصوص
+                digits_only = re.sub(r'\D', '', str(raw_val))
+                if digits_only:
+                    max_limit = int(digits_only)
+                else:
+                    max_limit = 999999 # في حال كتب "غير محدود"
+            except:
+                max_limit = 20
+        elif pkg_name in ["غير محدود", "VIP", "مفتوح"]:
+            max_limit = 999999
+
+        # 4. حساب العدد الفعلي لمنتجات التاجر
+        current_prods = get_products(user_id)
+        current_count = len(current_prods) if current_prods else 0
+
+        # 5. اتخاذ قرار المنع أو السماح
+        if current_count >= max_limit:
+            err_msg = f"⚠️ تم الوصول للحد الأقصى! باقتك الحالية ({pkg_name}) تسمح بـ {max_limit} منتج فقط (لديك حالياً {current_count} منتج). يرجى الترقية لإضافة المزيد."
+            return False, current_count, max_limit, pkg_name, err_msg
+
+        return True, current_count, max_limit, pkg_name, ""
+    except Exception as e:
+        print("Package Limit Checker Exception:", e)
+        return True, 0, 999999, "خطأ", ""
