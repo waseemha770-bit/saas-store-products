@@ -334,35 +334,46 @@ def dashboard():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_product':
-            # --- [نقطة التفتيش الأمنية الصارمة للباقات] ---
+            # 1. جلب بيانات التاجر
             user_data = database.users_col.find_one({'id': session['user_id']})
-            is_admin = (user_data and user_data.get('store_slug') == 'admin-store')
-            
+            if not user_data:
+                try:
+                    from bson.objectid import ObjectId
+                    user_data = database.users_col.find_one({'_id': ObjectId(str(session['user_id']))})
+                except:
+                    pass
+
+            is_admin = (session.get('store_slug') == 'admin-store')
             can_add = True
-            if not is_admin and user_data:
-                pkg_name = user_data.get('package', 'أساسية')
-                target_pkg = database.db.packages.find_one({"name": pkg_name})
-                
-                max_limit = 20 # الحد الافتراضي في حال غياب الباقة
+
+            if not is_admin:
+                # 2. استخراج الباقة والحد الأقصى
+                pkg_name = user_data.get('package', 'أساسية') if user_data else 'أساسية'
+                pkgs = database.get_packages()
+                target_pkg = next((p for p in pkgs if p.get('name') == pkg_name), None)
+
+                raw_max = 20
                 if target_pkg:
-                    try: 
-                        max_limit = int(target_pkg.get('max_products', 20))
-                    except: 
-                        max_limit = 999999 # للباقات المفتوحة (Unlimited)
-                
-                # حساب عدد المنتجات الفعلي للتاجر
-                current_count = database.db.products.count_documents({'store_id': session['user_id']})
-                
-                # المنع والتحذير إذا وصل للحد الأقصى
+                    raw_max = target_pkg.get('max_products') or target_pkg.get('pkg_max') or target_pkg.get('max') or 20
+
+                try:
+                    max_limit = int(str(raw_max).strip())
+                except:
+                    max_limit = 999999
+
+                # 3. حساب عدد المنتجات الفعلي المسجل للمتجر
+                current_prods = database.get_products(session['user_id'])
+                current_count = len(current_prods) if current_prods else 0
+
+                # 4. المنع الصارم عند بلوغ الحد الأقصى
                 if current_count >= max_limit:
                     can_add = False
-                    flash(f"⚠️ تم رفض الإضافة! باقتك الحالية ({pkg_name}) تسمح بـ {max_limit} منتج فقط كحد أقصى. يرجى الترقية.", "danger")
-            
-            # السماح بالتنفيذ إذا نجح في التفتيش الأمني
+                    flash(f"⚠️ لقد وصلت للحد الأقصى المسموح به في باقتك ({pkg_name}) وهو {max_limit} منتج. يرجى الترقية لإضافة المزيد.", "danger")
+
+            # 5. التنفيذ في حال عدم تجاوز السقف
             if can_add:
                 database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock'))
                 flash("تم إضافة المنتج بنجاح 📦", "success")
-                
         elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
