@@ -214,3 +214,51 @@ def assign_order_driver(order_id, store_id, driver_name, driver_phone):
     )
 
 
+
+
+def extract_real_order_items(order, store_id=None):
+    """استخراج وتنسيق أسماء المنتجات الحقيقية بدقة من كافة صيغ الطلبات"""
+    import json
+    extracted = []
+    
+    # 1. فحص حقل cart سواء كان مصفوفة أو نص JSON
+    cart_data = order.get('cart')
+    if isinstance(cart_data, str):
+        try:
+            cart_data = json.loads(cart_data)
+        except:
+            if cart_data.strip():
+                extracted.append({"name": cart_data.strip(), "qty": 1})
+                return extracted
+
+    if isinstance(cart_data, list):
+        for item in cart_data:
+            if isinstance(item, dict):
+                p_name = item.get('name') or item.get('title') or item.get('product_name') or item.get('item_name')
+                qty = item.get('qty') or item.get('quantity') or 1
+                prod_id = item.get('id') or item.get('product_id') or item.get('_id')
+                
+                # إذا كان الاسم غير متوفر أو عام، نبحث عنه في المنتجات
+                if (not p_name or p_name in ['منتج', 'منتجات متنوعة', '']) and prod_id:
+                    prod = products_col.find_one({"id": str(prod_id)}) or products_col.find_one({"_id": prod_id})
+                    if prod:
+                        p_name = prod.get('name') or prod.get('title')
+                
+                if p_name:
+                    extracted.append({"name": str(p_name), "qty": qty})
+            elif isinstance(item, str) and item.strip():
+                extracted.append({"name": item.strip(), "qty": 1})
+
+    # 2. فحص الحقول الفردية القديمة
+    if not extracted:
+        single_name = order.get('product_name') or order.get('item_name')
+        if single_name:
+            extracted.append({"name": str(single_name), "qty": order.get('qty', 1)})
+
+    # 3. التحقق من نص المنتجات الصريح إن وجد
+    if not extracted:
+        raw_text = order.get('items_text') or order.get('order_details')
+        if raw_text:
+            extracted.append({"name": str(raw_text), "qty": 1})
+
+    return extracted if extracted else [{"name": "طلب #" + str(order.get('order_id', '')), "qty": 1}]
