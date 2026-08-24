@@ -156,7 +156,6 @@ def checkout(slug):
     wallet_phone = data.get('wallet_phone', '')
     payment_str = data.get('payment', '')
     
-    # 1. إنشاء الطلب الآمن في قاعدة البيانات
     order_id, real_total, secure_cart, discount_info = database.create_secure_order(
         user.get('id'), data['name'], data['phone'], data.get('address', ''), 
         payment_str, data['cart'], data.get('coupon_code', '').strip()
@@ -164,10 +163,8 @@ def checkout(slug):
     
     payment_status_msg = "⏳ *حالة الدفع:* الدفع عند الاستلام (غير مدفوع)"
     
-    # --- محاكاة البنك الوهمي (Mock API) --- #
     if wallet_provider != 'cash':
         mock_bank_response = {"status": "success", "transaction_id": f"TXN-{order_id}"}
-        
         if mock_bank_response["status"] == "success":
             database.orders_col.update_one(
                 {"order_id": order_id, "store_id": user.get('id')}, 
@@ -176,9 +173,7 @@ def checkout(slug):
             payment_status_msg = f"✅ *حالة الدفع:* مدفوع إلكترونياً بنجاح (عملية وهمية: {mock_bank_response['transaction_id']})"
         else:
             payment_status_msg = "❌ *حالة الدفع:* فشلت عملية الدفع الإلكتروني"
-    # ----------------------------------------------- #
 
-    # 2. تجهيز رسالة الواتساب للتاجر
     msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {data.get('address', '')}\n💳 *طريقة الدفع:* {payment_str}\n{payment_status_msg}\n\n🛍️ *المنتجات:*\n"
     for item in secure_cart: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
     if discount_info: msg += f"\n🎟️ *الخصم:* {discount_info}"
