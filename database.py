@@ -175,12 +175,15 @@ def get_store_drivers(store_id):
 def get_driver_by_token(token):
     return drivers_col.find_one({"token": token.upper()}, {"_id": 0})
 
+
 def assign_order_driver(order_id, store_id, driver_name, driver_phone):
-    orders_col.update_one(
-        {"order_id": order_id, "store_id": store_id},
+    return orders_col.update_one(
+        {"order_id": str(order_id)},
         {"$set": {
             "driver_name": driver_name,
             "driver_phone": driver_phone,
             "status": "مع المندوب للتوصيل 🚚"
         }}
     )
+
+
