@@ -176,8 +176,7 @@ def checkout(slug):
         )
         payment_status_msg = f"✅ *حالة الدفع:* مدفوع إلكترونياً ({mock_txn})"
         
-    items_list_str = "
-".join([f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart])
+    items_list_str = '\n'.join([f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart])
     currency_label = settings.get('currency', 'ريال')
     
     msg = f"""🛍️ *طلب جديد من المتجر*
