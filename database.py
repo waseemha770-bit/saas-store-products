@@ -262,3 +262,86 @@ def extract_real_order_items(order, store_id=None):
             extracted.append({"name": str(raw_text), "qty": 1})
 
     return extracted if extracted else [{"name": "طلب #" + str(order.get('order_id', '')), "qty": 1}]
+
+
+def resolve_order_items(order, store_id=None):
+    """محرك استخراج ومطابقة أسماء المنتجات بدقة واحترافية من قاعدة البيانات"""
+    import json
+    from bson.objectid import ObjectId
+    
+    store_id = store_id or order.get('store_id')
+    results = []
+    
+    # خريطة سريعة لمنتجات المتجر بالمعرف والسعر
+    store_prods = list(products_col.find({"store_id": store_id})) if store_id else list(products_col.find({}))
+    prod_by_id = {}
+    prod_by_price = {}
+    
+    for p in store_prods:
+        p_name = p.get('name') or p.get('title') or p.get('name_ar')
+        if p_name:
+            if '_id' in p: prod_by_id[str(p['_id'])] = p_name
+            if 'id' in p: prod_by_id[str(p['id'])] = p_name
+            try:
+                price_val = float(p.get('price', 0))
+                if price_val > 0 and price_val not in prod_by_price:
+                    prod_by_price[price_val] = p_name
+            except:
+                pass
+
+    # 1. فحص حقل السلة cart
+    cart = order.get('cart')
+    if isinstance(cart, str):
+        try:
+            cart = json.loads(cart)
+        except:
+            pass
+            
+    if isinstance(cart, list) and len(cart) > 0:
+        for it in cart:
+            if isinstance(it, dict):
+                # البحث عن أي مفتاح يحمل اسم المنتج
+                name = (it.get('name') or it.get('title') or it.get('product_name') or 
+                        it.get('item_name') or it.get('name_ar') or it.get('label'))
+                
+                prod_id = str(it.get('id') or it.get('product_id') or it.get('_id') or '')
+                qty = it.get('qty') or it.get('quantity') or 1
+                
+                # مطابقة المعرف مع جدول المنتجات إذا كان الاسم مفقوداً
+                if (not name or name in ['منتج', 'منتجات متنوعة', '']) and prod_id:
+                    name = prod_by_id.get(prod_id)
+                
+                # مطابقة السعر مع جدول المنتجات كحل بديل
+                if not name or name in ['منتج', 'منتجات متنوعة', '']:
+                    try:
+                        p_price = float(it.get('price', 0))
+                        name = prod_by_price.get(p_price)
+                    except:
+                        pass
+                        
+                if name and name not in ['منتج', 'منتجات متنوعة']:
+                    results.append(f"{name} (x{qty})")
+                    
+            elif isinstance(it, str) and it.strip() and it.strip() != 'منتج':
+                results.append(it.strip())
+
+    # 2. فحص الحقول النصية والفردية
+    if not results:
+        direct_name = order.get('product_name') or order.get('item_name') or order.get('title')
+        if direct_name and direct_name != 'منتج':
+            results.append(f"{direct_name} (x{order.get('qty', 1)})")
+
+    # 3. مطابقة إجمالي الطلب مع أسعار منتجات المتجر للطلبات القديمة جداً
+    if not results:
+        try:
+            total_val = float(order.get('total', 0))
+            if total_val in prod_by_price:
+                results.append(f"{prod_by_price[total_val]} (x1)")
+        except:
+            pass
+
+    # 4. في حال تعذر المطابقة التامة نضع كود الطلب المرجعي
+    if not results:
+        results.append(f"طلب {order.get('order_id', '')}")
+
+    return results

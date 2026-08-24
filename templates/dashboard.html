@@ -178,14 +178,10 @@
 
                     <!-- 3. المنتجات -->
                     <td class="text-start">
-                        <div class="small" style="max-height: 100px; overflow-y: auto; line-height: 1.6;">
-                            {% if o.products_list %}
-                                {% for p in o.products_list %}
-                                    <div class="text-dark fw-bold">▪️ {{ p }}</div>
-                                {% endfor %}
-                            {% else %}
-                                <div class="text-dark fw-bold">▪️ منتج</div>
-                            {% endif %}
+                        <div class="small" style="max-height: 110px; overflow-y: auto; line-height: 1.6;">
+                            {% for prod in o.get('products_list', []) %}
+                                <div class="text-dark fw-bold">▪️ {{ prod }}</div>
+                            {% endfor %}
                         </div>
                     </td>
 
