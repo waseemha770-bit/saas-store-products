@@ -30,7 +30,7 @@
                 <div class="card track-card bg-white p-4">
                     <div class="text-center mb-4">
                         <h4 class="fw-bold text-dark">📦 تتبع حالة الطلب</h4>
-                        <p class="text-muted small">أدخل رقم الطلب أو رقم هاتفك لمعرفة حالة طلبك</p>
+                        <p class="text-muted small">أدخل رقم الطلب أو رقم هاتفك لمعرفة حالة الطلب</p>
                         
                         <form method="GET" action="/track" class="input-group shadow-sm rounded-pill overflow-hidden mt-3">
                             <input type="text" name="order_id" class="form-control border-0 px-4" placeholder="رقم الطلب (مثال: ORD-1001) أو رقم الهاتف" value="{{ search_query if search_query else '' }}" required>
@@ -47,36 +47,40 @@
                         
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div>
-                                <h6 class="fw-bold mb-0">رقم الطلب: <span class="text-primary">{{ order.order_id }}</span></h6>
-                                <small class="text-muted">{{ order.date if order.date is string else (order.date.strftime('%Y-%m-%d %I:%M %p') if order.date else '') }}</small>
+                                <h6 class="fw-bold mb-0">رقم الطلب: <span class="text-primary">{{ order.get('order_id', '') }}</span></h6>
+                                <small class="text-muted">{{ order.get('date', '') }}</small>
                             </div>
-                            <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ order.status }}</span>
+                            <span class="badge bg-light text-dark border px-3 py-2 fs-6">{{ order.get('status', 'جديد 🟡') }}</span>
                         </div>
 
                         {% set st = order.get('status', 'جديد 🟡') %}
                         {% if 'ملغي' in st %}
                             <div class="alert alert-danger text-center fw-bold rounded-4 my-3"><i class="fas fa-times-circle"></i> تم إلغاء هذا الطلب</div>
                         {% else %}
-                            {% set step_num = 1 %}
-                            {% if 'مدفوع' in st %}{% set step_num = 2 %}{% endif %}
-                            {% if 'تجهيز' in st %}{% set step_num = 3 %}{% endif %}
-                            {% if 'توصيل' in st %}{% set step_num = 4 %}{% endif %}
+                            {% set is_paid = ('مدفوع' in st or 'تجهيز' in st or 'توصيل' in st) %}
+                            {% set is_processing = ('تجهيز' in st or 'توصيل' in st) %}
+                            {% set is_delivered = ('توصيل' in st) %}
+                            {% set prog_width = '100%' if is_delivered else ('66%' if is_processing else ('33%' if is_paid else '0%')) %}
 
                             <div class="stepper">
-                                <div class="stepper-progress" style="width: {{ (step_num - 1) * 33.33 }}%;"></div>
-                                <div class="step-item {% if step_num >= 1 %}completed{% endif %}">
+                                <div class="stepper-progress" style="width: {{ prog_width }};"></div>
+                                
+                                <div class="step-item completed">
                                     <div class="step-icon"><i class="fas fa-file-invoice"></i></div>
                                     <div class="step-label">تم الطلب</div>
                                 </div>
-                                <div class="step-item {% if step_num >= 2 %}completed{% elif step_num == 1 %}active{% endif %}">
+                                
+                                <div class="step-item {% if is_paid %}completed{% else %}active{% endif %}">
                                     <div class="step-icon"><i class="fas fa-wallet"></i></div>
                                     <div class="step-label">تأكيد الدفع</div>
                                 </div>
-                                <div class="step-item {% if step_num >= 3 %}completed{% elif step_num == 2 %}active{% endif %}">
+                                
+                                <div class="step-item {% if is_processing %}completed{% elif is_paid %}active{% endif %}">
                                     <div class="step-icon"><i class="fas fa-box-open"></i></div>
                                     <div class="step-label">التجهيز</div>
                                 </div>
-                                <div class="step-item {% if step_num >= 4 %}completed{% elif step_num == 3 %}active{% endif %}">
+                                
+                                <div class="step-item {% if is_delivered %}completed{% elif is_processing %}active{% endif %}">
                                     <div class="step-icon"><i class="fas fa-truck-fast"></i></div>
                                     <div class="step-label">تم التوصيل</div>
                                 </div>
@@ -88,26 +92,26 @@
                             <ul class="list-unstyled mb-0">
                                 {% for item in order.get('cart_items', []) %}
                                     <li class="d-flex justify-content-between py-1 border-bottom border-light">
-                                        <span>{{ item.name }} (x{{ item.qty }})</span>
-                                        <span class="fw-bold">{{ item.price }}</span>
+                                        <span>{{ item.get('name', '') }} (x{{ item.get('qty', 1) }})</span>
+                                        <span class="fw-bold">{{ item.get('price', '') }}</span>
                                     </li>
                                 {% endfor %}
                             </ul>
                             <div class="d-flex justify-content-between pt-2 fw-bold text-success fs-5">
                                 <span>الإجمالي النهائي:</span>
-                                <span>{{ order.total }}</span>
+                                <span>{{ order.get('total', '') }}</span>
                             </div>
                         </div>
 
                         <div class="small text-muted mb-4">
-                            <div><i class="fas fa-user me-1"></i> <strong>المستلم:</strong> {{ order.customer_name }}</div>
-                            <div><i class="fas fa-map-marker-alt me-1"></i> <strong>العنوان:</strong> {{ order.customer_address }}</div>
-                            <div><i class="fas fa-credit-card me-1"></i> <strong>الدفع:</strong> {{ order.payment_info }}</div>
+                            <div><i class="fas fa-user me-1 text-primary"></i> <strong>المستلم:</strong> {{ order.get('customer_name', '') }}</div>
+                            <div><i class="fas fa-map-marker-alt me-1 text-danger"></i> <strong>العنوان:</strong> {{ order.get('customer_address', 'غير محدد') }}</div>
+                            <div><i class="fas fa-credit-card me-1 text-success"></i> <strong>الدفع:</strong> {{ order.get('payment_info', '') }}</div>
                         </div>
 
-                        {% if settings and settings.whatsapp %}
+                        {% if settings and settings.get('whatsapp') %}
                             <div class="text-center">
-                                <a href="https://wa.me/{{ settings.whatsapp }}?text={{ ('استفسار بخصوص الطلب: ' ~ order.order_id)|urlencode }}" class="btn btn-outline-success btn-sm rounded-pill px-4 fw-bold" target="_blank">
+                                <a href="https://wa.me/{{ settings.get('whatsapp') }}?text=استفسار%20بخصوص%20الطلب%20{{ order.get('order_id', '') }}" class="btn btn-outline-success btn-sm rounded-pill px-4 fw-bold" target="_blank">
                                     <i class="fab fa-whatsapp"></i> تواصل مع المتجر بخصوص الطلب
                                 </a>
                             </div>
