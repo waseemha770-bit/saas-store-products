@@ -337,6 +337,18 @@ def dashboard():
         elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
+        elif action == 'add_driver':
+            d_name = request.form.get('driver_name') or request.form.get('name')
+            d_phone = request.form.get('driver_phone') or request.form.get('phone')
+            if d_name and d_phone:
+                database.add_driver(session['user_id'], d_name, d_phone)
+                flash(f"تم إضافة المندوب {d_name} بنجاح 🛵", "success")
+            else:
+                flash("يرجى إدخال اسم ورقم المندوب", "danger")
+        elif action == 'delete_driver':
+            d_phone = request.form.get('driver_phone') or request.form.get('phone')
+            database.delete_driver(session['user_id'], d_phone)
+            flash("تم حذف المندوب 🗑️", "danger")
         elif action == 'add_coupon': database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
         elif action == 'delete_coupon': database.delete_coupon(request.form.get('coupon_id'), session['user_id']); flash("تم حذف الكوبون", "danger")
         elif action == 'change_password':
