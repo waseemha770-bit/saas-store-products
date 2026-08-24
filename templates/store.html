@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --main-color: {{ settings.theme_color|default('#0d6efd') }}; --surface-color: #f8f9fa; --card-shadow: 0 8px 24px rgba(0,0,0,0.04); --hover-shadow: 0 12px 32px rgba(0,0,0,0.1); }
-        body { font-family: '{{ settings.font_family|default('Cairo') }}', sans-serif; background-color: #f2f5f9; padding-bottom: 90px; color: #333; }
+        body { font-family: '{{ settings.font_family|default('Cairo') }}', sans-serif; background-color: #f2f5f9; padding-bottom: 25px; color: #333; }
 
         /* Hero Section */
         {% if settings.header_size == 'small' %} .hero-section { padding: 40px 0 30px; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; margin-bottom: 25px; } .hero-title { font-size: 1.8rem; } .store-logo { width: 80px; height: 80px; }
@@ -57,26 +57,30 @@
         .tags-container { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
         .tag-badge { background: #f8f9fa; border: 1px solid #e9ecef; color: #6c757d; font-size: 0.7rem; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
 
-        /* Floating Cart (Glassmorphism) */
-        #floating-cart { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: rgba(var(--main-color-rgb, 13, 110, 253), 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 50rem; padding: 12px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); cursor: pointer; z-index: 1000; font-weight: 800; font-size: 1.1rem; display: none; width: auto; white-space: nowrap; transition: all 0.3s ease; }
+        /* Floating Cart */
+        #floating-cart { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: rgba(13, 110, 253, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 50rem; padding: 12px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); cursor: pointer; z-index: 1000; font-weight: 800; font-size: 1.1rem; display: none; width: auto; white-space: nowrap; transition: all 0.3s ease; }
         #floating-cart:hover { transform: translateX(-50%) scale(1.05); }
 
-        /* Modals */
+        /* Modals & Support */
         .modal-content { border-radius: 24px; border: none; }
         .modal-header { border-bottom: 1px solid #f0f0f0; border-radius: 24px 24px 0 0; }
-        .support-card { background: #fff; border: none; border-radius: 20px; padding: 25px; box-shadow: var(--card-shadow); margin-top: 40px; text-align: center; }
-        .btn-support-wa { background-color: #25D366; color: white; border-radius: 50rem; padding: 12px 25px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.2); }
+        .support-card { background: #fff; border: none; border-radius: 20px; padding: 20px; box-shadow: var(--card-shadow); margin-top: 30px; text-align: center; }
+        .btn-support-wa { background-color: #25D366; color: white; border-radius: 50rem; padding: 10px 22px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.2); }
         .btn-support-wa:hover { background-color: #1ebe57; color: white; transform: translateY(-2px); }
     </style>
 </head>
 <body>
-    <div class="hero-section"><div class="container d-flex flex-column align-items-center justify-content-center">
-
-
-
-        {% if settings.get('logo_url') and settings.logo_url.strip() != '' %}<img src="{{ settings.logo_url }}" onerror="fixImg(this)" class="store-logo" alt="شعار المتجر">{% else %}<div class="store-logo d-flex align-items-center justify-content-center bg-white text-primary" style="font-size: 2.5rem; width: 100px; height: 100px;"><i class="fas fa-store"></i></div>{% endif %}
-        <h1 class="fw-bold hero-title">{{ settings.store_name }}</h1><p class="lead mb-0 mt-2" style="opacity: 0.9; font-weight: 600;">{{ settings.store_desc }}</p>
-    </div></div>
+    <div class="hero-section">
+        <div class="container d-flex flex-column align-items-center justify-content-center">
+            {% if settings.get('logo_url') and settings.logo_url.strip() != '' %}
+                <img src="{{ settings.logo_url }}" onerror="fixImg(this)" class="store-logo" alt="شعار المتجر">
+            {% else %}
+                <div class="store-logo d-flex align-items-center justify-content-center bg-white text-primary" style="font-size: 2.5rem; width: 100px; height: 100px;"><i class="fas fa-store"></i></div>
+            {% endif %}
+            <h1 class="fw-bold hero-title">{{ settings.store_name }}</h1>
+            <p class="lead mb-0 mt-2" style="opacity: 0.9; font-weight: 600;">{{ settings.store_desc }}</p>
+        </div>
+    </div>
 
     <div class="container mb-4">
         <div class="row g-2 align-items-center">
@@ -104,7 +108,11 @@
         {% set grouped_products = products | groupby('category') %}
         {% if grouped_products %}
             <ul class="nav nav-pills category-tabs" id="categoryTabs" role="tablist">
-                {% for category, items in grouped_products %}<li class="nav-item" role="presentation"><button class="nav-link {% if loop.first %}active{% endif %}" id="tab-btn-{{ loop.index }}" data-bs-toggle="pill" data-bs-target="#tab-pane-{{ loop.index }}" type="button" role="tab">{{ category if category else 'عام' }}</button></li>{% endfor %}
+                {% for category, items in grouped_products %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {% if loop.first %}active{% endif %}" id="tab-btn-{{ loop.index }}" data-bs-toggle="pill" data-bs-target="#tab-pane-{{ loop.index }}" type="button" role="tab">{{ category if category else 'عام' }}</button>
+                    </li>
+                {% endfor %}
             </ul>
             <div class="tab-content" id="categoryTabsContent">
                 {% for category, items in grouped_products %}
@@ -172,27 +180,46 @@
                 </div>
                 {% endfor %}
             </div>
-        {% else %}<div class="text-center py-5 mt-4"><i class="fas fa-box-open fs-1 text-muted mb-3 opacity-50"></i><h5 class="text-muted fw-bold">لا توجد منتجات معروضة حالياً</h5></div>{% endif %}
+        {% else %}
+            <div class="text-center py-5 mt-4"><i class="fas fa-box-open fs-1 text-muted mb-3 opacity-50"></i><h5 class="text-muted fw-bold">لا توجد منتجات معروضة حالياً</h5></div>
+        {% endif %}
     </div>
 
-    <div class="container pb-4"><div class="support-card"><h5 class="fw-bold mb-2">هل تبحث عن المساعدة؟ 💬</h5><p class="text-muted small mb-4 fw-bold">تواصل معنا مباشرة وسنقوم بخدمتك فوراً.</p><div class="d-flex justify-content-center flex-wrap gap-3">{% if settings.get('whatsapp') %}<a href="https://wa.me/{{ settings.whatsapp }}" target="_blank" class="btn-support-wa"><i class="fab fa-whatsapp fs-5"></i> تواصل عبر الواتساب</a>{% endif %}{% if settings.get('telegram') %}<a href="https://t.me/{{ settings.telegram.strip('@') }}" target="_blank" class="btn btn-primary" style="border-radius: 50rem; padding: 12px 25px; font-weight: bold;"><i class="fab fa-telegram-plane fs-5 me-1"></i> تواصل عبر التلجرام</a>{% endif %}</div></div></div>
-
-    <div class="container text-center mb-4">
-        <div class="d-flex justify-content-center gap-4 mb-3">
-            {% if settings.get('facebook') %}<a href="{{ settings.facebook }}" target="_blank" class="text-primary fs-3"><i class="fab fa-facebook"></i></a>{% endif %}
-            {% if settings.get('instagram') %}<a href="{{ settings.instagram }}" target="_blank" class="text-danger fs-3"><i class="fab fa-instagram"></i></a>{% endif %}
-            {% if settings.get('tiktok') %}<a href="{{ settings.tiktok }}" target="_blank" class="text-dark fs-3"><i class="fab fa-tiktok"></i></a>{% endif %}
+    <!-- قسم المساعدة المدمج -->
+    <div class="container mb-3">
+        <div class="support-card">
+            <h6 class="fw-bold mb-1">هل تبحث عن المساعدة؟ 💬</h6>
+            <p class="text-muted small mb-3">تواصل معنا وسنقوم بخدمتك فوراً.</p>
+            <div class="d-flex justify-content-center flex-wrap gap-2">
+                {% if settings.get('whatsapp') %}
+                    <a href="https://wa.me/{{ settings.whatsapp }}" target="_blank" class="btn-support-wa"><i class="fab fa-whatsapp fs-5"></i> تواصل عبر الواتساب</a>
+                {% endif %}
+                {% if settings.get('telegram') %}
+                    <a href="https://t.me/{{ settings.telegram.strip('@') }}" target="_blank" class="btn btn-primary btn-sm" style="border-radius: 50rem; padding: 10px 20px; font-weight: bold;"><i class="fab fa-telegram-plane me-1"></i> تواصل عبر التلجرام</a>
+                {% endif %}
+                <a href="/track" class="btn btn-outline-secondary btn-sm rounded-pill px-3 fw-bold d-inline-flex align-items-center">
+                    <i class="fas fa-truck-fast text-primary me-1"></i> تتبع طلبك
+                </a>
+            </div>
         </div>
-        <!-- توقيع المبرمج -->
-        <p class="text-muted" style="font-size: 0.75rem; font-weight: bold; opacity: 0.5; margin-top: 10px;">برمجة المهندس / وسيم همدان - 771954200</p>
+    </div>
+
+    <!-- تذييل الصفحة المدمج مع توقيع المطور مباشرة -->
+    <div class="container text-center my-2 pb-1">
+        <div class="d-flex justify-content-center gap-3 mb-2">
+            {% if settings.get('facebook') %}<a href="{{ settings.facebook }}" target="_blank" class="text-primary fs-5"><i class="fab fa-facebook"></i></a>{% endif %}
+            {% if settings.get('instagram') %}<a href="{{ settings.instagram }}" target="_blank" class="text-danger fs-5"><i class="fab fa-instagram"></i></a>{% endif %}
+            {% if settings.get('tiktok') %}<a href="{{ settings.tiktok }}" target="_blank" class="text-dark fs-5"><i class="fab fa-tiktok"></i></a>{% endif %}
+        </div>
+        <p class="text-muted mb-0" style="font-size: 0.72rem; font-weight: bold; opacity: 0.65;">برمجة المهندس / وسيم همدان - 771954200</p>
     </div>
 
     <div id="floating-cart" onclick="openCartModal()"><i class="fas fa-shopping-bag me-1"></i> سلة المشتريات (<span id="cart-count">0</span>) | <span id="cart-total">0</span> {{ settings.currency }}</div>
 
-    <!-- Modals -->
+    <!-- Cart Modal -->
     <div class="modal fade" id="cartModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content shadow-lg"><div class="modal-header bg-light"><h5 class="modal-title fw-bold text-dark">إتمام الطلب 🚀</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-4"><ul id="cart-items" class="list-group mb-3 border-0"></ul><div class="mb-3 p-3 bg-light rounded-4 border"><label class="form-label small fw-bold text-primary"><i class="fas fa-ticket-alt"></i> لديك كود خصم؟</label><div class="input-group"><input type="text" id="coupon-code" class="form-control" placeholder="أدخل الكوبون هنا" style="text-transform: uppercase; border-radius: 0 10px 10px 0;"><button class="btn btn-primary fw-bold" type="button" onclick="applyCoupon()" style="border-radius: 10px 0 0 10px;">تطبيق</button></div><small id="coupon-msg" class="fw-bold mt-1 d-block"></small></div><div class="d-flex justify-content-between align-items-center mb-4 bg-success bg-opacity-10 p-3 rounded-4 border border-success"><h5 class="fw-bold text-success mb-0">الإجمالي النهائي:</h5><h3 class="fw-bold text-success mb-0"><span id="modal-total">0</span> <small class="fs-6">{{ settings.currency }}</small></h3></div><h6 class="fw-bold mb-3 text-secondary border-bottom pb-2">بيانات التوصيل والدفع:</h6><div class="mb-3"><label class="form-label small fw-bold">الاسم الكامل *</label><input type="text" id="customer-name" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">رقم الهاتف (للتواصل) *</label><input type="tel" id="customer-phone" class="form-control bg-light" required></div><div class="mb-3"><label class="form-label small fw-bold">العنوان الدقيق *</label><input type="text" id="customer-address" class="form-control bg-light" required></div>
     
-    <!-- قسم الدفع المحدث -->
+    <!-- قسم الدفع -->
     <div class="mb-4 p-3 border rounded-3 bg-light">
         <label class="form-label fw-bold text-primary mb-2"><i class="fas fa-wallet"></i> طريقة الدفع *</label>
         <select id="payment-method" class="form-select border-primary fw-bold" onchange="toggleWalletInput()">
@@ -220,7 +247,12 @@
     
     <button id="btn-submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm rounded-pill" onclick="checkout()"><i class="fab fa-whatsapp fs-5 me-1"></i> إرسال الطلب</button></div></div></div></div>
 
+    <!-- Details Modal -->
     <div class="modal fade" id="detailsModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content shadow-lg overflow-hidden"><div class="modal-header bg-light border-0"><h5 class="modal-title fw-bold text-dark" id="detailsName"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div style="background:#f8f9fa; text-align:center; border-bottom:1px solid #eaeaea;"><img id="detailsImg" src="" onerror="fixImg(this)" style="max-height:350px; max-width:100%; object-fit:contain; padding:20px;"></div><div class="p-4"><h3 class="text-primary fw-bold border-bottom pb-3 mb-3"><span id="detailsPrice"></span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h3><h6 class="fw-bold mb-2 text-dark"><i class="fas fa-align-right text-primary me-1"></i> تفاصيل المنتج:</h6><p id="detailsDesc" class="text-muted" style="line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap;"></p></div></div><div class="modal-footer bg-light border-0 p-3"><button id="detailsAddToCartBtn" class="btn btn-primary w-100 fw-bold py-3 fs-5 rounded-pill"><i class="fas fa-cart-plus me-1"></i> إضافة إلى السلة</button></div></div></div></div>
+
+    <!-- Rating Modal -->
+    <div class="modal fade" id="globalRatingModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content shadow-lg"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold text-dark" id="ratingModalHeaderTitle"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center pt-2 pb-3"><p id="ratingModalProductName" class="text-secondary small fw-bold mb-3"></p><div class="d-flex justify-content-center flex-row-reverse mb-3" id="interactive-stars" onmouseleave="resetHover()"><svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div><div class="mb-2"><button id="confirmRatingBtn" class="btn btn-warning btn-sm px-4 fw-bold rounded-pill shadow-sm" disabled>تأكيد التقييم</button></div><p id="ratingModalMessage" class="fw-bold text-success d-none mb-0 small"></p></div></div></div></div>
+    <style>.modal-star:hover, .modal-star:hover ~ .modal-star { fill: #ffc107 !important; transform: scale(1.15); } .star-selected { fill: #ffc107 !important; }</style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -307,7 +339,6 @@
             if(!name || !phone || !address) return alert("يرجى ملء بيانات التوصيل الأساسية"); 
             if(paymentMethod !== 'cash' && !walletPhone) return alert("يرجى إدخال رقم هاتف المحفظة لإتمام الدفع الإلكتروني");
 
-            // دمج معلومات الدفع لإرسالها للباك إند
             let paymentStr = "الدفع عند الاستلام";
             if (paymentMethod !== 'cash') {
                 let providerName = document.getElementById('payment-method').options[document.getElementById('payment-method').selectedIndex].text;
@@ -317,7 +348,6 @@
             document.getElementById('btn-submit').innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحويل...'; 
             document.getElementById('btn-submit').disabled = true; 
             
-            // هنا سيتم تجهيز الـ Payload المستقبلي للباك إند
             let payload = {
                 name: name, phone: phone, address: address, 
                 payment: paymentStr, 
@@ -330,67 +360,15 @@
                 method: 'POST', headers: {'Content-Type': 'application/json'}, 
                 body: JSON.stringify(payload) 
             }).then(res => res.json()).then(data => { 
-                cart = []; currentDiscountPercent = 0; currentDiscountInfo = ''; document.getElementById('coupon-code').value = ''; document.getElementById('coupon-msg').innerText = ''; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب"; document.getElementById('btn-submit').disabled = false; window.open(data.whatsapp_url, '_blank'); 
+                cart = []; currentDiscountPercent = 0; currentDiscountInfo = ''; document.getElementById('coupon-code').value = ''; document.getElementById('coupon-msg').innerText = ''; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب"; document.getElementById('btn-submit').disabled = false; window.open(data.wa_link || data.whatsapp_url, '_blank'); 
             }); 
         }
+
+        let currentRatingProductId = null; let ratingModal = null; let selectedRating = 0; let previousRating = null;
+        function openRatingModal(pid, pname) { currentRatingProductId = pid; document.getElementById('ratingModalProductName').innerText = pname; document.getElementById('ratingModalMessage').classList.add('d-none'); let btn = document.getElementById('confirmRatingBtn'); btn.classList.remove('d-none'); let savedRating = localStorage.getItem('rated_val_' + pid); if(savedRating) { previousRating = parseInt(savedRating); selectedRating = previousRating; document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-edit text-warning"></i> تعديل تقييمك'; btn.innerText = 'تحديث التقييم'; btn.disabled = false; } else { previousRating = null; selectedRating = 0; document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-star text-warning"></i> تقييم المنتج'; btn.innerText = 'تأكيد التقييم'; btn.disabled = true; } document.querySelectorAll('.modal-star').forEach(s => { let val = parseInt(s.getAttribute('data-val')); if(val <= selectedRating) { s.classList.add('star-selected'); s.setAttribute('fill', '#ffc107'); } else { s.classList.remove('star-selected'); s.setAttribute('fill', '#e4e5e9'); } }); if(!ratingModal) ratingModal = new bootstrap.Modal(document.getElementById('globalRatingModal')); ratingModal.show(); }
+        function resetHover() { document.querySelectorAll('.modal-star').forEach(s => { let val = parseInt(s.getAttribute('data-val')); if(val <= selectedRating) { s.setAttribute('fill', '#ffc107'); } else { s.setAttribute('fill', '#e4e5e9'); } }); }
+        document.querySelectorAll('.modal-star').forEach(star => { star.addEventListener('click', function() { selectedRating = parseInt(this.getAttribute('data-val')); document.querySelectorAll('.modal-star').forEach(s => { if(parseInt(s.getAttribute('data-val')) <= selectedRating) { s.classList.add('star-selected'); s.setAttribute('fill', '#ffc107'); } else { s.classList.remove('star-selected'); s.setAttribute('fill', '#e4e5e9'); } }); let btn = document.getElementById('confirmRatingBtn'); btn.disabled = false; if(previousRating && selectedRating === previousRating) { btn.disabled = true; } }); });
+        document.getElementById('confirmRatingBtn').addEventListener('click', function() { if(selectedRating === 0 || !currentRatingProductId) return; let pid = currentRatingProductId; let btn = this; btn.disabled = true; btn.innerHTML = 'جاري الحفظ...'; let payload = { product_id: pid, rating: selectedRating }; if (previousRating) { payload.old_rating = previousRating; } fetch('/api/rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }).then(r => r.json()).then(data => { if(data.success) { localStorage.setItem('rated_val_' + pid, selectedRating); let msg = document.getElementById('ratingModalMessage'); msg.innerText = previousRating ? 'تم التحديث بنجاح!' : 'تم التقييم بنجاح!'; msg.classList.remove('d-none'); btn.classList.add('d-none'); document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1); document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ')'; let svgStars = ''; let newRate = Math.round(data.new_rating); for(let i=1; i<=5; i++){ let color = (newRate >= i) ? '#ffc107' : '#e4e5e9'; svgStars += `<svg width="15" height="15" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`; } document.getElementById('display-stars-' + pid).innerHTML = svgStars; setTimeout(() => { ratingModal.hide(); }, 1500); } else { btn.innerText = 'حدث خطأ'; btn.disabled = false; } }).catch(err => { btn.innerText = 'فشل الاتصال'; btn.disabled = false; }); });
     </script>
-
-    <!-- Global Rating Modal -->
-    <div class="modal fade" id="globalRatingModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content shadow-lg"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold text-dark" id="ratingModalHeaderTitle"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center pt-2 pb-3"><p id="ratingModalProductName" class="text-secondary small fw-bold mb-3"></p><div class="d-flex justify-content-center flex-row-reverse mb-3" id="interactive-stars" onmouseleave="resetHover()"><svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div><div class="mb-2"><button id="confirmRatingBtn" class="btn btn-warning btn-sm px-4 fw-bold rounded-pill shadow-sm" disabled>تأكيد التقييم</button></div><p id="ratingModalMessage" class="fw-bold text-success d-none mb-0 small"></p></div></div></div></div>
-    <style>.modal-star:hover, .modal-star:hover ~ .modal-star { fill: #ffc107 !important; transform: scale(1.15); } .star-selected { fill: #ffc107 !important; }</style>
-    <script>
-    let currentRatingProductId = null; let ratingModal = null; let selectedRating = 0; let previousRating = null;
-    function openRatingModal(pid, pname) { currentRatingProductId = pid; document.getElementById('ratingModalProductName').innerText = pname; document.getElementById('ratingModalMessage').classList.add('d-none'); let btn = document.getElementById('confirmRatingBtn'); btn.classList.remove('d-none'); let savedRating = localStorage.getItem('rated_val_' + pid); if(savedRating) { previousRating = parseInt(savedRating); selectedRating = previousRating; document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-edit text-warning"></i> تعديل تقييمك'; btn.innerText = 'تحديث التقييم'; btn.disabled = false; } else { previousRating = null; selectedRating = 0; document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-star text-warning"></i> تقييم المنتج'; btn.innerText = 'تأكيد التقييم'; btn.disabled = true; } document.querySelectorAll('.modal-star').forEach(s => { let val = parseInt(s.getAttribute('data-val')); if(val <= selectedRating) { s.classList.add('star-selected'); s.setAttribute('fill', '#ffc107'); } else { s.classList.remove('star-selected'); s.setAttribute('fill', '#e4e5e9'); } }); if(!ratingModal) ratingModal = new bootstrap.Modal(document.getElementById('globalRatingModal')); ratingModal.show(); }
-    function resetHover() { document.querySelectorAll('.modal-star').forEach(s => { let val = parseInt(s.getAttribute('data-val')); if(val <= selectedRating) { s.setAttribute('fill', '#ffc107'); } else { s.setAttribute('fill', '#e4e5e9'); } }); }
-    document.querySelectorAll('.modal-star').forEach(star => { star.addEventListener('click', function() { selectedRating = parseInt(this.getAttribute('data-val')); document.querySelectorAll('.modal-star').forEach(s => { if(parseInt(s.getAttribute('data-val')) <= selectedRating) { s.classList.add('star-selected'); s.setAttribute('fill', '#ffc107'); } else { s.classList.remove('star-selected'); s.setAttribute('fill', '#e4e5e9'); } }); let btn = document.getElementById('confirmRatingBtn'); btn.disabled = false; if(previousRating && selectedRating === previousRating) { btn.disabled = true; } }); });
-    document.getElementById('confirmRatingBtn').addEventListener('click', function() { if(selectedRating === 0 || !currentRatingProductId) return; let pid = currentRatingProductId; let btn = this; btn.disabled = true; btn.innerHTML = 'جاري الحفظ...'; let payload = { product_id: pid, rating: selectedRating }; if (previousRating) { payload.old_rating = previousRating; } fetch('/api/rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }).then(r => r.json()).then(data => { if(data.success) { localStorage.setItem('rated_val_' + pid, selectedRating); let msg = document.getElementById('ratingModalMessage'); msg.innerText = previousRating ? 'تم التحديث بنجاح!' : 'تم التقييم بنجاح!'; msg.classList.remove('d-none'); btn.classList.add('d-none'); document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1); document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ')'; let svgStars = ''; let newRate = Math.round(data.new_rating); for(let i=1; i<=5; i++){ let color = (newRate >= i) ? '#ffc107' : '#e4e5e9'; svgStars += `<svg width="15" height="15" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`; } document.getElementById('display-stars-' + pid).innerHTML = svgStars; setTimeout(() => { ratingModal.hide(); }, 1500); } else { btn.innerText = 'حدث خطأ'; btn.disabled = false; } }).catch(err => { btn.innerText = 'فشل الاتصال'; btn.disabled = false; }); });
-    </script>
-
-<!-- تذييل المتجر الرسمي (Official Store Footer) -->
-<!-- التذييل المدمج والمحدث -->
-<footer class="bg-white border-top text-center py-2 mt-3 shadow-sm" style="font-size: 0.85rem;">
-    <div class="container d-flex flex-column flex-sm-row justify-content-between align-items-center py-1 gap-2">
-        <div class="d-flex align-items-center gap-2">
-            {% if settings.get('logo_url') %}
-                <img src="{{ settings.logo_url }}" onerror="fixImg(this)" width="24" height="24" style="object-fit: cover; border-radius: 50%;">
-            {% endif %}
-            <span class="fw-bold text-dark">{{ settings.get('store_name', '') }}</span>
-        </div>
-        
-        <!-- روابط التواصل بشكل مدمج وصغير -->
-        <div class="d-flex align-items-center gap-3 fs-5">
-            {% if settings.get('whatsapp') %}
-                <a href="https://wa.me/{{ settings.whatsapp }}" target="_blank" class="text-success"><i class="fab fa-whatsapp"></i></a>
-            {% endif %}
-            {% if settings.get('facebook') %}
-                <a href="{{ settings.facebook }}" target="_blank" class="text-primary"><i class="fab fa-facebook"></i></a>
-            {% endif %}
-            {% if settings.get('instagram') %}
-                <a href="{{ settings.instagram }}" target="_blank" class="text-danger"><i class="fab fa-instagram"></i></a>
-            {% endif %}
-            {% if settings.get('tiktok') %}
-                <a href="{{ settings.tiktok }}" target="_blank" class="text-dark"><i class="fab fa-tiktok"></i></a>
-            {% endif %}
-            {% if settings.get('telegram') %}
-                <a href="https://t.me/{{ settings.telegram }}" target="_blank" class="text-info"><i class="fab fa-telegram"></i></a>
-            {% endif %}
-        </div>
-    </div>
-</footer>
-
-
-
-<!-- تذييل المتجر الرسمي -->
-<footer class="mt-5 py-4 bg-white border-top text-center">
-    <div class="container">
-        <div class="d-flex justify-content-center align-items-center gap-3 my-2">
-            <a href="/track" class="btn btn-sm btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">
-                <i class="fas fa-truck-fast text-primary me-1"></i> تتبع حالة طلبك
-            </a>
-        </div>
-        
-    </div>
-</footer>
-
 </body>
 </html>
