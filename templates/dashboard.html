@@ -82,8 +82,8 @@
     </div>
     
     <div class="col-md-12" id="basicProviderField" style="{% if settings.get('img_provider', 'catbox') == 'cloudinary' or settings.get('img_provider', 'catbox') == 'catbox' %}display:none;{% endif %}"><label class="small fw-bold">مفتاح الربط (API Key)</label><input name="img_api_key" type="password" class="form-control" value="{{ settings.get('img_api_key', '') }}"></div>
-    <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider') != 'cloudinary' %}display:none;{% endif %}"><label class="small fw-bold text-info">Cloud Name</label><input name="cloudinary_name" type="text" class="form-control" value="{{ settings.get('cloudinary_name', '') }}"></div>
-    <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider') != 'cloudinary' %}display:none;{% endif %}"><label class="small fw-bold text-info">Upload Preset</label><input name="cloudinary_preset" type="password" class="form-control" value="{{ settings.get('cloudinary_preset', '') }}"></div>
+    <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider', 'catbox') != 'cloudinary' %}display:none;{% endif %}"><label class="small fw-bold text-info">Cloud Name</label><input name="cloudinary_name" type="text" class="form-control" value="{{ settings.get('cloudinary_name', '') }}"></div>
+    <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider', 'catbox') != 'cloudinary' %}display:none;{% endif %}"><label class="small fw-bold text-info">Upload Preset</label><input name="cloudinary_preset" type="password" class="form-control" value="{{ settings.get('cloudinary_preset', '') }}"></div>
     
     <!-- بداية قسم بوابات الدفع -->
     <div class="col-12 mt-4 border-bottom pb-2 d-flex justify-content-between align-items-center">
