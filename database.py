@@ -196,8 +196,43 @@ def add_driver(store_id, name, phone):
     drivers_col.insert_one(driver_data)
     return token
 
+
 def get_store_drivers(store_id):
-    return list(drivers_col.find({"store_id": store_id}, {"_id": 0}))
+    try:
+        drivers = list(db.drivers.find({"store_id": store_id}).sort('_id', -1))
+        for d in drivers:
+            d['_id'] = str(d['_id'])
+        return drivers
+    except Exception as e:
+        print("Driver Fetch Error:", e)
+        return []
+
+def add_driver(store_id, name, phone):
+    try:
+        clean_phone = str(phone).strip()
+        clean_name = str(name).strip()
+        existing = db.drivers.find_one({"store_id": store_id, "phone": clean_phone})
+        if not existing:
+            db.drivers.insert_one({
+                "store_id": store_id,
+                "name": clean_name,
+                "phone": clean_phone
+            })
+            return True
+        return False
+    except Exception as e:
+        print("Driver Insert Error:", e)
+        return False
+
+def delete_driver(store_id, phone):
+    try:
+        db.drivers.delete_one({"store_id": store_id, "phone": str(phone).strip()})
+        return True
+    except Exception as e:
+        print("Driver Delete Error:", e)
+        return False
+
+
 
 def get_driver_by_token(token):
     return drivers_col.find_one({"token": token.upper()}, {"_id": 0})

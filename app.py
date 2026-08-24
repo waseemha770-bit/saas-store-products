@@ -398,6 +398,7 @@ def dashboard():
     products = database.get_products(session['user_id'])
     settings = database.get_settings(session['user_id'])
     coupons = database.get_coupons(session['user_id'])
+    drivers = database.get_store_drivers(session['user_id'])
     
     def parse_date(d):
         if isinstance(d, datetime): return d
@@ -455,7 +456,7 @@ def dashboard():
         else:
             status_counts[st] = 1
     
-    return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
+    return render_template('dashboard.html', drivers=drivers, products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))

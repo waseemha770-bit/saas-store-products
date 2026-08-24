@@ -36,6 +36,7 @@
             <li class="nav-item"><button class="nav-link fw-bold text-dark" data-bs-toggle="tab" data-bs-target="#orders">📦 الطلبات</button></li>
             <li class="nav-item"><button class="nav-link fw-bold text-primary" data-bs-toggle="tab" data-bs-target="#products">المنتجات</button></li>
             <li class="nav-item"><button class="nav-link fw-bold text-warning" data-bs-toggle="tab" data-bs-target="#coupons">🎟️ الكوبونات</button></li>
+            <li class="nav-item"><button class="nav-link fw-bold text-info" data-bs-toggle="tab" data-bs-target="#drivers">🛵 المناديب</button></li>
             <li class="nav-item"><button class="nav-link fw-bold text-secondary" data-bs-toggle="tab" data-bs-target="#settings">⚙️ الإعدادات</button></li>
             {% if is_super_admin %}<li class="nav-item"><button class="nav-link fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#superadmin">👑 الإدارة</button></li>{% endif %}
         </ul>
@@ -255,6 +256,82 @@
 </div>
 <div class="table-responsive">
 <table class="table table-hover align-middle"><thead class="table-light"><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>الكمية</th><th>التصنيف</th><th>إجراءات</th></tr></thead><tbody>{% for p in products %}<tr class="admin-product-row" data-name="{{ p.name }}" data-cat="{{ p.category }}"><td><img src="{{ p.image_url }}" onerror="fixImg(this)" width="50" height="50" style="object-fit:cover; border-radius:5px;"></td><td class="fw-bold">{{ p.name }}</td><td class="text-primary">{{ p.price }}</td><td>{{ p.stock }}</td><td><span class="badge bg-secondary">{{ p.category }}</span></td><td><button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}">تعديل</button> <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');"><input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}"><button class="btn btn-sm btn-danger">حذف</button></form></td></tr><div class="modal fade" id="editModal{{ p.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST" class="row g-3"><input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}"><div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div><div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" value="{{ p.price }}" required></div><div class="col-6"><label class="small fw-bold">المخزون</label><input name="stock" type="number" class="form-control" value="{{ p.stock }}" required></div><div class="col-12"><label class="small fw-bold">التصنيف</label><input name="cat" class="form-control" value="{{ p.category }}" required></div><div class="col-12"><label class="small fw-bold">تغيير الصورة</label><input type="file" class="form-control mb-1" accept="image/*" onchange="uploadImageToCloud(this, 'editImgUrl{{ p.id }}', 'editImgStatus{{ p.id }}', 'editSaveBtn{{ p.id }}')"><small id="editImgStatus{{ p.id }}" class="fw-bold d-block text-secondary mb-1"></small><input type="text" name="img" id="editImgUrl{{ p.id }}" class="form-control" value="{{ p.image_url }}"></div><div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control" value="{{ p.description }}"></div><div class="col-12 mt-3"><button class="btn btn-primary w-100 fw-bold" id="editSaveBtn{{ p.id }}">حفظ التعديلات</button></div></form></div></div></div></div>{% endfor %}</tbody></table></div></div></div></div>
+
+            
+            <!-- تبويب إدارة المناديب -->
+            <div class="tab-pane fade" id="drivers">
+                <div class="row">
+                    <!-- نموذج إضافة مندوب -->
+                    <div class="col-md-5 mb-4">
+                        <div class="card shadow-sm border-0 border-top border-4 border-info">
+                            <div class="card-body">
+                                <h5 class="fw-bold mb-3 text-info"><i class="fas fa-motorcycle"></i> إضافة مندوب توصيل</h5>
+                                <form method="POST">
+                                    <input type="hidden" name="action" value="add_driver">
+                                    <div class="mb-3">
+                                        <label class="small fw-bold">اسم المندوب</label>
+                                        <input type="text" name="driver_name" class="form-control" placeholder="مثال: أحمد محمد" required>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="small fw-bold">رقم هاتف المندوب (للتواصل وتعيين الطلبات)</label>
+                                        <input type="text" name="driver_phone" class="form-control" placeholder="مثال: 771234567" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-info w-100 fw-bold text-white shadow-sm">حفظ بيانات المندوب 🛵</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- جدول قائمة المناديب -->
+                    <div class="col-md-7 mb-4">
+                        <div class="card shadow-sm border-0">
+                            <div class="card-body">
+                                <h5 class="fw-bold mb-3"><i class="fas fa-users"></i> قائمة مناديب المتجر</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle text-center">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>اسم المندوب</th>
+                                                <th>رقم الهاتف</th>
+                                                <th>إجراء</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% if drivers %}
+                                                {% for d in drivers %}
+                                                <tr>
+                                                    <td class="fw-bold text-dark text-start">🛵 {{ d.name }}</td>
+                                                    <td>
+                                                        <a href="tel:{{ d.phone }}" class="text-decoration-none text-muted fw-bold">
+                                                            <i class="fas fa-phone-alt text-success me-1"></i>{{ d.phone }}
+                                                        </a>
+                                                    </td>
+                                                    <td>
+                                                        <form method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا المندوب؟');">
+                                                            <input type="hidden" name="action" value="delete_driver">
+                                                            <input type="hidden" name="driver_phone" value="{{ d.phone }}">
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="3" class="text-muted py-4">
+                                                        <i class="fas fa-motorcycle fs-2 mb-2 opacity-50 d-block"></i>
+                                                        لا يوجد مناديب مسجلين حالياً. أضف مندوبك الأول من النموذج الجانبي.
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div class="tab-pane fade" id="coupons"><div class="row"><div class="col-md-5 mb-4"><div class="card shadow-sm border-0 border-top border-4 border-warning"><div class="card-body"><h5 class="fw-bold mb-3"><i class="fas fa-ticket-alt text-warning"></i> إنشاء كوبون خصم</h5><form method="POST"><input type="hidden" name="action" value="add_coupon"><div class="mb-3"><label class="small fw-bold">كود الكوبون (مثال: KSA20)</label><input type="text" name="code" class="form-control" required style="text-transform: uppercase;"></div><div class="mb-4"><label class="small fw-bold">نسبة الخصم المئوية (%)</label><input type="number" name="discount" class="form-control" placeholder="مثال: 15" required min="1" max="99"></div><button class="btn btn-warning w-100 fw-bold text-dark shadow-sm">تفعيل الكوبون</button></form></div></div></div><div class="col-md-7"><div class="card shadow-sm border-0"><div class="card-body"><h5 class="fw-bold mb-3">الكوبونات الفعالة</h5><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>كود الكوبون</th><th>نسبة الخصم</th><th>إجراءات</th></tr></thead><tbody>{% for c in coupons %}<tr><td class="fw-bold text-primary fs-5">{{ c.code }}</td><td><span class="badge bg-success fs-6">{{ c.discount }}%</span></td><td><form method="POST" onsubmit="return confirm('إلغاء هذا الكوبون؟');"><input type="hidden" name="action" value="delete_coupon"><input type="hidden" name="coupon_id" value="{{ c.id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted py-3 text-center fw-bold">لا توجد كوبونات فعالة حالياً</td></tr>{% endfor %}</tbody></table></div></div></div></div></div></div>
 
