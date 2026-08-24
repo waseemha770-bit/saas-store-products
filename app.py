@@ -439,3 +439,10 @@ def api_assign_driver():
     data = request.json
     database.assign_order_driver(data['order_id'], session['user_id'], data['driver_name'], data['driver_phone'])
     return jsonify({"success": True})
+
+
+@app.route('/api/drivers/delete/<token>', methods=['POST'])
+def api_delete_driver(token):
+    if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
+    database.drivers_col.delete_one({"token": token, "store_id": session.get('user_id')})
+    return jsonify({"success": True})

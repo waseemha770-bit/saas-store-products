@@ -25,6 +25,13 @@
         {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }}">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
 
         <ul class="nav nav-tabs mb-4 bg-white p-2 rounded shadow-sm" id="myTab">
+
+<li class="nav-item" role="presentation">
+    <button class="nav-link fw-bold px-3" id="drivers-tab" data-bs-toggle="tab" data-bs-target="#drivers-pane" type="button" role="tab">
+        <i class="fas fa-motorcycle me-1 text-primary"></i> المناديب والتوصيل
+    </button>
+</li>
+
             <li class="nav-item"><button class="nav-link fw-bold text-success active" data-bs-toggle="tab" data-bs-target="#analytics">📊 الإحصائيات</button></li>
             <li class="nav-item"><button class="nav-link fw-bold text-dark" data-bs-toggle="tab" data-bs-target="#orders">📦 الطلبات</button></li>
             <li class="nav-item"><button class="nav-link fw-bold text-primary" data-bs-toggle="tab" data-bs-target="#products">المنتجات</button></li>
@@ -35,6 +42,85 @@
         {% set cats = products | map(attribute='category') | unique | list %}
 
         <div class="tab-content">
+
+<!-- تبويب إدارة المناديب -->
+<div class="tab-pane fade" id="drivers-pane" role="tabpanel">
+    <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
+        <h5 class="fw-bold text-dark mb-0"><i class="fas fa-motorcycle text-primary me-2"></i> فريق مناديب التوصيل</h5>
+        <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addDriverModal">
+            <i class="fas fa-plus-circle me-1"></i> إضافة مندوب جديد
+        </button>
+    </div>
+
+    <div class="row g-3" id="driversListContainer">
+        {% if drivers %}
+            {% for d in drivers %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">{{ d.name }}</h6>
+                            <span class="text-muted small"><i class="fas fa-phone-alt me-1 text-success"></i> {{ d.phone }}</span>
+                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small rounded-pill">نشط 🟢</span>
+                    </div>
+                    
+                    <div class="bg-light p-2 rounded-3 my-2 small">
+                        <span class="text-muted d-block mb-1">رابط بوابة المندوب:</span>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control border-0 bg-white" value="{{ request.host_url }}driver/{{ d.token }}" id="link-{{ d.token }}" readonly>
+                            <button class="btn btn-outline-primary" onclick="copyDriverPortalLink('{{ d.token }}')" title="نسخ الرابط"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                        <a href="https://wa.me/{{ d.phone }}?text={{ ('مرحباً ' + d.name + '، هذا هو رابط بوابة استلام مهام التوصيل الخاصة بك:%0A' + request.host_url + 'driver/' + d.token)|urlencode }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2 fw-bold">
+                            <i class="fab fa-whatsapp me-1"></i> إرسال الرابط
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger rounded-pill px-2" onclick="deleteDriver('{{ d.token }}')">
+                            <i class="fas fa-trash-alt"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm">
+                <i class="fas fa-motorcycle fs-1 text-muted mb-3 opacity-50"></i>
+                <h6 class="text-muted fw-bold">لم تقم بإضافة أي مندوب توصيل بعد</h6>
+                <p class="text-muted small">أضف مناديبك وشاركهم روابط بواباتهم الميدانية لاستلام وتوصيل الطلبات.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal إضافة مندوب جديد -->
+<div class="modal fade" id="addDriverModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-user-plus text-primary me-2"></i> إضافة مندوب جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <form id="addDriverForm" onsubmit="submitNewDriver(event)">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">اسم المندوب</label>
+                        <input type="text" class="form-control rounded-3" id="driverNameInput" placeholder="مثال: أحمد محمد" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">رقم هاتف المندوب (واتساب)</label>
+                        <input type="tel" class="form-control rounded-3" id="driverPhoneInput" placeholder="مثال: 770000000" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm">
+                        <i class="fas fa-save me-1"></i> حفظ وإنشاء بوابة المندوب
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
             
     <div class="tab-pane fade show active" id="analytics">
         <div class="row mb-4">
@@ -370,6 +456,71 @@
         }
     });
     </script>
+
+
+<script>
+function copyDriverPortalLink(token) {
+    const input = document.getElementById('link-' + token);
+    input.select();
+    document.execCommand('copy');
+    alert('✅ تم نسخ رابط بوابة المندوب إلى الحافظة');
+}
+
+function submitNewDriver(e) {
+    e.preventDefault();
+    const name = document.getElementById('driverNameInput').value.trim();
+    const phone = document.getElementById('driverPhoneInput').value.trim();
+    
+    fetch('/api/drivers/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, phone: phone })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ تم إضافة المندوب بنجاح وتوليد بوابته الخاصة');
+            location.reload();
+        } else {
+            alert('حدث خطأ: ' + (data.error || 'تعذر الإضافة'));
+        }
+    });
+}
+
+function deleteDriver(token) {
+    if (!confirm('هل أنت متأكد من حذف هذا المندوب؟')) return;
+    fetch('/api/drivers/delete/' + token, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) location.reload();
+    });
+}
+
+function assignOrderToDriver(orderId, selectEl) {
+    const selectedOption = selectEl.options[selectEl.selectedIndex];
+    const driverName = selectedOption.getAttribute('data-name');
+    const driverPhone = selectedOption.getAttribute('data-phone');
+    
+    if (!driverPhone) return;
+    
+    fetch('/api/orders/assign-driver', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            order_id: orderId,
+            driver_name: driverName,
+            driver_phone: driverPhone
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert('🚚 تم إسناد الطلب ' + orderId + ' للمندوب: ' + driverName);
+            location.reload();
+        }
+    });
+}
+</script>
 
 </body>
 </html>
