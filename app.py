@@ -308,7 +308,7 @@ def dashboard():
         if d_str in daily_chart: daily_chart[d_str] += clean_total(o.get('total'))
             
     adv_stats = { 'total_sales': total_sales, 'net_sales': net_sales, 'total_orders': len(orders), 'completed_orders': len(completed_orders), 'canceled_orders': len(canceled_orders), 'avg_order_value': avg_order_value, 'customers_count': len(customers_map), 'top_customers': top_customers, 'best_sellers': best_sellers, 'least_sellers': least_sellers, 'this_month_sales': this_month_sales, 'last_month_sales': last_month_sales, 'today_sales': today_sales, 'weekly_sales': weekly_sales, 'growth_rate': growth_rate, 'completion_rate': completion_rate, 'delivery_fees': 0.0, 'chart_labels': list(daily_chart.keys()), 'chart_data': list(daily_chart.values()) }
-    status_counts = {"جديد 🟡": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
+    status_counts = {"جديد 🟡": 0, "مدفوع 🟢": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
     for o in orders: status_counts[o.get('status', 'جديد 🟡')] += 1
     
     return render_template('dashboard.html', products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
