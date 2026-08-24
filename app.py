@@ -257,7 +257,8 @@ def checkout(slug):
 💰 *الإجمالي النهائي:* {real_total} {currency_label}"""
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
-    wa_link = f"https://wa.me/{wa_phone}?text={quote(msg)}"
+    import urllib.parse
+        wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.quote(msg)}"
     
     
         # --- Telegram Notification Hook ---
