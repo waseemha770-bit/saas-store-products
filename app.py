@@ -189,43 +189,6 @@ def checkout(slug):
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
 
 
-@app.route('/track/<order_id>', methods=['GET'])
-def track_order(order_id=None):
-    search_query = (order_id or request.args.get('order_id', '')).strip().replace('#', '')
-    if not search_query:
-        return render_template('track.html', order=None)
-    
-    # تنظيف رقم الهاتف للبحث المرن
-    clean_phone = re.sub(r'[^0-9]', '', search_query)
-    phone_query = clean_phone[-9:] if len(clean_phone) >= 9 else clean_phone
-
-    # البحث عن أحدث طلب يطابق رقم الطلب أو رقم الهاتف
-    order = database.orders_col.find_one({
-        "$or": [
-            {"order_id": {"$regex": f"^{re.escape(search_query)}$", "$options": "i"}},
-            {"customer_phone": {"$regex": re.escape(phone_query)}} if phone_query else {"customer_phone": search_query}
-        ]
-    }, sort=[('_id', -1)])
-    
-    if not order:
-        return render_template('track.html', order=None, search_query=search_query, error="عذراً، لم نتمكن من العثور على أي طلب مسجل بهذا الرقم. يرجى التأكد من رقم الطلب أو رقم الهاتف.")
-    
-    settings = database.get_settings(order.get('store_id'))
-    return render_template('track.html', order=order, settings=settings, search_query=search_query)
-    
-    # البحث برقم الطلب (مع تجاهل حالة الأحرف) أو برقم هاتف العميل
-    order = database.orders_col.find_one({
-        "$or": [
-            {"order_id": {"$regex": f"^{re.escape(search_query)}$", "$options": "i"}},
-            {"customer_phone": search_query}
-        ]
-    })
-    
-    if not order:
-        return render_template('track.html', order=None, search_query=search_query, error="لم يتم العثور على أي طلب مطابق لهذا الرقم. يرجى التأكد من رقم الطلب أو رقم الهاتف.")
-    
-    settings = database.get_settings(order.get('store_id'))
-    return render_template('track.html', order=order, settings=settings, search_query=search_query)
 
 @app.route('/track', methods=['GET'])
 @app.route('/track/<order_id>', methods=['GET'])
@@ -236,7 +199,6 @@ def track_order(order_id=None):
     if not clean_query:
         return render_template('track.html', order=None)
     
-    # تنظيف واستخراج الأرقام للبحث بالهاتف
     digits = ''.join(c for c in clean_query if c.isdigit())
     digits_suffix = digits[-9:] if len(digits) >= 9 else (digits[-7:] if len(digits) >= 7 else digits)
     
@@ -261,7 +223,6 @@ def track_order(order_id=None):
             
     order = database.orders_col.find_one({'': or_filters}, sort=[('_id', -1)])
     
-    # بحث احتياطي عبر فحص أحدث 200 طلب
     if not order and (digits_suffix or clean_query):
         recent_orders = list(database.orders_col.find().sort('_id', -1).limit(200))
         for o in recent_orders:
