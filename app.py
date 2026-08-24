@@ -166,15 +166,12 @@ def checkout(slug):
     
     # --- محاكاة البنك الوهمي (Mock API) --- #
     if wallet_provider != 'cash':
-        # في العالم الحقيقي، نرسل طلب HTTP هنا إلى البنك وننتظر الرد
-        # لكن الآن سنفترض أن البنك رد علينا بـ (عملية ناجحة)
         mock_bank_response = {"status": "success", "transaction_id": f"TXN-{order_id}"}
         
         if mock_bank_response["status"] == "success":
-            # تحديث حالة الطلب في قاعدة البيانات إلى مدفوع تلقائياً
             database.orders_col.update_one(
                 {"order_id": order_id, "store_id": user.get('id')}, 
-                {"": {"status": "مدفوع 🟢", "transaction_id": mock_bank_response["transaction_id"]}}
+                {"$set": {"status": "مدفوع 🟢", "transaction_id": mock_bank_response["transaction_id"]}}
             )
             payment_status_msg = f"✅ *حالة الدفع:* مدفوع إلكترونياً بنجاح (عملية وهمية: {mock_bank_response['transaction_id']})"
         else:
@@ -182,26 +179,12 @@ def checkout(slug):
     # ----------------------------------------------- #
 
     # 2. تجهيز رسالة الواتساب للتاجر
-    msg = f"مرحباً، لدي طلب جديد 🛒
-
-🧾 *رقم الطلب:* {order_id}
-👤 *الاسم:* {data['name']}
-📞 *الهاتف:* {data['phone']}
-📍 *العنوان:* {data.get('address', '')}
-💳 *طريقة الدفع:* {payment_str}
-{payment_status_msg}
-
-🛍️ *المنتجات:*
-"
-    for item in secure_cart: msg += f"▪️ {item['name']} (الكمية: {item['qty']})
-"
-    if discount_info: msg += f"
-🎟️ *الخصم:* {discount_info}"
-    msg += f"
-💰 *الإجمالي النهائي:* {real_total} {settings.get('currency', 'ريال')}
-
-*()*"
+    msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {data.get('address', '')}\n💳 *طريقة الدفع:* {payment_str}\n{payment_status_msg}\n\n🛍️ *المنتجات:*\n"
+    for item in secure_cart: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
+    if discount_info: msg += f"\n🎟️ *الخصم:* {discount_info}"
+    msg += f"\n💰 *الإجمالي النهائي:* {real_total} {settings.get('currency', 'ريال')}\n\n*()*"
     
+    import urllib.parse
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
 @app.route('/export/orders')
 def export_orders():
