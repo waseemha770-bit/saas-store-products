@@ -154,8 +154,6 @@ def checkout(slug):
     settings = database.get_settings(user.get('id'))
     wallet_provider = data.get('wallet_provider', 'cash')
     wallet_phone = data.get('wallet_phone', '')
-    
-    # تحسين نص الدفع ليوضح رقم المحفظة
     payment_str = data.get('payment', '')
     
     # 1. إنشاء الطلب الآمن في قاعدة البيانات
@@ -164,11 +162,23 @@ def checkout(slug):
         payment_str, data['cart'], data.get('coupon_code', '').strip()
     )
     
-    # --- منطقة معالجة الدفع الإلكتروني المستقبلي --- #
+    payment_status_msg = "⏳ *حالة الدفع:* الدفع عند الاستلام (غير مدفوع)"
+    
+    # --- محاكاة البنك الوهمي (Mock API) --- #
     if wallet_provider != 'cash':
-        # هُنا سيتم ربط API البنك (فلوسك / جوالي / الكريمي) قريباً
-        # باستخدام wallet_provider و wallet_phone و real_total
-        pass
+        # في العالم الحقيقي، نرسل طلب HTTP هنا إلى البنك وننتظر الرد
+        # لكن الآن سنفترض أن البنك رد علينا بـ (عملية ناجحة)
+        mock_bank_response = {"status": "success", "transaction_id": f"TXN-{order_id}"}
+        
+        if mock_bank_response["status"] == "success":
+            # تحديث حالة الطلب في قاعدة البيانات إلى مدفوع تلقائياً
+            database.orders_col.update_one(
+                {"order_id": order_id, "store_id": user.get('id')}, 
+                {"": {"status": "مدفوع 🟢", "transaction_id": mock_bank_response["transaction_id"]}}
+            )
+            payment_status_msg = f"✅ *حالة الدفع:* مدفوع إلكترونياً بنجاح (عملية وهمية: {mock_bank_response['transaction_id']})"
+        else:
+            payment_status_msg = "❌ *حالة الدفع:* فشلت عملية الدفع الإلكتروني"
     # ----------------------------------------------- #
 
     # 2. تجهيز رسالة الواتساب للتاجر
@@ -178,7 +188,8 @@ def checkout(slug):
 👤 *الاسم:* {data['name']}
 📞 *الهاتف:* {data['phone']}
 📍 *العنوان:* {data.get('address', '')}
-💳 *الدفع:* {payment_str}
+💳 *طريقة الدفع:* {payment_str}
+{payment_status_msg}
 
 🛍️ *المنتجات:*
 "
