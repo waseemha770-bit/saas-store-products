@@ -176,12 +176,9 @@ def checkout(slug):
         )
         payment_status_msg = f"✅ *حالة الدفع:* مدفوع إلكترونياً ({mock_txn})"
         
-    # بناء نص رسالة الواتساب المتكاملة
     items_list_str = "
 ".join([f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart])
     currency_label = settings.get('currency', 'ريال')
-    host_name = request.host
-    track_direct_url = f"https://{host_name}/track/{order_id}"
     
     msg = f"""🛍️ *طلب جديد من المتجر*
 🔢 *رقم الطلب:* {order_id}
@@ -194,10 +191,7 @@ def checkout(slug):
 📋 *تفاصيل المنتجات:*
 {items_list_str}
 
-💰 *الإجمالي النهائي:* {real_total} {currency_label}
-
-🔗 *رابط تتبع حالة طلبك مباشرة:*
-{track_direct_url}"""
+💰 *الإجمالي النهائي:* {real_total} {currency_label}"""
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     wa_link = f"https://wa.me/{wa_phone}?text={quote(msg)}"
@@ -205,8 +199,7 @@ def checkout(slug):
     return jsonify({
         "success": True,
         "order_id": order_id,
-        "wa_link": wa_link,
-        "track_url": track_direct_url
+        "wa_link": wa_link
     })
 
 
