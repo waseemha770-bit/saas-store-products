@@ -1,7 +1,7 @@
 import requests
 import threading
 
-TELEGRAM_BOT_TOKEN = 'ضع_توكن_البوت_هنا' # سيتم استبداله لاحقاً
+TELEGRAM_BOT_TOKEN = 'YOUR_TOKEN_HERE' # سيتم استبداله لاحقاً
 
 
 def extract_clean_products(order):
@@ -565,7 +565,7 @@ def api_update_order_status():
 
 
 def send_telegram_order(chat_id, order_data, store_name, currency="ريال"):
-    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "ضع_توكن_البوت_هنا": return
+    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "YOUR_TOKEN_HERE": return
     try:
         text = f"🚨 *طلب جديد في متجرك!*\n\n"
         text += f"🏬 المتجر: {store_name}\n"
