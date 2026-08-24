@@ -1,3 +1,8 @@
+import requests
+import threading
+
+TELEGRAM_BOT_TOKEN = 'ضع_توكن_البوت_هنا' # سيتم استبداله لاحقاً
+
 
 def extract_clean_products(order):
     """دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن"""
@@ -253,7 +258,22 @@ def checkout(slug):
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     wa_link = f"https://wa.me/{wa_phone}?text={quote(msg)}"
     
-    return jsonify({
+    
+        # --- Telegram Notification Hook ---
+        try:
+            store_slug_hook = request.path.split('/')[-1]
+            user_data_hook = database.users_col.find_one({'store_slug': store_slug_hook})
+            if user_data_hook:
+                tg_settings = user_data_hook.get('settings', {})
+                if tg_settings.get('enable_telegram') and tg_settings.get('telegram_chat_id'):
+                    s_name = tg_settings.get('store_name', user_data_hook.get('store_slug', 'متجرك'))
+                    curr = tg_settings.get('currency', 'ريال')
+                    threading.Thread(target=send_telegram_order, args=(tg_settings['telegram_chat_id'], request.json, s_name, curr)).start()
+        except Exception as tg_err:
+            print("TG Hook err:", tg_err)
+        # ----------------------------------
+
+        return jsonify({
         "success": True,
         "order_id": order_id,
         "wa_link": wa_link
@@ -542,3 +562,25 @@ def api_update_order_status():
         {"$set": {"status": data['status']}}
     )
     return jsonify({"success": True})
+
+
+def send_telegram_order(chat_id, order_data, store_name, currency="ريال"):
+    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "ضع_توكن_البوت_هنا": return
+    try:
+        text = f"🚨 *طلب جديد في متجرك!*\n\n"
+        text += f"🏬 المتجر: {store_name}\n"
+        text += f"👤 العميل: {order_data.get('name', 'غير محدد')}\n"
+        text += f"📞 الهاتف: {order_data.get('phone', 'غير محدد')}\n"
+        text += f"📍 العنوان: {order_data.get('address', 'غير محدد')}\n"
+        text += f"💳 الدفع: {order_data.get('payment', 'كاش')}\n\n"
+        text += f"🛍️ *المنتجات المطلوبة:*\n"
+        for item in order_data.get('cart', []):
+            text += f"▪️ {item.get('name', '')} (الكمية: {item.get('qty', 1)})\n"
+        
+        text += f"\n💰 *الإجمالي:* {order_data.get('final_total', 0)} {currency}"
+        
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'}
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print("Telegram Error:", e)
