@@ -350,11 +350,22 @@
 <footer class="mt-5 py-4 bg-white border-top text-center">
     <div class="container">
         <div class="d-flex flex-wrap justify-content-center align-items-center gap-3 my-2">
-            <a href="/track" class="text-decoration-none text-secondary fw-bold small px-3 py-2 rounded-pill bg-light border">
+            
+        </div>
+        <p class="text-muted small mb-0 mt-2">جميع الحقوق محفوظة &copy; {{ settings.name if settings else 'متجرنا' }}</p>
+    </div>
+</footer>
+
+
+<!-- تذييل المتجر الرسمي -->
+<footer class="mt-5 py-4 bg-white border-top text-center">
+    <div class="container">
+        <div class="d-flex justify-content-center align-items-center gap-3 my-2">
+            <a href="/track" class="btn btn-sm btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm">
                 <i class="fas fa-truck-fast text-primary me-1"></i> تتبع حالة طلبك
             </a>
         </div>
-        <p class="text-muted small mb-0 mt-2">جميع الحقوق محفوظة &copy; {{ settings.name if settings else 'متجرنا' }}</p>
+        <p class="text-muted small mb-0 mt-2">جميع الحقوق محفوظة &copy; {{ settings.get('name', 'المتجر') }}</p>
     </div>
 </footer>
 

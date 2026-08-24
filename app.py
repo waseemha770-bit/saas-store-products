@@ -154,40 +154,60 @@ def apply_coupon(slug):
 @app.route('/api/checkout/<slug>', methods=['POST'])
 def checkout(slug):
     user = database.get_user_by_slug(slug)
-    if not user: return jsonify({"error": "Store not found"}), 404
-    
+    if not user:
+        return jsonify({"error": "Store not found"}), 404
+        
     data = request.json
     settings = database.get_settings(user.get('id'))
     wallet_provider = data.get('wallet_provider', 'cash')
-    wallet_phone = data.get('wallet_phone', '')
     payment_str = data.get('payment', '')
     
     order_id, real_total, secure_cart, discount_info = database.create_secure_order(
-        user.get('id'), data['name'], data['phone'], data.get('address', ''), 
+        user.get('id'), data['name'], data['phone'], data.get('address', ''),
         payment_str, data['cart'], data.get('coupon_code', '').strip()
     )
     
-    payment_status_msg = "⏳ *حالة الدفع:* الدفع عند الاستلام (غير مدفوع)"
-    
+    payment_status_msg = "⏳ *حالة الدفع:* الدفع عند الاستلام"
     if wallet_provider != 'cash':
-        mock_bank_response = {"status": "success", "transaction_id": f"TXN-{order_id}"}
-        if mock_bank_response["status"] == "success":
-            database.orders_col.update_one(
-                {"order_id": order_id, "store_id": user.get('id')}, 
-                {"$set": {"status": "مدفوع 🟢", "transaction_id": mock_bank_response["transaction_id"]}}
-            )
-            payment_status_msg = f"✅ *حالة الدفع:* مدفوع إلكترونياً بنجاح (عملية وهمية: {mock_bank_response['transaction_id']})"
-        else:
-            payment_status_msg = "❌ *حالة الدفع:* فشلت عملية الدفع الإلكتروني"
-
-    msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {data.get('address', '')}\n💳 *طريقة الدفع:* {payment_str}\n{payment_status_msg}\n\n🛍️ *المنتجات:*\n"
-    for item in secure_cart: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
-    if discount_info: msg += f"\n🎟️ *الخصم:* {discount_info}"
-    msg += f"\n💰 *الإجمالي النهائي:* {real_total} {settings.get('currency', 'ريال')}\n\n*()*"
+        mock_txn = f"TXN-{order_id}"
+        database.orders_col.update_one(
+            {"order_id": order_id, "store_id": user.get('id')},
+            {"$set": {"status": "مدفوع 🟢", "transaction_id": mock_txn}}
+        )
+        payment_status_msg = f"✅ *حالة الدفع:* مدفوع إلكترونياً ({mock_txn})"
+        
+    # بناء نص رسالة الواتساب المتكاملة
+    items_list_str = "
+".join([f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart])
+    currency_label = settings.get('currency', 'ريال')
+    host_name = request.host
+    track_direct_url = f"https://{host_name}/track/{order_id}"
     
-    import urllib.parse
-    return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
+    msg = f"""🛍️ *طلب جديد من المتجر*
+🔢 *رقم الطلب:* {order_id}
+👤 *العميل:* {data['name']}
+📱 *الهاتف:* {data['phone']}
+📍 *العنوان:* {data.get('address', 'غير محدد')}
+💳 *طريقة الدفع:* {payment_str}
+{payment_status_msg}
 
+📋 *تفاصيل المنتجات:*
+{items_list_str}
+
+💰 *الإجمالي النهائي:* {real_total} {currency_label}
+
+🔗 *رابط تتبع حالة طلبك مباشرة:*
+{track_direct_url}"""
+
+    wa_phone = settings.get('whatsapp') or user.get('phone', '')
+    wa_link = f"https://wa.me/{wa_phone}?text={quote(msg)}"
+    
+    return jsonify({
+        "success": True,
+        "order_id": order_id,
+        "wa_link": wa_link,
+        "track_url": track_direct_url
+    })
 
 
 @app.route('/track', methods=['GET'])
