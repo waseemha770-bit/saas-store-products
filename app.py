@@ -45,7 +45,12 @@ def view_store_logic(slug):
     return render_template('store.html', user=user, settings=database.get_settings(user.get('id')), products=products)
 
 @app.route('/')
-def home(): return redirect(url_for('login'))
+@app.route('/home')
+def home():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
+
 @app.route('/store/<slug>')
 def view_store(slug): return view_store_logic(slug)
 
