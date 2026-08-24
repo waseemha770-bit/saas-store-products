@@ -1,3 +1,61 @@
+
+def extract_clean_products(order):
+    """دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن"""
+    import json
+    parsed = []
+    
+    # أ) فحص حقل السلة (cart) سواء كان مصفوفة أو نص JSON
+    cart = order.get('cart')
+    if isinstance(cart, str):
+        try:
+            cart = json.loads(cart)
+        except Exception:
+            if cart.strip():
+                parsed.append(cart.strip())
+                
+    if isinstance(cart, list):
+        for it in cart:
+            if isinstance(it, dict):
+                name = it.get('name') or it.get('title') or it.get('product_name') or 'منتج'
+                qty = it.get('qty') or it.get('quantity') or 1
+                parsed.append(f"{name} (x{qty})")
+            elif isinstance(it, str) and it.strip():
+                parsed.append(it.strip())
+    elif isinstance(cart, dict):
+        name = cart.get('name') or cart.get('title') or 'منتج'
+        qty = cart.get('qty') or 1
+        parsed.append(f"{name} (x{qty})")
+
+    # ب) فحص حقل items إذا لم نجد منتجات في السلة
+    if not parsed:
+        raw_items = order.get('items')
+        if isinstance(raw_items, str) and raw_items.strip():
+            for line in raw_items.splitlines():
+                clean_line = line.strip().lstrip('▪️').lstrip('-').strip()
+                if clean_line:
+                    parsed.append(clean_line)
+        elif isinstance(raw_items, list):
+            for it in raw_items:
+                if isinstance(it, dict):
+                    name = it.get('name') or it.get('title') or 'منتج'
+                    qty = it.get('qty') or 1
+                    parsed.append(f"{name} (x{qty})")
+                elif isinstance(it, str) and it.strip():
+                    parsed.append(it.strip())
+
+    # ج) فحص الحقول الفردية القديمة
+    if not parsed:
+        p_name = order.get('product_name') or order.get('item_name')
+        if p_name:
+            qty = order.get('qty') or 1
+            parsed.append(f"{p_name} (x{qty})")
+
+    # في حال انعدام البيانات تماماً
+    if not parsed:
+        parsed.append("منتج")
+
+    return parsed
+
 import re
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
