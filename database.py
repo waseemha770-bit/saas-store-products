@@ -183,29 +183,43 @@ def delete_package(pkg_id):
 drivers_col = db['drivers']
 
 def add_driver(store_id, name, phone):
-    import secrets
-    token = secrets.token_hex(4).upper()  # كود دخول خاص بالمندوب
-    driver_data = {
-        "store_id": store_id,
-        "name": name,
-        "phone": phone,
-        "token": token,
-        "status": "نشط 🟢",
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
-    }
-    drivers_col.insert_one(driver_data)
-    return token
+    try:
+        import secrets
+        clean_phone = str(phone).strip()
+        clean_name = str(name).strip()
+        existing = db.drivers.find_one({"store_id": store_id, "phone": clean_phone})
+        if not existing:
+            db.drivers.insert_one({
+                "store_id": store_id,
+                "name": clean_name,
+                "phone": clean_phone,
+                "token": secrets.token_hex(8) # توليد رمز أمان سري للمندوب الجديد
+            })
+            return True
+        return False
+    except Exception as e:
+        print("Driver Insert Error:", e)
+        return False
 
 
 def get_store_drivers(store_id):
     try:
+        import secrets
+        from bson.objectid import ObjectId
         drivers = list(db.drivers.find({"store_id": store_id}).sort('_id', -1))
         for d in drivers:
-            d['_id'] = str(d['_id'])
+            d_id_str = str(d['_id'])
+            d['_id'] = d_id_str
+            # إذا كان المندوب لا يملك رمز بوابة، نقوم بتوليده وحفظه فوراً
+            if 'token' not in d:
+                new_token = secrets.token_hex(8)
+                db.drivers.update_one({"_id": ObjectId(d_id_str)}, {"$set": {"token": new_token}})
+                d['token'] = new_token
         return drivers
     except Exception as e:
         print("Driver Fetch Error:", e)
         return []
+
 
 def add_driver(store_id, name, phone):
     try:
