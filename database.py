@@ -92,39 +92,66 @@ def get_products(user_id):
 # ==========================================
 # 🛡️ الأمان: معالجة الطلبات الآمنة (Backend Cart Validation)
 # ==========================================
-def create_secure_order(store_id, customer_name, customer_phone, customer_address, payment_info, raw_cart_items, coupon_code=""):
-    products = list(products_col.find({"u_id": store_id}))
-    prod_map = {p['name']: p for p in products}
-    real_total = 0.0
+
+def create_secure_order(store_id, customer_name, customer_phone, customer_address, payment, cart_items, coupon_code=""):
+    import secrets
+    order_id = "ORD-" + secrets.token_hex(3).upper()
+    
     secure_cart = []
+    total = 0.0
     
-    # 1. التحقق من الأسعار الحقيقية من قاعدة البيانات
-    for item in raw_cart_items:
-        p_name = item.get('name')
+    for item in cart_items:
+        # جلب بيانات المنتج من قاعدة البيانات للتأكد من الاسم والسعر الحقيقي
+        prod_id = item.get('id') or item.get('product_id') or item.get('_id')
+        p_name = item.get('name') or item.get('title')
+        p_price = float(item.get('price', 0))
         qty = int(item.get('qty', 1))
-        if p_name in prod_map:
-            price = float(prod_map[p_name].get('price', 0))
-            real_total += (price * qty)
-            secure_cart.append({'name': p_name, 'qty': qty, 'price': price})
-    
-    # 2. تطبيق الخصم إن وجد كوبون صحيح
-    discount_info = ""
+        
+        if prod_id:
+            db_prod = products_col.find_one({"_id": prod_id, "store_id": store_id}) or products_col.find_one({"id": prod_id, "store_id": store_id})
+            if db_prod:
+                p_name = db_prod.get('name') or db_prod.get('title') or p_name
+                p_price = float(db_prod.get('price', p_price))
+        
+        if not p_name:
+            p_name = f"منتج #{str(prod_id)[:6]}" if prod_id else "منتج"
+            
+        subtotal = p_price * qty
+        total += subtotal
+        secure_cart.append({
+            "id": str(prod_id) if prod_id else "",
+            "name": str(p_name),
+            "price": p_price,
+            "qty": qty,
+            "subtotal": subtotal
+        })
+
+    discount_info = {}
     if coupon_code:
         coupon = validate_coupon(store_id, coupon_code)
         if coupon:
-            discount = int(coupon.get('discount', 0))
-            real_total = real_total - (real_total * (discount / 100.0))
-            discount_info = f"كوبون ({coupon_code}) - خصم {discount}%"
+            disc_val = float(coupon['discount'])
+            total = max(0.0, total - disc_val)
+            discount_info = {"code": coupon_code, "discount": disc_val}
 
-    # 3. حفظ الطلب النهائي
-    order_id = f"ORD-{uuid.uuid4().hex[:6].upper()}"
-    orders_col.insert_one({
-        "order_id": order_id, "store_id": store_id, "customer_name": customer_name,
-        "customer_phone": customer_phone, "customer_address": customer_address,
-        "payment_info": payment_info, "cart_items": secure_cart, "total": round(real_total, 2),
-        "discount_info": discount_info, "date": datetime.now(), "status": "جديد 🟡"
-    })
-    return order_id, round(real_total, 2), secure_cart, discount_info
+    order_doc = {
+        "order_id": order_id,
+        "store_id": store_id,
+        "customer_name": customer_name,
+        "customer_phone": customer_phone,
+        "customer_address": customer_address,
+        "payment": payment,
+        "cart": secure_cart,
+        "total": round(total, 2),
+        "status": "جديد 🟡",
+        "discount_info": discount_info,
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
+    }
+    
+    orders_col.insert_one(order_doc)
+    return order_id, round(total, 2), secure_cart, discount_info
+
+
 
 def get_orders(store_id): 
     return list(orders_col.find({"store_id": store_id}).sort("date", -1))
