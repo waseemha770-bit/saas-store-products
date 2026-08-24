@@ -334,40 +334,31 @@ def dashboard():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_product':
-            # 1. جلب بيانات التاجر
+            # --- [نقطة التفتيش الأمنية الصارمة للباقات] ---
             user_data = database.users_col.find_one({'id': session['user_id']})
             is_admin = (user_data and user_data.get('store_slug') == 'admin-store')
             
             can_add = True
             if not is_admin and user_data:
                 pkg_name = user_data.get('package', 'أساسية')
-                pkgs = database.get_packages()
-                target_pkg = None
+                target_pkg = database.db.packages.find_one({"name": pkg_name})
                 
-                # 2. مطابقة باقة التاجر مع الباقات المتوفرة
-                for p in pkgs:
-                    if p.get('name') == pkg_name:
-                        target_pkg = p
-                        break
-                
-                # 3. تحديد الحد الأقصى للمنتجات
-                max_limit = 20
+                max_limit = 20 # الحد الافتراضي في حال غياب الباقة
                 if target_pkg:
-                    raw_max = target_pkg.get('max_products') or target_pkg.get('pkg_max') or 20
                     try: 
-                        max_limit = int(raw_max)
+                        max_limit = int(target_pkg.get('max_products', 20))
                     except: 
-                        max_limit = 999999 # في حال كانت الباقة غير محدودة نصياً
-                    
-                # 4. حساب المنتجات الحالية في المتجر
+                        max_limit = 999999 # للباقات المفتوحة (Unlimited)
+                
+                # حساب عدد المنتجات الفعلي للتاجر
                 current_count = database.db.products.count_documents({'store_id': session['user_id']})
                 
-                # 5. المنع إذا تم الوصول للحد
+                # المنع والتحذير إذا وصل للحد الأقصى
                 if current_count >= max_limit:
                     can_add = False
-                    flash(f"⚠️ توقف! باقتك الحالية ({pkg_name}) تسمح لك بإضافة {max_limit} منتج فقط كحد أقصى. يرجى الترقية.", "danger")
+                    flash(f"⚠️ تم رفض الإضافة! باقتك الحالية ({pkg_name}) تسمح بـ {max_limit} منتج فقط كحد أقصى. يرجى الترقية.", "danger")
             
-            # 6. السماح بالإضافة إذا لم يتجاوز الحد
+            # السماح بالتنفيذ إذا نجح في التفتيش الأمني
             if can_add:
                 database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock'))
                 flash("تم إضافة المنتج بنجاح 📦", "success")
