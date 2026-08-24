@@ -749,5 +749,31 @@ function assignOrderToDriver(orderId, selectEl) {
 }
 </script>
 
+
+    <script>
+    // --- نظام حفظ التبويب النشط ---
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. استرجاع التبويب الأخير من ذاكرة المتصفح
+        let activeTab = localStorage.getItem('tajergo_active_tab');
+        if (activeTab) {
+            let tabBtn = document.querySelector(`button[data-bs-target="${activeTab}"]`);
+            if (tabBtn) {
+                // تفعيل التبويب برمجياً عبر مكتبة Bootstrap
+                let tab = new bootstrap.Tab(tabBtn);
+                tab.show();
+            }
+        }
+
+        // 2. مراقبة وحفظ التبويب عند انتقال المستخدم
+        let tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabElms.forEach(function(tabElm) {
+            tabElm.addEventListener('shown.bs.tab', function (event) {
+                let currentTarget = event.target.getAttribute('data-bs-target');
+                localStorage.setItem('tajergo_active_tab', currentTarget);
+            });
+        });
+    });
+    </script>
+
 </body>
 </html>
