@@ -178,26 +178,23 @@
 
                     <!-- 3. المنتجات -->
                     <td class="text-start">
-                        <div class="small" style="max-height: 90px; overflow-y: auto; line-height: 1.6;">
-                            {% if o.cart %}
-                                {% if o.cart is iterable and o.cart is not string %}
-                                    {% for it in o.cart %}
-                                        {% if it is mapping %}
-                                            <div class="text-dark fw-semibold">
-                                                ▪️ {{ it.get('name') or it.get('title') or it.get('product_name') or 'منتج' }}
-                                                <span class="badge bg-light text-secondary border px-1" style="font-size: 0.7rem;">x{{ it.get('qty') or it.get('quantity') or 1 }}</span>
-                                            </div>
-                                        {% else %}
-                                            <div class="text-dark">• {{ it }}</div>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="text-dark">{{ o.cart }}</div>
-                                {% endif %}
-                            {% elif o.items %}
-                                <div class="text-dark">{{ o.items }}</div>
+                        <div class="small" style="max-height: 95px; overflow-y: auto; line-height: 1.6;">
+                            {% set order_cart = o.get('cart') if o is mapping else [] %}
+                            {% if order_cart and order_cart is iterable and order_cart is not string %}
+                                {% for it in order_cart %}
+                                    {% if it is mapping %}
+                                        <div class="text-dark fw-semibold">
+                                            ▪️ {{ it.get('name') or it.get('title') or it.get('product_name') or 'منتج' }}
+                                            <span class="badge bg-light text-secondary border px-1" style="font-size: 0.7rem;">x{{ it.get('qty') or it.get('quantity') or 1 }}</span>
+                                        </div>
+                                    {% else %}
+                                        <div class="text-dark">▪️ {{ it }}</div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% elif o.get('product_name') %}
+                                <div class="text-dark">▪️ {{ o.get('product_name') }}</div>
                             {% else %}
-                                <span class="text-muted small">-</span>
+                                <span class="text-muted small">منتجات متنوعة</span>
                             {% endif %}
                         </div>
                     </td>
