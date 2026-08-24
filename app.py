@@ -188,7 +188,7 @@ def checkout(slug):
     import urllib.parse
     return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
 
-@app.route('/track', methods=['GET'])
+
 @app.route('/track/<order_id>', methods=['GET'])
 def track_order(order_id=None):
     search_query = (order_id or request.args.get('order_id', '')).strip().replace('#', '')
@@ -226,6 +226,57 @@ def track_order(order_id=None):
     
     settings = database.get_settings(order.get('store_id'))
     return render_template('track.html', order=order, settings=settings, search_query=search_query)
+
+@app.route('/track', methods=['GET'])
+@app.route('/track/<order_id>', methods=['GET'])
+def track_order(order_id=None):
+    raw_query = (order_id or request.args.get('order_id', '') or request.args.get('q', '')).strip()
+    clean_query = raw_query.replace('#', '').strip()
+    
+    if not clean_query:
+        return render_template('track.html', order=None)
+    
+    # تنظيف واستخراج الأرقام للبحث بالهاتف
+    digits = ''.join(c for c in clean_query if c.isdigit())
+    digits_suffix = digits[-9:] if len(digits) >= 9 else (digits[-7:] if len(digits) >= 7 else digits)
+    
+    or_filters = [
+        {'order_id': clean_query},
+        {'order_id': {'': f'^{clean_query}$', '': 'i'}},
+        {'customer_phone': clean_query},
+        {'phone': clean_query}
+    ]
+    
+    if digits:
+        or_filters.append({'customer_phone': {'': digits_suffix}})
+        or_filters.append({'phone': {'': digits_suffix}})
+        try:
+            or_filters.append({'customer_phone': int(digits)})
+            or_filters.append({'phone': int(digits)})
+            if digits_suffix != digits:
+                or_filters.append({'customer_phone': int(digits_suffix)})
+                or_filters.append({'phone': int(digits_suffix)})
+        except:
+            pass
+            
+    order = database.orders_col.find_one({'': or_filters}, sort=[('_id', -1)])
+    
+    # بحث احتياطي عبر فحص أحدث 200 طلب
+    if not order and (digits_suffix or clean_query):
+        recent_orders = list(database.orders_col.find().sort('_id', -1).limit(200))
+        for o in recent_orders:
+            p_val = ''.join(c for c in str(o.get('customer_phone') or o.get('phone') or '') if c.isdigit())
+            o_id = str(o.get('order_id') or '').replace('#', '').strip()
+            if (digits_suffix and digits_suffix in p_val) or (clean_query.lower() == o_id.lower()):
+                order = o
+                break
+                
+    if not order:
+        return render_template('track.html', order=None, search_query=raw_query, error='عذراً، لم نتمكن من العثور على الطلب. يرجى التأكد من رقم الطلب (مثال: ORD-XXXX) أو رقم هاتفك المسجل.')
+    
+    settings = database.get_settings(order.get('store_id'))
+    return render_template('track.html', order=order, settings=settings, search_query=raw_query)
+
 @app.route('/export/orders')
 def export_orders():
     if 'user_id' not in session: return redirect(url_for('login'))

@@ -33,7 +33,7 @@
                         <p class="text-muted small">أدخل رقم الطلب أو رقم هاتفك لمعرفة حالة الطلب</p>
                         
                         <form method="GET" action="/track" class="input-group shadow-sm rounded-pill overflow-hidden mt-3">
-                            <input type="text" name="order_id" class="form-control border-0 px-4" placeholder="رقم الطلب (مثال: ORD-1001) أو رقم الهاتف" value="{{ search_query if search_query else '' }}" required>
+                            <input type="text" name="order_id" class="form-control border-0 px-4" placeholder="رقم الطلب (مثال: ORD-1001) أو رقم هاتفك" value="{{ search_query if search_query else '' }}" required>
                             <button class="btn btn-primary px-4 fw-bold" type="submit"><i class="fas fa-search me-1"></i> بحث</button>
                         </form>
                     </div>
