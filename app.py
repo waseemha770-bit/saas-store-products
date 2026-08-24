@@ -149,15 +149,49 @@ def apply_coupon(slug):
 def checkout(slug):
     user = database.get_user_by_slug(slug)
     if not user: return jsonify({"error": "Store not found"}), 404
+    
     data = request.json
     settings = database.get_settings(user.get('id'))
-    order_id, real_total, secure_cart, discount_info = database.create_secure_order(user.get('id'), data['name'], data['phone'], data.get('address', ''), data.get('payment', ''), data['cart'], data.get('coupon_code', '').strip())
-    msg = f"مرحباً، لدي طلب جديد 🛒\n\n🧾 *رقم الطلب:* {order_id}\n👤 *الاسم:* {data['name']}\n📞 *الهاتف:* {data['phone']}\n📍 *العنوان:* {data.get('address', '')}\n💳 *الدفع:* {data.get('payment', '')}\n\n🛍️ *المنتجات:*\n"
-    for item in secure_cart: msg += f"▪️ {item['name']} (الكمية: {item['qty']})\n"
-    if discount_info: msg += f"\n🎟️ *الخصم:* {discount_info}"
-    msg += f"\n💰 *الإجمالي النهائي:* {real_total} {settings.get('currency', 'ريال')}\n\n*()*"
-    return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
+    wallet_provider = data.get('wallet_provider', 'cash')
+    wallet_phone = data.get('wallet_phone', '')
+    
+    # تحسين نص الدفع ليوضح رقم المحفظة
+    payment_str = data.get('payment', '')
+    
+    # 1. إنشاء الطلب الآمن في قاعدة البيانات
+    order_id, real_total, secure_cart, discount_info = database.create_secure_order(
+        user.get('id'), data['name'], data['phone'], data.get('address', ''), 
+        payment_str, data['cart'], data.get('coupon_code', '').strip()
+    )
+    
+    # --- منطقة معالجة الدفع الإلكتروني المستقبلي --- #
+    if wallet_provider != 'cash':
+        # هُنا سيتم ربط API البنك (فلوسك / جوالي / الكريمي) قريباً
+        # باستخدام wallet_provider و wallet_phone و real_total
+        pass
+    # ----------------------------------------------- #
 
+    # 2. تجهيز رسالة الواتساب للتاجر
+    msg = f"مرحباً، لدي طلب جديد 🛒
+
+🧾 *رقم الطلب:* {order_id}
+👤 *الاسم:* {data['name']}
+📞 *الهاتف:* {data['phone']}
+📍 *العنوان:* {data.get('address', '')}
+💳 *الدفع:* {payment_str}
+
+🛍️ *المنتجات:*
+"
+    for item in secure_cart: msg += f"▪️ {item['name']} (الكمية: {item['qty']})
+"
+    if discount_info: msg += f"
+🎟️ *الخصم:* {discount_info}"
+    msg += f"
+💰 *الإجمالي النهائي:* {real_total} {settings.get('currency', 'ريال')}
+
+*()*"
+    
+    return jsonify({"whatsapp_url": f"https://wa.me/{settings.get('whatsapp', '')}?text={urllib.parse.quote(msg)}"})
 @app.route('/export/orders')
 def export_orders():
     if 'user_id' not in session: return redirect(url_for('login'))
