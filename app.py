@@ -195,6 +195,24 @@ def track_order(order_id=None):
     if not search_query:
         return render_template('track.html', order=None)
     
+    # تنظيف رقم الهاتف للبحث المرن
+    clean_phone = re.sub(r'[^0-9]', '', search_query)
+    phone_query = clean_phone[-9:] if len(clean_phone) >= 9 else clean_phone
+
+    # البحث عن أحدث طلب يطابق رقم الطلب أو رقم الهاتف
+    order = database.orders_col.find_one({
+        "$or": [
+            {"order_id": {"$regex": f"^{re.escape(search_query)}$", "$options": "i"}},
+            {"customer_phone": {"$regex": re.escape(phone_query)}} if phone_query else {"customer_phone": search_query}
+        ]
+    }, sort=[('_id', -1)])
+    
+    if not order:
+        return render_template('track.html', order=None, search_query=search_query, error="عذراً، لم نتمكن من العثور على أي طلب مسجل بهذا الرقم. يرجى التأكد من رقم الطلب أو رقم الهاتف.")
+    
+    settings = database.get_settings(order.get('store_id'))
+    return render_template('track.html', order=order, settings=settings, search_query=search_query)
+    
     # البحث برقم الطلب (مع تجاهل حالة الأحرف) أو برقم هاتف العميل
     order = database.orders_col.find_one({
         "$or": [
