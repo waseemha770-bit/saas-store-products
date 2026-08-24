@@ -333,7 +333,45 @@ def dashboard():
     
     if request.method == 'POST':
         action = request.form.get('action')
-        if action == 'add_product': database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم الإضافة", "success")
+        if action == 'add_product':
+            # 1. جلب بيانات التاجر
+            user_data = database.users_col.find_one({'id': session['user_id']})
+            is_admin = (user_data and user_data.get('store_slug') == 'admin-store')
+            
+            can_add = True
+            if not is_admin and user_data:
+                pkg_name = user_data.get('package', 'أساسية')
+                pkgs = database.get_packages()
+                target_pkg = None
+                
+                # 2. مطابقة باقة التاجر مع الباقات المتوفرة
+                for p in pkgs:
+                    if p.get('name') == pkg_name:
+                        target_pkg = p
+                        break
+                
+                # 3. تحديد الحد الأقصى للمنتجات
+                max_limit = 20
+                if target_pkg:
+                    raw_max = target_pkg.get('max_products') or target_pkg.get('pkg_max') or 20
+                    try: 
+                        max_limit = int(raw_max)
+                    except: 
+                        max_limit = 999999 # في حال كانت الباقة غير محدودة نصياً
+                    
+                # 4. حساب المنتجات الحالية في المتجر
+                current_count = database.db.products.count_documents({'store_id': session['user_id']})
+                
+                # 5. المنع إذا تم الوصول للحد
+                if current_count >= max_limit:
+                    can_add = False
+                    flash(f"⚠️ توقف! باقتك الحالية ({pkg_name}) تسمح لك بإضافة {max_limit} منتج فقط كحد أقصى. يرجى الترقية.", "danger")
+            
+            # 6. السماح بالإضافة إذا لم يتجاوز الحد
+            if can_add:
+                database.add_product(session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock'))
+                flash("تم إضافة المنتج بنجاح 📦", "success")
+                
         elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
