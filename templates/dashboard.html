@@ -178,21 +178,10 @@
 
                     <!-- 3. المنتجات -->
                     <td class="text-start">
-                        <div class="small" style="max-height: 110px; overflow-y: auto; line-height: 1.6;">
-                            {% if o.cart %}
-                                {% for it in o.cart %}
-                                    <div class="text-dark fw-bold mb-1">
-                                        ▪️ {{ it.name if it.name else (it.title if it.title else (it.product_name if it.product_name else 'منتج متنوع')) }}
-                                        <span class="badge bg-light text-secondary border px-1" style="font-size: 0.72rem;">x{{ it.qty if it.qty else (it.quantity if it.quantity else 1) }}</span>
-                                    </div>
-                                {% endfor %}
-                            {% elif o.product_name %}
-                                <div class="text-dark fw-bold">▪️ {{ o.product_name }} <span class="badge bg-light text-secondary border px-1">x{{ o.qty if o.qty else 1 }}</span></div>
-                            {% elif o.items %}
-                                <div class="text-dark fw-bold">{{ o.items }}</div>
-                            {% else %}
-                                <span class="text-muted small">-</span>
-                            {% endif %}
+                        <div class="small" style="max-height: 100px; overflow-y: auto; line-height: 1.6;">
+                            {% for item_str in o.get('formatted_items', []) %}
+                                <div class="text-dark fw-bold">{{ item_str }}</div>
+                            {% endfor %}
                         </div>
                     </td>
 
