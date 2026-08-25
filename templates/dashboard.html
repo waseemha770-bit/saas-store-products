@@ -1,5 +1,5 @@
 {% extends "base_dashboard.html" %}
-{% block title %}لوحة التحكم | TajerGo{% endblock %}
+{% block title %}إدارة المتجر | TajerGo{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -11,14 +11,17 @@
     .divider-text { display: flex; align-items: center; text-align: center; color: #888; font-weight: bold; margin: 8px 0; }
     .divider-text::before, .divider-text::after { content: ''; flex: 1; border-bottom: 1px dashed #ccc; }
     .divider-text:not(:empty)::before { margin-left: .5em; } .divider-text:not(:empty)::after { margin-right: .5em; }
-    .nav-pills .nav-link { color: #495057; border-radius: 8px; margin-left: 5px; }
+    .nav-pills .nav-link { color: #495057; border-radius: 8px; margin-left: 5px; cursor: pointer; }
     .nav-pills .nav-link.active { background-color: #0d6efd; color: #fff; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-    <h3 class="fw-bold mb-0 text-dark"><img src="{{ settings.platform_logo if settings and settings.platform_logo else platform_logo }}" onerror="fixImg(this)" width="40" height="40" style="object-fit:cover; border-radius:50%; background:#fff; padding:2px; border: 1px solid #ccc;" class="me-2 shadow-sm"> إدارة المتجر</h3>
+    <h3 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+        <img src="{{ settings.platform_logo if settings and settings.platform_logo else platform_logo }}" onerror="fixImg(this)" width="45" height="45" style="object-fit:cover; border-radius:50%; background:#fff; padding:2px; border: 1px solid #ccc;" class="shadow-sm"> 
+        <span>إدارة المتجر</span>
+    </h3>
     <div>
         {% if is_super_admin %}
             <span class="badge bg-danger fs-6 shadow-sm px-3 py-2"><i class="fas fa-crown me-1"></i> مدير النظام</span>
@@ -30,131 +33,69 @@
     </div>
 </div>
 
-<!-- التبويبات الشاملة المأخوذة من النسخة الأصلية -->
-<ul class="nav nav-pills mb-4 bg-white p-2 rounded shadow-sm border" id="dashboardTabs" role="tablist">
-    <li class="nav-item"><button class="nav-link fw-bold px-3 active" data-bs-toggle="tab" data-bs-target="#analytics"><i class="fas fa-chart-pie me-1"></i> الإحصائيات</button></li>
-    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-toggle="tab" data-bs-target="#orders"><i class="fas fa-box-open me-1"></i> الطلبات</button></li>
-    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-toggle="tab" data-bs-target="#products"><i class="fas fa-tags me-1"></i> المنتجات</button></li>
-    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-toggle="tab" data-bs-target="#drivers-pane"><i class="fas fa-motorcycle me-1"></i> المناديب</button></li>
-    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-toggle="tab" data-bs-target="#coupons"><i class="fas fa-ticket-alt me-1"></i> الكوبونات</button></li>
-    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-toggle="tab" data-bs-target="#settings"><i class="fas fa-cog me-1"></i> الإعدادات</button></li>
-    {% if is_super_admin %}<li class="nav-item"><button class="nav-link fw-bold px-3 text-danger" data-bs-toggle="tab" data-bs-target="#superadmin"><i class="fas fa-cogs me-1"></i> الإدارة</button></li>{% endif %}
+<!-- التبويبات الشاملة (للكمبيوتر، أما الجوال سيعتمد على القائمة الجانبية) -->
+<ul class="nav nav-pills mb-4 bg-white p-2 rounded shadow-sm border d-none d-lg-flex" id="dashboardTabs" role="tablist">
+    <li class="nav-item"><button class="nav-link fw-bold px-3 active" data-bs-target="#analytics" data-bs-toggle="tab"><i class="fas fa-chart-pie me-1"></i> الإحصائيات</button></li>
+    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-target="#products" data-bs-toggle="tab"><i class="fas fa-tags me-1"></i> المنتجات</button></li>
+    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-target="#orders" data-bs-toggle="tab"><i class="fas fa-box-open me-1"></i> الطلبات</button></li>
+    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-target="#drivers-pane" data-bs-toggle="tab"><i class="fas fa-motorcycle me-1"></i> المناديب</button></li>
+    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-target="#coupons" data-bs-toggle="tab"><i class="fas fa-ticket-alt me-1"></i> الكوبونات</button></li>
+    <li class="nav-item"><button class="nav-link fw-bold px-3" data-bs-target="#settings" data-bs-toggle="tab"><i class="fas fa-cog me-1"></i> الإعدادات</button></li>
+    {% if is_super_admin %}<li class="nav-item"><button class="nav-link fw-bold px-3 text-danger" data-bs-target="#superadmin" data-bs-toggle="tab"><i class="fas fa-cogs me-1"></i> الإدارة</button></li>{% endif %}
 </ul>
 
 <div class="tab-content">
     
-    <!-- 1. الإحصائيات -->
+    <!-- 1. الإحصائيات المتقدمة -->
     <div class="tab-pane fade show active" id="analytics">
         <div class="row mb-4">
-            <div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">صافي المبيعات 💰</h6><h3 class="mb-0">{{ '{:,.2f}'.format(adv_stats.net_sales) }} <small>{{ settings.currency }}</small></h3><small>نمو: <span dir="ltr">{{ '{:,.1f}'.format(adv_stats.growth_rate) }}%</span></small></div></div></div>
-            <div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">إجمالي الطلبات 📦</h6><h3 class="mb-0">{{ adv_stats.total_orders }}</h3><small>مكتملة: {{ adv_stats.completed_orders }} | ملغاة: {{ adv_stats.canceled_orders }}</small></div></div></div>
-            <div class="col-md-3 col-6 mb-2"><div class="card bg-info text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">متوسط الطلب 🛒</h6><h3 class="mb-0">{{ '{:,.2f}'.format(adv_stats.avg_order_value) }} <small>{{ settings.currency }}</small></h3><small>الإتمام: <span dir="ltr">{{ '{:,.1f}'.format(adv_stats.completion_rate) }}%</span></small></div></div></div>
-            <div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">قاعدة العملاء 👥</h6><h3 class="mb-0">{{ adv_stats.customers_count }}</h3><small>رسوم التوصيل: {{ '{:,.2f}'.format(adv_stats.delivery_fees) }}</small></div></div></div>
+            <div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold">صافي المبيعات 💰</h6><h3 class="mb-0">{{ '{:,.2f}'.format(adv_stats.net_sales) }} <small>{{ settings.currency }}</small></h3><small>نمو: <span dir="ltr">{{ '{:,.1f}'.format(adv_stats.growth_rate) }}%</span></small></div></div></div>
+            <div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold">إجمالي الطلبات 📦</h6><h3 class="mb-0">{{ adv_stats.total_orders }}</h3><small>مكتملة: {{ adv_stats.completed_orders }} | ملغاة: {{ adv_stats.canceled_orders }}</small></div></div></div>
+            <div class="col-md-3 col-6 mb-2"><div class="card bg-info text-white shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold">متوسط الطلب 🛒</h6><h3 class="mb-0">{{ '{:,.2f}'.format(adv_stats.avg_order_value) }} <small>{{ settings.currency }}</small></h3><small>الإتمام: <span dir="ltr">{{ '{:,.1f}'.format(adv_stats.completion_rate) }}%</span></small></div></div></div>
+            <div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0 h-100" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">قاعدة العملاء 👥</h6><h3 class="mb-0">{{ adv_stats.customers_count }}</h3><small>رسوم التوصيل: {{ '{:,.2f}'.format(adv_stats.delivery_fees) }}</small></div></div></div>
         </div>
         <div class="row mb-4">
-            <div class="col-md-4"><div class="card shadow-sm border-0 h-100"><div class="card-body text-center"><h6 class="fw-bold text-muted border-bottom pb-2">تفصيل المبيعات الزمنية</h6><div class="d-flex justify-content-between mb-2 mt-3"><span>مبيعات اليوم:</span> <span class="fw-bold text-primary">{{ '{:,.2f}'.format(adv_stats.today_sales) }}</span></div><div class="d-flex justify-content-between mb-2"><span>مبيعات الأسبوع:</span> <span class="fw-bold text-success">{{ '{:,.2f}'.format(adv_stats.weekly_sales) }}</span></div><div class="d-flex justify-content-between mb-2"><span>هذا الشهر:</span> <span class="fw-bold text-info">{{ '{:,.2f}'.format(adv_stats.this_month_sales) }}</span></div><div class="d-flex justify-content-between mb-2"><span>الشهر الماضي:</span> <span class="fw-bold text-secondary">{{ '{:,.2f}'.format(adv_stats.last_month_sales) }}</span></div></div></div></div>
+            <div class="col-md-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold text-muted border-bottom pb-2 text-center">تفصيل المبيعات الزمنية</h6><div class="d-flex justify-content-between mb-2 mt-3"><span>مبيعات اليوم:</span> <span class="fw-bold text-primary">{{ '{:,.2f}'.format(adv_stats.today_sales) }}</span></div><div class="d-flex justify-content-between mb-2"><span>مبيعات الأسبوع:</span> <span class="fw-bold text-success">{{ '{:,.2f}'.format(adv_stats.weekly_sales) }}</span></div><div class="d-flex justify-content-between mb-2"><span>هذا الشهر:</span> <span class="fw-bold text-info">{{ '{:,.2f}'.format(adv_stats.this_month_sales) }}</span></div><div class="d-flex justify-content-between mb-2"><span>الشهر الماضي:</span> <span class="fw-bold text-secondary">{{ '{:,.2f}'.format(adv_stats.last_month_sales) }}</span></div></div></div></div>
             <div class="col-md-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold text-success border-bottom pb-2">🌟 العملاء الأكثر شراءً</h6><ul class="list-group list-group-flush mt-3">{% for c in adv_stats.top_customers %}<li class="list-group-item d-flex justify-content-between align-items-center px-0"><div><i class="fas fa-user-circle text-muted me-1"></i> {{ c.name }} <br><small class="text-muted">{{ c.orders }} طلبات</small></div><span class="fw-bold text-success">{{ '{:,.2f}'.format(c.spent) }}</span></li>{% else %}<li class="list-group-item text-center text-muted">لا يوجد بيانات</li>{% endfor %}</ul></div></div></div>
             <div class="col-md-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold text-primary border-bottom pb-2">🔥 الأكثر مبيعًا</h6><ul class="list-group list-group-flush mt-3">{% for p_name, qty in adv_stats.best_sellers %}<li class="list-group-item d-flex justify-content-between align-items-center px-0"><span class="text-truncate" style="max-width: 150px;">{{ p_name }}</span><span class="badge bg-primary rounded-pill">{{ qty }} قطعة</span></li>{% else %}<li class="list-group-item text-center text-muted">لا يوجد بيانات</li>{% endfor %}</ul></div></div></div>
         </div>
     </div>
 
-    <!-- 2. الطلبات (مع أزرار الحالة الدقيقة وتعيين المندوب) -->
-    <div class="tab-pane fade" id="orders">
-        <div class="card shadow-sm border-0 mb-4 h-100">
-            <div class="card-body">
-                <a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a>
-                <div class="table-responsive bg-white rounded-4 shadow-sm border p-2">
-                    <table class="table table-hover align-middle mb-0 text-center">
-                        <thead class="table-light">
-                            <tr class="text-secondary small fw-bold">
-                                <th style="width: 110px;">رقم الطلب</th>
-                                <th class="text-start">العميل والهاتف</th>
-                                <th class="text-start">المنتجات</th>
-                                <th>الإجمالي</th>
-                                <th>الحالة الحالية</th>
-                                <th class="text-primary"><i class="fas fa-motorcycle me-1"></i> المندوب المسؤول</th>
-                                <th>تحديث الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% if orders %}
-                                {% for o in orders %}
-                                <tr>
-                                    <td>
-                                        <span class="fw-bold text-dark d-block mb-1">{{ o.order_id }}</span>
-                                        <a href="/track/{{ o.order_id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-0" style="font-size: 0.72rem;"><i class="fas fa-truck-fast"></i> تتبع</a>
-                                    </td>
-                                    <td class="text-start">
-                                        <div class="fw-bold text-dark">👤 {{ o.customer_name }}</div>
-                                        <div class="small text-muted"><i class="fas fa-phone-alt text-success me-1"></i> <span dir="ltr">{{ o.customer_phone }}</span></div>
-                                        {% if o.customer_address %}<div class="small text-muted text-truncate" style="max-width: 140px;">📍 {{ o.customer_address }}</div>{% endif %}
-                                    </td>
-                                    <td class="text-start">
-                                        <div class="small" style="max-height: 100px; overflow-y: auto; line-height: 1.6;">
-                                            {% for i in o.cart_items %}
-                                                <div class="text-dark fw-bold">▪️ {{ i.name }} <span class="badge bg-light text-secondary border px-1" style="font-size: 0.72rem;">x{{ i.qty }}</span></div>
-                                            {% endfor %}
-                                        </div>
-                                    </td>
-                                    <td><span class="fw-bold text-success fs-6">{{ o.total }}</span></td>
-                                    <td><span class="badge {% if 'توصيل' in o.status or 'مدفوع' in o.status %}bg-success{% elif 'مع المندوب' in o.status %}bg-primary{% elif 'تجهيز' in o.status %}bg-info text-dark{% elif 'ملغي' in o.status %}bg-danger{% else %}bg-warning text-dark{% endif %} px-2 py-1 rounded-pill small">{{ o.status }}</span></td>
-                                    <td>
-                                        <select class="form-select form-select-sm rounded-pill border-primary border-opacity-50 shadow-sm fw-bold mx-auto" style="min-width: 135px; font-size: 0.78rem;" onchange="submitStatusForm('{{ o.order_id }}', null, this.value)">
-                                            <option value="">{% if o.driver_name %}🛵 {{ o.driver_name }}{% else %}-- تعيين مندوب --{% endif %}</option>
-                                            {% for d in drivers %}
-                                            <option value="{{ d.phone }}" {% if o.driver_phone == d.phone %}selected{% endif %}>🛵 {{ d.name }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <button type="button" onclick="submitStatusForm('{{ o.order_id }}', 'جديد 🟡')" class="btn btn-outline-warning py-0 px-1" style="font-size: 0.7rem;">جديد</button>
-                                            <button type="button" onclick="submitStatusForm('{{ o.order_id }}', 'قيد التجهيز 🔵')" class="btn btn-outline-info py-0 px-1" style="font-size: 0.7rem;">تجهيز</button>
-                                            <button type="button" onclick="submitStatusForm('{{ o.order_id }}', 'تم التوصيل 🟢')" class="btn btn-outline-success py-0 px-1" style="font-size: 0.7rem;">توصيل</button>
-                                            <button type="button" onclick="submitStatusForm('{{ o.order_id }}', 'ملغي 🔴')" class="btn btn-outline-danger py-0 px-1" style="font-size: 0.7rem;">ملغي</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            {% else %}
-                                <tr><td colspan="7" class="text-center py-5 text-muted"><i class="fas fa-box-open fs-1 mb-2 opacity-50 d-block"></i> لا توجد طلبات مسجلة حتى الآن</td></tr>
-                            {% endif %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. المنتجات -->
+    <!-- 2. المنتجات (الميزات الشاملة والفلاتر والتعديل) -->
     <div class="tab-pane fade" id="products">
+        {% set cats = products | map(attribute='category') | unique | list %}
         <div class="card shadow-sm border-0 mb-4 border-top border-4 border-primary">
             <div class="card-body">
-                <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle text-primary"></i> إضافة منتج</h5>
+                <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle text-primary"></i> إضافة منتج جديد</h5>
                 <form method="POST" class="row g-3" id="addProductForm">
                     <input type="hidden" name="action" value="add_product">
                     <div class="col-md-4"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" required></div>
-                    <div class="col-md-4"><label class="small fw-bold">السعر</label><input name="price" type="number" class="form-control" required></div>
-                    <div class="col-md-4"><label class="small fw-bold">الكمية</label><input name="stock" type="number" class="form-control" required></div>
+                    <div class="col-md-4"><label class="small fw-bold">السعر</label><input name="price" type="number" step="0.01" class="form-control" required></div>
+                    <div class="col-md-4"><label class="small fw-bold">الكمية</label><input name="stock" type="number" class="form-control" value="100" required></div>
                     <div class="col-md-6">
                         <label class="small fw-bold">التصنيف</label>
-                        <select class="form-select" name="cat" required>
+                        <input type="hidden" name="cat" id="finalCategory" required>
+                        <select class="form-select" id="categorySelect" onchange="handleCategoryChange(this)" required>
                             <option value="" disabled selected>-- اختر تصنيفاً --</option>
+                            {% for c in cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
                             <option value="إلكترونيات وجوالات">إلكترونيات وجوالات</option>
                             <option value="ملابس وأزياء">ملابس وأزياء</option>
-                            <option value="عام">عام</option>
+                            <option value="NEW_CATEGORY" class="fw-bold text-primary">➕ تصنيف جديد...</option>
                         </select>
+                        <input type="text" id="newCategoryInput" class="form-control mt-2" placeholder="اكتب اسم التصنيف الجديد" style="display: none;" oninput="updateFinalCategory()">
                     </div>
                     <div class="col-md-6">
                         <label class="small fw-bold">صورة المنتج</label>
                         <div class="upload-btn-wrapper">
-                            <button type="button" class="btn btn-outline-primary w-100 fw-bold border-2" style="padding:8px;"><i class="fas fa-cloud-upload-alt"></i> رفع للسحابة (قريباً)</button>
+                            <button type="button" class="btn btn-outline-primary w-100 fw-bold border-2" style="padding:8px;"><i class="fas fa-cloud-upload-alt"></i> رفع الصورة للسحابة</button>
+                            <input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'newProductImg', 'newProductStatus', 'submitProductBtn')">
                         </div>
-                        <div class="divider-text" style="font-size:0.8rem;">أو أدخل الرابط المباشر</div>
-                        <input type="url" name="img" class="form-control" placeholder="https://..." dir="ltr" required>
+                        <small id="newProductStatus" class="fw-bold d-block text-secondary text-center mb-1" style="font-size:0.8rem;"></small>
+                        <div class="divider-text" style="font-size:0.8rem;">أو أدخل الرابط يدوياً</div>
+                        <input type="text" name="img" id="newProductImg" class="form-control" placeholder="https://..." dir="ltr" required>
                     </div>
                     <div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control"></div>
-                    <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm" type="submit">حفظ ونشر</button></div>
+                    <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm" type="button" id="submitProductBtn" onclick="submitProductForm()">حفظ ونشر المنتج</button></div>
                 </form>
             </div>
         </div>
@@ -162,21 +103,49 @@
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-body">
                 <h5 class="fw-bold mb-3"><i class="fas fa-box"></i> المنتجات الحالية</h5>
+                <div class="row mb-3 bg-light p-3 rounded shadow-sm mx-0">
+                    <div class="col-md-8 mb-2"><label class="small fw-bold text-muted">بحث سريع</label><div class="input-group shadow-sm"><span class="input-group-text bg-white border-primary text-primary"><i class="fas fa-search"></i></span><input type="text" id="adminProductSearch" class="form-control border-primary" placeholder="اكتب اسم المنتج للبحث..." onkeyup="filterAdminProducts()"></div></div>
+                    <div class="col-md-4 mb-2"><label class="small fw-bold text-muted">تصفية حسب القسم</label><select id="adminCategoryFilter" class="form-select border-primary shadow-sm" onchange="filterAdminProducts()"><option value="ALL">عرض كل التصنيفات</option>{% for c in cats %}<option value="{{ c }}">{{ c }}</option>{% endfor %}</select></div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light"><tr><th>الصورة</th><th>الاسم</th><th>السعر</th><th>الكمية</th><th>التصنيف</th><th>إجراءات</th></tr></thead>
                         <tbody>
                             {% for p in products %}
-                            <tr>
+                            <tr class="admin-product-row" data-name="{{ p.name }}" data-cat="{{ p.category }}">
                                 <td><img src="{{ p.image_url }}" onerror="fixImg(this)" width="50" height="50" style="object-fit:cover; border-radius:5px;"></td>
-                                <td class="fw-bold">{{ p.name }}</td><td class="text-primary">{{ p.price }}</td><td>{{ p.stock }}</td><td><span class="badge bg-secondary">{{ p.category }}</span></td>
+                                <td class="fw-bold">{{ p.name }}</td><td class="text-primary fw-bold">{{ p.price }}</td><td>{{ p.stock }}</td><td><span class="badge bg-secondary">{{ p.category }}</span></td>
                                 <td>
-                                    <form method="POST" class="d-inline" onsubmit="return confirm('حذف؟');">
-                                        <input type="hidden" name="action" value="delete_product"><input type="hidden" name="product_id" value="{{ p.id }}">
-                                        <button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button>
-                                    </form>
+                                    <button class="btn btn-sm btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#editModal{{ p.id }}"><i class="fas fa-edit"></i> تعديل</button>
+                                    <button class="btn btn-sm btn-danger shadow-sm" onclick="submitJsAction('delete_product', null, null, null, '{{ p.id }}', 'تأكيد حذف المنتج؟')"><i class="fas fa-trash"></i></button>
                                 </td>
                             </tr>
+                            
+                            <!-- Modal تعديل المنتج -->
+                            <div class="modal fade" id="editModal{{ p.id }}">
+                                <div class="modal-dialog">
+                                    <div class="modal-content rounded-4 border-0">
+                                        <div class="modal-header bg-light border-0"><h5 class="modal-title fw-bold">تعديل: {{ p.name }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                        <div class="modal-body">
+                                            <form method="POST" class="row g-3">
+                                                <input type="hidden" name="action" value="edit_product"><input type="hidden" name="product_id" value="{{ p.id }}">
+                                                <div class="col-12"><label class="small fw-bold">الاسم</label><input name="name" class="form-control" value="{{ p.name }}" required></div>
+                                                <div class="col-6"><label class="small fw-bold">السعر</label><input name="price" type="number" step="0.01" class="form-control" value="{{ p.price }}" required></div>
+                                                <div class="col-6"><label class="small fw-bold">المخزون</label><input name="stock" type="number" class="form-control" value="{{ p.stock }}" required></div>
+                                                <div class="col-12"><label class="small fw-bold">التصنيف</label><input name="cat" class="form-control" value="{{ p.category }}" required></div>
+                                                <div class="col-12">
+                                                    <label class="small fw-bold">تغيير الصورة</label>
+                                                    <input type="file" class="form-control mb-1" accept="image/*" onchange="uploadImageToCloud(this, 'editImgUrl{{ p.id }}', 'editImgStatus{{ p.id }}', 'editSaveBtn{{ p.id }}')">
+                                                    <small id="editImgStatus{{ p.id }}" class="fw-bold d-block text-secondary mb-1"></small>
+                                                    <input type="text" name="img" id="editImgUrl{{ p.id }}" class="form-control" value="{{ p.image_url }}" dir="ltr">
+                                                </div>
+                                                <div class="col-12"><label class="small fw-bold">الوصف</label><input name="desc" class="form-control" value="{{ p.description }}"></div>
+                                                <div class="col-12 mt-3"><button class="btn btn-primary w-100 fw-bold rounded-pill" id="editSaveBtn{{ p.id }}"><i class="fas fa-save me-1"></i> حفظ التعديلات</button></div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -185,38 +154,125 @@
         </div>
     </div>
 
-    <!-- 4. المناديب (النسخة الأصلية) -->
-    <div class="tab-pane fade" id="drivers-pane" role="tabpanel">
-        <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
-            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-motorcycle text-primary me-2"></i> فريق مناديب التوصيل</h5>
-            <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addDriverModal"><i class="fas fa-plus-circle me-1"></i> إضافة مندوب جديد</button>
+    <!-- 3. الطلبات (الجدول المتقدم وتعيين المندوب) -->
+    <div class="tab-pane fade" id="orders">
+        <div class="card shadow-sm border-0 mb-4 h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="fas fa-box-open text-primary me-2"></i> سجل الطلبات</h5>
+                    <a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm"><i class="fas fa-file-excel me-1"></i> تصدير (CSV)</a>
+                </div>
+                <div class="table-responsive bg-light rounded shadow-sm border p-2">
+                    <table class="table table-hover align-middle mb-0 text-center">
+                        <thead class="table-secondary">
+                            <tr class="small fw-bold">
+                                <th>رقم الطلب</th>
+                                <th class="text-start">العميل</th>
+                                <th class="text-start">المنتجات</th>
+                                <th>الإجمالي</th>
+                                <th>الحالة</th>
+                                <th class="text-primary"><i class="fas fa-motorcycle me-1"></i> المندوب</th>
+                                <th>تحديث سريع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if orders %}
+                                {% for o in orders %}
+                                <tr class="bg-white">
+                                    <td>
+                                        <span class="fw-bold text-dark d-block mb-1">{{ o.order_id }}</span>
+                                        <a href="/track/{{ o.order_id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-0" style="font-size: 0.72rem;"><i class="fas fa-search me-1"></i> تتبع</a>
+                                    </td>
+                                    <td class="text-start">
+                                        <div class="fw-bold text-dark"><i class="fas fa-user-circle text-secondary me-1"></i> {{ o.customer_name }}</div>
+                                        <div class="small text-muted"><i class="fas fa-phone-alt text-success me-1"></i> <span dir="ltr">{{ o.customer_phone }}</span></div>
+                                        {% if o.customer_address %}<div class="small text-muted text-truncate" style="max-width: 130px;" title="{{ o.customer_address }}">📍 {{ o.customer_address }}</div>{% endif %}
+                                    </td>
+                                    <td class="text-start">
+                                        <div class="small" style="max-height: 80px; overflow-y: auto;">
+                                            {% for i in o.cart_items %}
+                                                <div class="text-dark fw-bold border-bottom pb-1 mb-1">▪️ {{ i.name }} <span class="badge bg-light text-secondary border px-1 float-end">x{{ i.qty }}</span></div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td><span class="fw-bold text-success">{{ o.total }}</span></td>
+                                    <td><span class="badge {% if 'توصيل' in o.status or 'مدفوع' in o.status %}bg-success{% elif 'مع المندوب' in o.status %}bg-primary{% elif 'تجهيز' in o.status %}bg-info text-dark{% elif 'ملغي' in o.status %}bg-danger{% else %}bg-warning text-dark{% endif %} px-2 py-1 rounded-pill small">{{ o.status }}</span></td>
+                                    <td>
+                                        <select class="form-select form-select-sm rounded-pill border-primary border-opacity-50 shadow-sm fw-bold mx-auto" style="min-width: 120px; font-size: 0.75rem;" onchange="submitJsAction('update_order_status', '{{ o.order_id }}', null, this.value)">
+                                            <option value="">{% if o.driver_name %}🛵 {{ o.driver_name }}{% else %}-- تعيين مندوب --{% endif %}</option>
+                                            {% for d in drivers %}
+                                            <option value="{{ d.phone }}" {% if o.driver_phone == d.phone %}selected{% endif %}>{{ d.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm shadow-sm" role="group">
+                                            <button type="button" onclick="submitJsAction('update_order_status', '{{ o.order_id }}', 'قيد التجهيز 🔵')" class="btn btn-outline-info py-0 px-2" style="font-size: 0.7rem;" title="تجهيز"><i class="fas fa-box"></i></button>
+                                            <button type="button" onclick="submitJsAction('update_order_status', '{{ o.order_id }}', 'تم التوصيل 🟢')" class="btn btn-outline-success py-0 px-2" style="font-size: 0.7rem;" title="توصيل"><i class="fas fa-check"></i></button>
+                                            <button type="button" onclick="submitJsAction('update_order_status', '{{ o.order_id }}', 'ملغي 🔴')" class="btn btn-outline-danger py-0 px-2" style="font-size: 0.7rem;" title="إلغاء"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="7" class="text-center py-5 text-muted"><i class="fas fa-clipboard-list fs-1 mb-2 opacity-50 d-block"></i> لا توجد طلبات حتى الآن</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. المناديب (تخطيط البطاقات الجميل) -->
+    <div class="tab-pane fade" id="drivers-pane">
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-2 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0"><i class="fas fa-motorcycle text-primary me-2"></i> فريق المناديب</h5>
+            <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addDriverModal"><i class="fas fa-plus-circle me-1"></i> إضافة مندوب</button>
         </div>
         <div class="row g-3">
             {% if drivers %}
                 {% for d in drivers %}
                 <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+                    <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100 border-top border-4 border-info">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div><h6 class="fw-bold mb-1 text-dark">{{ d.get('name', '') }}</h6><span class="text-muted small"><i class="fas fa-phone-alt me-1 text-success"></i> <span dir="ltr">{{ d.get('phone', '') }}</span></span></div>
                             <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small rounded-pill">نشط 🟢</span>
                         </div>
                         <div class="bg-light p-2 rounded-3 my-2 small">
-                            <span class="text-muted d-block mb-1">رابط بوابة المندوب:</span>
-                            <div class="input-group input-group-sm">
+                            <span class="text-muted d-block mb-1 fw-bold">رابط بوابة المندوب:</span>
+                            <div class="input-group input-group-sm shadow-sm">
                                 <input type="text" class="form-control border-0 bg-white" value="{{ request.host_url }}delivery?token={{ d.get('token', d.get('_id', '')) }}" id="link-{{ d.get('token') }}" readonly>
-                                <button class="btn btn-outline-primary" onclick="copyText('link-{{ d.get('token') }}')" title="نسخ"><i class="fas fa-copy"></i></button>
+                                <button class="btn btn-primary" onclick="copyText('link-{{ d.get('token') }}')" title="نسخ"><i class="fas fa-copy"></i></button>
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                            <a href="https://wa.me/{{ d.get('phone', '') }}?text={{ ('مرحباً ' + d.get('name', '') + '، هذا هو رابط بوابة استلام مهام التوصيل الخاصة بك:%0A' + request.host_url + 'delivery?token=' + d.get('token', d.get('_id', '')))|urlencode }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2 fw-bold"><i class="fab fa-whatsapp me-1"></i> إرسال الرابط</a>
-                            <form method="POST" class="d-inline" onsubmit="return confirm('حذف المندوب؟');"><input type="hidden" name="action" value="delete_driver"><input type="hidden" name="driver_phone" value="{{ d.get('phone', '') }}"><button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2"><i class="fas fa-trash-alt"></i> حذف</button></form>
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                            <a href="https://wa.me/{{ d.get('phone', '') }}?text={{ ('مرحباً ' + d.get('name', '') + '، هذا هو رابط بوابة استلام مهام التوصيل الخاصة بك:%0A' + request.host_url + 'delivery?token=' + d.get('token', d.get('_id', '')))|urlencode }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-bold"><i class="fab fa-whatsapp me-1"></i> إرسال</a>
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" onclick="submitJsAction('delete_driver', null, null, '{{ d.get('phone', '') }}', null, 'تأكيد حذف المندوب؟')"><i class="fas fa-trash-alt me-1"></i> حذف</button>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
-                <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm"><i class="fas fa-motorcycle fs-1 text-muted mb-3 opacity-50"></i><h6 class="text-muted fw-bold">لم تقم بإضافة أي مندوب توصيل بعد</h6></div>
+                <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm"><i class="fas fa-motorcycle fs-1 text-muted mb-3 opacity-50 d-block"></i><h6 class="text-muted fw-bold">لم تقم بإضافة أي مندوب توصيل بعد</h6></div>
             {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal إضافة مندوب -->
+    <div class="modal fade" id="addDriverModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-dark"><i class="fas fa-user-plus text-primary me-2"></i> إضافة مندوب جديد</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body py-4">
+                    <form method="POST">
+                        <input type="hidden" name="action" value="add_driver">
+                        <div class="mb-3"><label class="form-label small fw-bold">اسم المندوب</label><input type="text" name="driver_name" class="form-control rounded-3" placeholder="مثال: أحمد محمد" required></div>
+                        <div class="mb-4"><label class="form-label small fw-bold">رقم هاتف المندوب (واتساب)</label><input type="tel" name="driver_phone" class="form-control rounded-3" placeholder="مثال: 770000000" dir="ltr" required></div>
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm"><i class="fas fa-save me-1"></i> حفظ وإنشاء البوابة</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -224,105 +280,162 @@
     <div class="tab-pane fade" id="coupons">
         <div class="row">
             <div class="col-md-5 mb-4">
-                <div class="card shadow-sm border-0 border-top border-4 border-warning">
+                <div class="card shadow-sm border-0 border-top border-4 border-warning h-100">
                     <div class="card-body">
-                        <h5 class="fw-bold mb-3"><i class="fas fa-ticket-alt text-warning"></i> إنشاء كوبون خصم</h5>
+                        <h5 class="fw-bold mb-4"><i class="fas fa-ticket-alt text-warning me-2"></i> إنشاء كوبون خصم</h5>
                         <form method="POST"><input type="hidden" name="action" value="add_coupon">
-                            <div class="mb-3"><label class="small fw-bold">كود الكوبون (مثال: KSA20)</label><input type="text" name="code" class="form-control" required style="text-transform: uppercase;"></div>
+                            <div class="mb-3"><label class="small fw-bold">كود الكوبون</label><input type="text" name="code" class="form-control" placeholder="مثال: VIP20" required style="text-transform: uppercase;"></div>
                             <div class="mb-4"><label class="small fw-bold">نسبة الخصم المئوية (%)</label><input type="number" name="discount" class="form-control" placeholder="مثال: 15" required min="1" max="99"></div>
-                            <button class="btn btn-warning w-100 fw-bold text-dark shadow-sm">تفعيل الكوبون</button>
+                            <button class="btn btn-warning w-100 fw-bold text-dark shadow-sm rounded-pill py-2"><i class="fas fa-check-circle me-1"></i> تفعيل الكوبون</button>
                         </form>
                     </div>
                 </div>
             </div>
-            <div class="col-md-7">
-                <div class="card shadow-sm border-0">
+            <div class="col-md-7 mb-4">
+                <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
-                        <h5 class="fw-bold mb-3">الكوبونات الفعالة</h5>
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light"><tr><th>الكود</th><th>الخصم</th><th>إجراء</th></tr></thead>
-                            <tbody>
-                                {% for c in coupons %}
-                                <tr>
-                                    <td class="fw-bold text-primary fs-5">{{ c.code }}</td><td><span class="badge bg-success fs-6">{{ c.discount }}%</span></td>
-                                    <td><form method="POST" onsubmit="return confirm('إلغاء هذا الكوبون؟');"><input type="hidden" name="action" value="delete_coupon"><input type="hidden" name="coupon_id" value="{{ c.id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td>
-                                </tr>
-                                {% else %}
-                                <tr><td colspan="3" class="text-muted py-3 text-center fw-bold">لا توجد كوبونات فعالة</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                        <h5 class="fw-bold mb-3 border-bottom pb-2">الكوبونات الفعالة</h5>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle text-center">
+                                <thead class="table-light"><tr><th>الكود</th><th>الخصم</th><th>إلغاء</th></tr></thead>
+                                <tbody>
+                                    {% for c in coupons %}
+                                    <tr>
+                                        <td class="fw-bold text-primary fs-5">{{ c.code }}</td><td><span class="badge bg-success fs-6">{{ c.discount }}%</span></td>
+                                        <td><button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="submitJsAction('delete_coupon', null, null, null, '{{ c.id }}', 'إلغاء الكوبون؟')"><i class="fas fa-trash-alt"></i></button></td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="text-muted py-5 fw-bold"><i class="fas fa-ticket-alt fs-1 opacity-50 d-block mb-3"></i> لا توجد كوبونات فعالة</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 6. الإعدادات -->
+    <!-- 6. الإعدادات المتكاملة -->
     <div class="tab-pane fade" id="settings">
         <div class="row">
             <div class="col-lg-8 mb-4">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
-                        <h5 class="fw-bold mb-3 border-bottom pb-2">⚙️ إعدادات المتجر والهوية</h5>
+                        <h5 class="fw-bold mb-4 border-bottom pb-2">⚙️ الإعدادات العامة للمتجر</h5>
                         <form method="POST" class="row g-3">
                             <input type="hidden" name="action" value="save_settings">
-                            
-                            <!-- إعدادات المتاجر -->
+
+                            {% if is_super_admin %}
+                            <div class="col-md-12 mb-3 p-3 bg-dark rounded border border-warning shadow-sm">
+                                <label class="small fw-bold text-warning mb-2"><i class="fas fa-crown"></i> شعار المنصة (تسجيل الدخول)</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="{{ settings.get('platform_logo', platform_logo) }}" onerror="fixImg(this)" width="60" height="60" style="object-fit:cover; border-radius:50%; border:2px solid #ffc107; background:#fff;">
+                                    <div class="flex-grow-1">
+                                        <div class="upload-btn-wrapper mb-1"><button type="button" class="btn btn-outline-warning btn-sm w-100 fw-bold border-2 text-white"><i class="fas fa-cloud-upload-alt"></i> رفع الشعار</button><input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'platformLogoInput', 'platformLogoStatus', 'settingsSaveBtn')"></div>
+                                        <small id="platformLogoStatus" class="fw-bold d-block text-warning mb-1" style="font-size:0.8rem;"></small>
+                                        <input type="text" name="platform_logo" id="platformLogoInput" class="form-control form-control-sm border-warning bg-light" value="{{ settings.get('platform_logo', '') }}" placeholder="الرابط">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="col-md-12 mb-3 p-3 bg-light rounded border border-info shadow-sm d-flex justify-content-between align-items-center">
+                                <div class="fw-bold text-info"><i class="fas fa-box-open me-2"></i> باقة اشتراكك: <span class="badge bg-primary fs-6">{{ current_user_data.get('package', 'أساسية') if current_user_data else 'أساسية' }}</span></div>
+                            </div>
+
+                            <div class="col-md-12 mb-3 border-bottom pb-4">
+                                <label class="small fw-bold text-primary mb-2"><i class="fas fa-store"></i> شعار المتجر (Logo)</label>
+                                <div class="d-flex align-items-center gap-3">
+                                    {% if settings.get('logo_url') %}<img src="{{ settings.logo_url }}" onerror="fixImg(this)" width="60" height="60" style="object-fit:cover; border-radius:50%; border:2px solid #ccc;">{% endif %}
+                                    <div class="flex-grow-1">
+                                        <div class="upload-btn-wrapper mb-1"><button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold border-2"><i class="fas fa-cloud-upload-alt"></i> اختيار صورة</button><input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'storeLogoInput', 'logoStatus', 'settingsSaveBtn')"></div>
+                                        <small id="logoStatus" class="fw-bold d-block text-secondary" style="font-size:0.8rem;"></small>
+                                        <input type="text" name="logo_url" id="storeLogoInput" class="form-control form-control-sm" value="{{ settings.get('logo_url', '') }}" placeholder="أو الصق رابط شعار متجرك" dir="ltr">
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-md-6"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
                             <div class="col-md-6"><label class="small fw-bold">اللون الأساسي</label><input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}"></div>
-                            <div class="col-md-4"><label class="small fw-bold">رقم الواتساب</label><input name="whatsapp" class="form-control" value="{{ settings.whatsapp }}" dir="ltr"></div>
-                            <div class="col-md-4"><label class="small fw-bold">العملة</label><input name="currency" class="form-control" value="{{ settings.currency }}"></div>
-                            <div class="col-md-4"><label class="small fw-bold">رابط الشعار</label><input name="logo_url" class="form-control" value="{{ settings.logo_url }}" dir="ltr"></div>
                             
-                            <!-- سوشيال ميديا -->
-                            <h6 class="fw-bold mt-4 mb-1 border-bottom pb-2">روابط التواصل والنطاق</h6>
-                            <div class="col-md-4"><label class="small fw-bold">فيسبوك</label><input name="facebook" class="form-control" value="{{ settings.get('facebook', '') }}"></div>
-                            <div class="col-md-4"><label class="small fw-bold">إنستجرام</label><input name="instagram" class="form-control" value="{{ settings.get('instagram', '') }}"></div>
-                            <div class="col-md-4"><label class="small fw-bold">الدومين المخصص</label><input name="custom_domain" class="form-control" value="{{ settings.get('custom_domain', '') }}" placeholder="www.domain.com" dir="ltr"></div>
+                            <div class="col-md-6">
+                                <label class="small fw-bold">نوع الخط (Font)</label>
+                                <select name="font_family" class="form-select">
+                                    <option value="Cairo" {% if settings.font_family=='Cairo' %}selected{% endif %}>Cairo</option>
+                                    <option value="Tajawal" {% if settings.font_family=='Tajawal' %}selected{% endif %}>Tajawal</option>
+                                    <option value="Almarai" {% if settings.font_family=='Almarai' %}selected{% endif %}>Almarai</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6"><label class="small fw-bold">حجم الهيدر</label><select name="header_size" class="form-select"><option value="small" {% if settings.header_size=='small' %}selected{% endif %}>صغير</option><option value="medium" {% if settings.header_size=='medium' %}selected{% endif %}>متوسط</option><option value="large" {% if settings.header_size=='large' %}selected{% endif %}>كبير</option></select></div>
+                            
+                            <div class="col-md-4"><label class="small fw-bold">واتساب الطلبات</label><input name="whatsapp" class="form-control" value="{{ settings.whatsapp }}" dir="ltr"></div>
+                            <div class="col-md-4"><label class="small fw-bold">العملة المعتمدة</label><input name="currency" class="form-control" value="{{ settings.currency }}"></div>
+                            <div class="col-md-4"><label class="small fw-bold">زر إضافة للسلة</label><input name="btn_text" class="form-control" value="{{ settings.get('btn_text', 'إضافة للسلة') }}"></div>
+                            <div class="col-12"><label class="small fw-bold">وصف المتجر (SEO)</label><input name="store_desc" class="form-control" value="{{ settings.store_desc }}"></div>
+                            
+                            <h6 class="fw-bold mt-4 mb-2 border-bottom pb-2 text-secondary">الروابط الدائمة والنطاق</h6>
+                            <div class="col-md-4"><label class="small fw-bold">فيسبوك</label><input name="facebook" class="form-control" value="{{ settings.get('facebook', '') }}" dir="ltr"></div>
+                            <div class="col-md-4"><label class="small fw-bold">إنستجرام</label><input name="instagram" class="form-control" value="{{ settings.get('instagram', '') }}" dir="ltr"></div>
+                            <div class="col-md-4"><label class="small fw-bold">تيك توك</label><input name="tiktok" class="form-control" value="{{ settings.get('tiktok', '') }}" dir="ltr"></div>
+                            <div class="col-md-6"><label class="small fw-bold text-info"><i class="fab fa-telegram me-1"></i> يوزر التلجرام</label><input name="telegram" class="form-control border-info" value="{{ settings.get('telegram', '') }}" placeholder="بدون @"></div>
+                            <div class="col-md-6"><label class="small fw-bold text-primary"><i class="fas fa-globe me-1"></i> الدومين المخصص</label><input name="custom_domain" class="form-control border-primary" value="{{ settings.get('custom_domain', '') }}" placeholder="www.domain.com" dir="ltr"></div>
 
-                            <!-- بوابات الدفع -->
+                            <h6 class="fw-bold mt-4 mb-2 border-bottom pb-2 text-secondary">إعدادات مزود التخزين (السحابة)</h6>
+                            <div class="col-md-12 mb-2">
+                                <select name="img_provider" class="form-select" id="providerSelect" onchange="toggleProviderFields()">
+                                    <option value="catbox" {% if settings.get('img_provider', 'catbox') == 'catbox' %}selected{% endif %}>Catbox.moe (مجاني وسريع 🚀)</option>
+                                    <option value="imgbb" {% if settings.get('img_provider') == 'imgbb' %}selected{% endif %}>ImgBB</option>
+                                    <option value="cloudinary" {% if settings.get('img_provider') == 'cloudinary' %}selected{% endif %}>Cloudinary</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12" id="basicProviderField" style="{% if settings.get('img_provider', 'catbox') == 'cloudinary' or settings.get('img_provider', 'catbox') == 'catbox' %}display:none;{% endif %}"><label class="small fw-bold">مفتاح الربط (API Key)</label><input name="img_api_key" type="password" class="form-control" value="{{ settings.get('img_api_key', '') }}"></div>
+                            <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider', 'catbox') != 'cloudinary' %}display:none;{% endif %}"><label class="small fw-bold text-info">Cloud Name</label><input name="cloudinary_name" type="text" class="form-control" value="{{ settings.get('cloudinary_name', '') }}"></div>
+                            <div class="col-md-6 cloudinary-fields" style="{% if settings.get('img_provider', 'catbox') != 'cloudinary' %}display:none;{% endif %}"><label class="small fw-bold text-info">Upload Preset</label><input name="cloudinary_preset" type="password" class="form-control" value="{{ settings.get('cloudinary_preset', '') }}"></div>
+
                             <div class="col-12 mt-4 border-bottom pb-2 d-flex justify-content-between align-items-center">
-                                <h6 class="fw-bold text-success mb-0"><i class="fas fa-wallet"></i> بوابات الدفع (API)</h6>
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1">ميزة قادمة</span>
+                                <h6 class="fw-bold text-success mb-0"><i class="fas fa-wallet me-2"></i> بوابات الدفع (API)</h6>
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1">قريباً</span>
                             </div>
                             <div class="col-md-12 mb-2">
                                 <select name="wallet_provider" class="form-select border-success">
-                                    <option value="" {% if not settings.get('wallet_provider') %}selected{% endif %}>الدفع عند الاستلام/تحويل بنكي يدوي</option>
+                                    <option value="" {% if not settings.get('wallet_provider') %}selected{% endif %}>الدفع عند الاستلام فقط</option>
                                     <option value="jawali" {% if settings.get('wallet_provider') == 'jawali' %}selected{% endif %}>جوالي (Jawali)</option>
                                     <option value="kuraimi" {% if settings.get('wallet_provider') == 'kuraimi' %}selected{% endif %}>الكريمي</option>
                                 </select>
                             </div>
-                            <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm" type="submit">حفظ كافة التحديثات</button></div>
-                        </form>
 
-                        <!-- إعدادات تليجرام -->
-                        <div class="card border-0 shadow-sm mt-4 border-top border-4 border-info">
-                            <div class="card-body">
-                                <h6 class="fw-bold text-dark"><i class="fab fa-telegram text-info fs-5 me-2"></i> إشعارات الطلبات الفورية (تليجرام)</h6>
-                                <form method="POST" action="/dashboard">
-                                    <input type="hidden" name="action" value="save_settings">
-                                    <div class="mb-3 mt-3">
-                                        <label class="form-label fw-bold small">معرف الدردشة (Chat ID)</label>
-                                        <input type="text" class="form-control bg-light" name="telegram" value="{{ settings.get('telegram', '') }}" placeholder="Chat ID">
-                                    </div>
-                                    <button type="submit" class="btn btn-dark w-100 fw-bold rounded-pill shadow-sm"><i class="fas fa-save me-1"></i> حفظ إعدادات تليجرام</button>
-                                </form>
-                            </div>
-                        </div>
+                            <div class="col-12 mt-4"><button class="btn btn-primary w-100 fw-bold shadow-sm rounded-pill py-2" type="submit" id="settingsSaveBtn"><i class="fas fa-save me-1"></i> حفظ إعدادات المتجر بالكامل</button></div>
+                        </form>
                     </div>
                 </div>
             </div>
+
             <div class="col-lg-4 mb-4">
+                <!-- إعدادات تليجرام -->
+                <div class="card border-0 shadow-sm mb-4 border-top border-4 border-info">
+                    <div class="card-body">
+                        <h6 class="fw-bold text-dark mb-3"><i class="fab fa-telegram text-info fs-5 me-2"></i> إشعارات الطلبات (تليجرام)</h6>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="save_settings">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">معرف الدردشة (Chat ID)</label>
+                                <input type="text" class="form-control bg-light" name="telegram_chat_id" value="{{ settings.get('telegram_chat_id', '') }}" placeholder="مثال: 123456789">
+                            </div>
+                            <button type="submit" class="btn btn-info text-white w-100 fw-bold rounded-pill shadow-sm"><i class="fas fa-bell me-1"></i> تفعيل الإشعارات</button>
+                        </form>
+                    </div>
+                </div>
+                <!-- تغيير كلمة المرور -->
                 <div class="card shadow-sm border-0 h-100 border-top border-4 border-warning">
                     <div class="card-body">
-                        <h5 class="fw-bold mb-3 text-dark"><i class="fas fa-shield-alt text-warning"></i> كلمة المرور</h5>
+                        <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-shield-alt text-warning me-2"></i> الأمان والمرور</h6>
                         <form method="POST" class="d-flex flex-column gap-3">
                             <input type="hidden" name="action" value="change_password">
-                            <div><label class="small fw-bold">الحالية</label><input type="password" name="old_password" class="form-control" required></div>
-                            <div><label class="small fw-bold">الجديدة</label><input type="password" name="new_password" class="form-control" required></div>
-                            <div><label class="small fw-bold">تأكيد</label><input type="password" name="confirm_password" class="form-control" required></div>
-                            <button class="btn btn-warning fw-bold text-dark w-100"><i class="fas fa-key"></i> تحديث</button>
+                            <div><input type="password" name="old_password" class="form-control" placeholder="كلمة المرور الحالية" required></div>
+                            <div><input type="password" name="new_password" class="form-control" placeholder="الجديدة" required></div>
+                            <div><input type="password" name="confirm_password" class="form-control" placeholder="تأكيد الجديدة" required></div>
+                            <button class="btn btn-warning fw-bold text-dark w-100 rounded-pill"><i class="fas fa-key me-1"></i> تحديث</button>
                         </form>
                     </div>
                 </div>
@@ -334,29 +447,31 @@
     {% if is_super_admin %}
     <div class="tab-pane fade" id="superadmin">
         <div class="row mb-4">
-            <div class="col-12">
+            <div class="col-12 mb-4">
                 <div class="card border-primary shadow-sm border-0">
                     <div class="card-body">
-                        <h5 class="fw-bold text-primary mb-3">📦 إدارة باقات المنصة (SaaS Plans)</h5>
+                        <h5 class="fw-bold text-primary mb-3"><i class="fas fa-cubes me-2"></i> إدارة باقات المنصة (SaaS Plans)</h5>
                         <form method="POST" class="row g-2 mb-3 bg-light p-3 rounded">
                             <input type="hidden" name="action" value="add_package">
                             <div class="col-md-3"><input type="text" name="pkg_name" class="form-control" placeholder="اسم الباقة" required></div>
                             <div class="col-md-2"><input type="number" name="pkg_price" class="form-control" placeholder="السعر" required></div>
                             <div class="col-md-3"><input type="number" name="pkg_max" class="form-control" placeholder="حد المنتجات" required></div>
-                            <div class="col-md-3"><input type="text" name="pkg_features" class="form-control" placeholder="ميزات اضافية"></div>
-                            <div class="col-md-1"><button class="btn btn-primary w-100"><i class="fas fa-plus"></i></button></div>
+                            <div class="col-md-3"><input type="text" name="pkg_features" class="form-control" placeholder="ميزات (مفصولة بفاصلة)"></div>
+                            <div class="col-md-1"><button class="btn btn-primary w-100 fw-bold"><i class="fas fa-plus"></i></button></div>
                         </form>
-                        <table class="table table-sm align-middle"><thead class="table-light"><tr><th>الباقة</th><th>السعر</th><th>الحد</th><th>إجراء</th></tr></thead>
-                        <tbody>{% for pkg in packages %}<tr><td class="fw-bold">{{ pkg.name }}</td><td>{{ pkg.price }}</td><td>{{ pkg.max_products }}</td><td><form method="POST"><input type="hidden" name="action" value="delete_package"><input type="hidden" name="pkg_id" value="{{ pkg._id }}"><button class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% endfor %}</tbody></table>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle text-center"><thead class="table-light"><tr><th>الباقة</th><th>السعر</th><th>الحد</th><th>إجراء</th></tr></thead>
+                            <tbody>{% for pkg in packages %}<tr><td class="fw-bold">{{ pkg.name }}</td><td>{{ pkg.price }}</td><td>{{ pkg.max_products }}</td><td><button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="submitJsAction('delete_package', null, null, null, '{{ pkg._id }}')"><i class="fas fa-trash"></i></button></td></tr>{% endfor %}</tbody></table>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-12 mt-4">
+            <div class="col-12">
                 <div class="card border-danger shadow-sm border-0">
                     <div class="card-body">
-                        <h5 class="fw-bold text-danger mb-3"><i class="fas fa-users-cog"></i> المتاجر المسجلة</h5>
+                        <h5 class="fw-bold text-danger mb-3"><i class="fas fa-users-cog me-2"></i> المتاجر المسجلة</h5>
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle">
+                            <table class="table table-hover align-middle text-center">
                                 <thead class="table-light"><tr><th>التاجر</th><th>الرابط</th><th>الباقة</th><th>الحالة</th><th>إجراءات</th></tr></thead>
                                 <tbody>
                                     {% for m in merchants %}
@@ -364,8 +479,8 @@
                                         <td class="fw-bold">{{ m.username }}</td><td dir="ltr">{{ m.store_slug }}</td><td><span class="badge bg-secondary">{{ m.package | default('أساسية') }}</span></td>
                                         <td>{% if m.active == 'TRUE' %}<span class="badge bg-success">نشط</span>{% else %}<span class="badge bg-danger">موقوف</span>{% endif %}</td>
                                         <td>
-                                            <form action="/dashboard" method="POST" class="d-inline"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button type="submit" class="btn btn-sm btn-outline-warning"><i class="fas fa-power-off"></i></button></form>
-                                            <form action="/dashboard" method="POST" class="d-inline"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('تأكيد الحذف؟')"><i class="fas fa-trash"></i></button></form>
+                                            <button class="btn btn-sm btn-outline-warning" onclick="submitJsAction('toggle_status', null, null, null, '{{ m.id }}')"><i class="fas fa-power-off"></i></button>
+                                            <button class="btn btn-sm btn-danger" onclick="submitJsAction('delete_merchant', null, null, null, '{{ m.id }}', 'تأكيد الحذف النهائي؟')"><i class="fas fa-trash"></i></button>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -381,41 +496,27 @@
 
 </div>
 
-<!-- Modal إضافة مندوب -->
-<div class="modal fade" id="addDriverModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-user-plus text-primary me-2"></i> إضافة مندوب جديد</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body py-3">
-                <form method="POST">
-                    <input type="hidden" name="action" value="add_driver">
-                    <div class="mb-3"><label class="form-label small fw-bold">اسم المندوب</label><input type="text" name="driver_name" class="form-control rounded-3" placeholder="مثال: أحمد محمد" required></div>
-                    <div class="mb-3"><label class="form-label small fw-bold">رقم هاتف المندوب</label><input type="tel" name="driver_phone" class="form-control rounded-3" placeholder="مثال: 770000000" required></div>
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm"><i class="fas fa-save me-1"></i> حفظ المندوب</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- نموذج مخفي لإرسال تحديثات الحالة وتعيين المندوب من الجدول -->
-<form id="quickUpdateForm" method="POST" style="display: none;">
-    <input type="hidden" name="action" value="update_order_status">
-    <input type="hidden" name="order_id" id="quickOrderId">
-    <input type="hidden" name="new_status" id="quickNewStatus">
-    <input type="hidden" name="driver_phone" id="quickDriverPhone">
+<!-- نموذج مخفي لعمليات الـ JS السريعة (بديل عن التكرار في HTML) -->
+<form id="jsActionForm" method="POST" style="display: none;">
+    <input type="hidden" name="action" id="jsAction">
+    <input type="hidden" name="order_id" id="jsOrderId">
+    <input type="hidden" name="new_status" id="jsNewStatus">
+    <input type="hidden" name="driver_phone" id="jsDriverPhone">
+    <input type="hidden" name="product_id" id="jsProductId">
+    <input type="hidden" name="coupon_id" id="jsCouponId">
+    <input type="hidden" name="pkg_id" id="jsPkgId">
+    <input type="hidden" name="user_id" id="jsUserId">
+    <input type="hidden" name="current_status" id="jsCurrentStatus">
 </form>
 
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // 1. إصلاح الصور
     function fixImg(img){if(!img.dataset.proxied){img.dataset.proxied='true';let src=img.getAttribute('src');if(src&&src!==''&&!src.includes('placeholder')){img.src='https://wsrv.nl/?url='+encodeURIComponent(img.src);}}}
-    
+
+    // 2. نسخ الروابط
     function copyText(elementId) {
         var copyText = document.getElementById(elementId);
         copyText.select();
@@ -424,22 +525,138 @@
         alert("تم النسخ بنجاح!");
     }
 
-    function submitStatusForm(orderId, status = null, driverPhone = null) {
-        document.getElementById('quickOrderId').value = orderId;
-        if (status) document.getElementById('quickNewStatus').value = status;
-        if (driverPhone !== null) document.getElementById('quickDriverPhone').value = driverPhone;
-        document.getElementById('quickUpdateForm').submit();
+    // 3. مدير العمليات السريعة (يغني عن عشرات الفورمات المخفية)
+    function submitJsAction(action, orderId=null, status=null, driverPhone=null, itemId=null, confirmMsg=null) {
+        if(confirmMsg && !confirm(confirmMsg)) return;
+        
+        document.getElementById('jsAction').value = action;
+        if(orderId) document.getElementById('jsOrderId').value = orderId;
+        if(status) document.getElementById('jsNewStatus').value = status;
+        if(driverPhone) document.getElementById('jsDriverPhone').value = driverPhone;
+        
+        if(itemId) {
+            if(action==='delete_product') document.getElementById('jsProductId').value = itemId;
+            if(action==='delete_coupon') document.getElementById('jsCouponId').value = itemId;
+            if(action==='delete_package') document.getElementById('jsPkgId').value = itemId;
+            if(action==='toggle_status' || action==='delete_merchant') {
+                document.getElementById('jsUserId').value = itemId;
+                // جلب الحالة الحالية إذا كان توقيف
+                if(action==='toggle_status') document.getElementById('jsCurrentStatus').value = 'TRUE'; // افتراضي، الباك اند سيعكسها
+            }
+        }
+        document.getElementById('jsActionForm').submit();
     }
 
-    document.addEventListener("DOMContentLoaded", function(){
-        let hash = window.location.hash;
-        if (hash) {
-            let tab = document.querySelector('button[data-bs-target="' + hash + '"]');
-            if (tab) { new bootstrap.Tab(tab).show(); }
+    // 4. فلترة المنتجات المتقدمة
+    function filterAdminProducts() {
+        let search = document.getElementById('adminProductSearch').value.toLowerCase();
+        let cat = document.getElementById('adminCategoryFilter').value;
+        document.querySelectorAll('.admin-product-row').forEach(row => {
+            let name = row.getAttribute('data-name').toLowerCase();
+            let rowCat = row.getAttribute('data-cat');
+            let matchSearch = name.includes(search);
+            let matchCat = (cat === 'ALL' || rowCat === cat);
+            row.style.display = (matchSearch && matchCat) ? '' : 'none';
+        });
+    }
+
+    // 5. إدارة تصنيفات المنتجات (التصنيف الجديد)
+    function handleCategoryChange(sel) {
+        let newCatInput = document.getElementById('newCategoryInput');
+        if(sel.value === 'NEW_CATEGORY') {
+            newCatInput.style.display = 'block'; newCatInput.required = true;
+        } else {
+            newCatInput.style.display = 'none'; newCatInput.required = false;
+            document.getElementById('finalCategory').value = sel.value;
         }
+    }
+    function updateFinalCategory() {
+        if(document.getElementById('categorySelect').value === 'NEW_CATEGORY') {
+            document.getElementById('finalCategory').value = document.getElementById('newCategoryInput').value;
+        }
+    }
+    function submitProductForm() {
+        updateFinalCategory();
+        document.getElementById('addProductForm').submit();
+    }
+
+    // 6. رفع الصور عبر API السحابة
+    async function uploadImageToCloud(input, urlFieldId, statusFieldId, btnId) {
+        let file = input.files[0];
+        if(!file) return;
+        let status = document.getElementById(statusFieldId);
+        let btn = document.getElementById(btnId);
+        status.textContent = 'جاري الرفع... ⏳'; status.className = 'fw-bold d-block text-warning mb-1';
+        if(btn) btn.disabled = true;
+
+        let reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async function() {
+            try {
+                let response = await fetch('/api/proxy_upload', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        provider: document.getElementById('providerSelect') ? document.getElementById('providerSelect').value : 'catbox',
+                        image_base64: reader.result
+                    })
+                });
+                let result = await response.json();
+                if(result.success) {
+                    document.getElementById(urlFieldId).value = result.url;
+                    status.textContent = 'تم الرفع بنجاح ✅'; status.className = 'fw-bold d-block text-success mb-1';
+                } else {
+                    status.textContent = 'فشل الرفع: ' + (result.error || ''); status.className = 'fw-bold d-block text-danger mb-1';
+                }
+            } catch (e) { status.textContent = 'خطأ في الاتصال'; }
+            if(btn) btn.disabled = false;
+        };
+    }
+    function toggleProviderFields() {
+        let val = document.getElementById('providerSelect').value;
+        document.getElementById('basicProviderField').style.display = (val === 'catbox' || val === 'cloudinary') ? 'none' : 'block';
+        document.querySelectorAll('.cloudinary-fields').forEach(el => el.style.display = val === 'cloudinary' ? 'block' : 'none');
+    }
+
+    // 7. إدارة القائمة الجانبية (Sidebar) و التبويبات (Tabs) بشكل مثالي
+    document.addEventListener("DOMContentLoaded", function() {
+        function activateTabFromHash() {
+            let hash = window.location.hash || '#analytics';
+            let tabBtn = document.querySelector(`button[data-bs-target="${hash}"]`) || document.querySelector(`a[href="${hash}"]`);
+            if (tabBtn && tabBtn.getAttribute('data-bs-toggle') === 'tab') {
+                new bootstrap.Tab(tabBtn).show();
+            }
+            // إغلاق القائمة الجانبية في الجوال بعد الضغط
+            let sidebarMenu = document.getElementById('sidebarMenu');
+            if (sidebarMenu && sidebarMenu.classList.contains('show')) {
+                let bsCollapse = bootstrap.Collapse.getInstance(sidebarMenu);
+                if (bsCollapse) bsCollapse.hide();
+            }
+            // تحديد العنصر النشط في القائمة الجانبية
+            document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+            let activeSidebarLink = document.querySelector(`.sidebar a[href="/dashboard${hash}"]`);
+            if (activeSidebarLink) activeSidebarLink.classList.add('active');
+        }
+
+        // تفعيل عند التحميل
+        activateTabFromHash();
+        
+        // تفعيل عند الضغط على القائمة الجانبية (تحديث الرابط بدون إعادة التحميل)
+        document.querySelectorAll('.sidebar a[href^="/dashboard#"]').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.hash = this.getAttribute('href').replace('/dashboard', '');
+                activateTabFromHash();
+            });
+        });
+
+        // تفعيل عند تغيير التبويب يدوياً من الشاشة الكبيرة
         document.querySelectorAll('button[data-bs-toggle="tab"]').forEach(btn => {
             btn.addEventListener('shown.bs.tab', function(e) {
-                window.location.hash = e.target.getAttribute('data-bs-target');
+                let target = e.target.getAttribute('data-bs-target');
+                if(history.pushState) { history.pushState(null, null, target); } else { window.location.hash = target; }
+                document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+                let activeLink = document.querySelector(`.sidebar a[href="/dashboard${target}"]`);
+                if (activeLink) activeLink.classList.add('active');
             });
         });
     });
