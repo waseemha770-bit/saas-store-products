@@ -1,3 +1,4 @@
+import urllib.parse
 def extract_clean_products(order):
     """دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن"""
     import json
@@ -253,7 +254,7 @@ def checkout(slug):
     # ==================================
     # الإصلاح هنا: استخدام التشفير الآمن
     # ==================================
-    wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.quote(msg)}"
+    wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.urllib.parse.quote(msg)}"
     
     return jsonify({
         "success": True,
