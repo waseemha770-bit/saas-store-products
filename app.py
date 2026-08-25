@@ -1,10 +1,3 @@
-import os
-import requests
-import threading
-
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '') # يتم قراءته بأمان من Vercel Environment Variables # سيتم استبداله لاحقاً
-
-
 def extract_clean_products(order):
     """دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن"""
     import json
@@ -257,25 +250,12 @@ def checkout(slug):
 💰 *الإجمالي النهائي:* {real_total} {currency_label}"""
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
-    import urllib.parse
-        wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.urllib.parse.quote(msg)}"
+    # ==================================
+    # الإصلاح هنا: استخدام التشفير الآمن
+    # ==================================
+    wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.quote(msg)}"
     
-    
-        # --- Telegram Notification Hook ---
-        try:
-            store_slug_hook = request.path.split('/')[-1]
-            user_data_hook = database.users_col.find_one({'store_slug': store_slug_hook})
-            if user_data_hook:
-                tg_settings = user_data_hook.get('settings', {})
-                if tg_settings.get('enable_telegram') and tg_settings.get('telegram_chat_id'):
-                    s_name = tg_settings.get('store_name', user_data_hook.get('store_slug', 'متجرك'))
-                    curr = tg_settings.get('currency', 'ريال')
-                    threading.Thread(target=send_telegram_order, args=(tg_settings['telegram_chat_id'], request.json, s_name, curr)).start()
-        except Exception as tg_err:
-            print("TG Hook err:", tg_err)
-        # ----------------------------------
-
-        return jsonify({
+    return jsonify({
         "success": True,
         "order_id": order_id,
         "wa_link": wa_link
@@ -420,7 +400,9 @@ def dashboard():
                 if new_user:
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
                     database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo!", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo", 10)
-                send_telegram_alert(f"🎉 <b>تاجر جديد!</b>\n👤 {request.form.get('name')}\n🔗 {slug}")
+                send_telegram_alert(f"🎉 <b>تاجر جديد!</b>
+👤 {request.form.get('name')}
+🔗 {slug}")
                 flash("تم إنشاء المتجر", "success")
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
@@ -564,90 +546,3 @@ def api_update_order_status():
         {"$set": {"status": data['status']}}
     )
     return jsonify({"success": True})
-
-
-def send_telegram_order(chat_id, order_data, store_name, currency="ريال"):
-    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "YOUR_TOKEN_HERE": return
-    try:
-        text = f"🚨 *طلب جديد في متجرك!*\n\n"
-        text += f"🏬 المتجر: {store_name}\n"
-        text += f"👤 العميل: {order_data.get('name', 'غير محدد')}\n"
-        text += f"📞 الهاتف: {order_data.get('phone', 'غير محدد')}\n"
-        text += f"📍 العنوان: {order_data.get('address', 'غير محدد')}\n"
-        text += f"💳 الدفع: {order_data.get('payment', 'كاش')}\n\n"
-        text += f"🛍️ *المنتجات المطلوبة:*\n"
-        for item in order_data.get('cart', []):
-            text += f"▪️ {item.get('name', '')} (الكمية: {item.get('qty', 1)})\n"
-        
-        text += f"\n💰 *الإجمالي:* {order_data.get('final_total', 0)} {currency}"
-        
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'Markdown'}
-        requests.post(url, json=payload, timeout=5)
-    except Exception as e:
-        print("Telegram Error:", e)
-
-
-@app.route('/api/checkout/<store_slug>', methods=['POST'])
-def checkout(store_slug):
-    try:
-        import urllib.parse
-        data = request.json
-        if not data:
-            return jsonify({"success": False, "error": "لا توجد بيانات."}), 400
-
-        user_data = database.users_col.find_one({'store_slug': store_slug})
-        if not user_data:
-            return jsonify({"success": False, "error": "المتجر غير موجود."}), 404
-
-        settings = user_data.get('settings', {})
-        wa_phone = settings.get('whatsapp', '')
-        currency = settings.get('currency', 'ريال')
-
-        customer_name = data.get('name', 'غير محدد')
-        customer_phone = data.get('phone', 'غير محدد')
-        customer_address = data.get('address', 'غير محدد')
-        payment_info = data.get('payment', 'الدفع عند الاستلام')
-        discount_info = data.get('discount_info', '')
-        cart = data.get('cart', [])
-        final_total = data.get('final_total', 0)
-
-        # حفظ الطلب في قاعدة البيانات إذا أردت لاحقاً
-        
-        # بناء رسالة واتساب
-        wa_text = f"مرحباً، أود تأكيد هذا الطلب:\n\n"
-        wa_text += f"👤 الاسم: {customer_name}\n"
-        wa_text += f"📞 الهاتف: {customer_phone}\n"
-        wa_text += f"📍 العنوان: {customer_address}\n"
-        wa_text += f"💳 الدفع: {payment_info}\n"
-        
-        if discount_info:
-            wa_text += f"🏷️ الخصم: {discount_info}\n"
-        
-        wa_text += "\n🛍️ المنتجات المطلوبة:\n"
-        for item in cart:
-            wa_text += f"- {item.get('name')} (الكمية: {item.get('qty')})\n"
-        
-        wa_text += f"\n💰 الإجمالي النهائي: {final_total} {currency}"
-        
-        # التشفير الآمن باستخدام urllib.parse
-        encoded_text = urllib.parse.quote(wa_text)
-        wa_link = f"https://wa.me/{wa_phone}?text={encoded_text}"
-        
-        # --- Telegram Notification Hook ---
-        try:
-            import threading
-            tg_settings = user_data.get('settings', {})
-            if tg_settings.get('enable_telegram') and tg_settings.get('telegram_chat_id'):
-                s_name = tg_settings.get('store_name', user_data.get('store_slug', 'متجرك'))
-                curr = tg_settings.get('currency', 'ريال')
-                threading.Thread(target=send_telegram_order, args=(tg_settings['telegram_chat_id'], data, s_name, curr)).start()
-        except Exception as tg_err:
-            print("TG Hook err:", tg_err)
-        # ----------------------------------
-
-        return jsonify({"success": True, "wa_link": wa_link, "whatsapp_url": wa_link})
-
-    except Exception as e:
-        print("Checkout Final Error:", e)
-        return jsonify({"success": False, "error": str(e)}), 500
