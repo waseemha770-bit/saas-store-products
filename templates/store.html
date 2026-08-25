@@ -144,7 +144,7 @@
                                 {% endif %}
 
                                 <div>
-                                    <div class="rating-badge" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "\'")|replace('"', '\"') }}')" title="اضغط لتقييم المنتج">
+                                    <div class="rating-badge" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "'")|replace('"', '"') }}')" title="اضغط لتقييم المنتج">
                                         <i class="fas fa-star me-1"></i> <span id="display-avg-{{ p.id }}">{{ p.rating|default(0)|float|round(1) }}</span>
                                         <span class="text-muted ms-1 small" id="display-count-{{ p.id }}">({{ p.reviews|default(0) }})</span>
                                     </div>
