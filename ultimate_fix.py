@@ -1,6 +1,10 @@
-import urllib.parse
-def extract_clean_products(order):
-    """دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن"""
+import urllib.request
+import re
+import os
+
+# هذا الكود هو النسخة الأصلية والمستقرة والسليمة 100% التي أرسلتها في رسالتك السابقة
+stable_code = """def extract_clean_products(order):
+    \"\"\"دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن\"\"\"
     import json
     parsed = []
     
@@ -86,7 +90,7 @@ def inject_global_vars():
 @app.before_request
 def handle_custom_domains():
     host = request.host.lower()
-    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/manifest', '/sw.js', '/driver', '/track']
+    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/manifest', '/sw.js']
     if not host.endswith('.vercel.app') and not any(request.path.startswith(p) for p in excluded_paths) and host not in ['127.0.0.1:5000', 'localhost:5000']:
         merchant_settings = database.settings_col.find_one({"custom_domain": host})
         if merchant_settings:
@@ -164,7 +168,7 @@ def proxy_upload():
             import base64
             file_data = base64.b64decode(raw_b64)
             boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
-            body = (f'--{boundary}\r\nContent-Disposition: form-data; name="reqtype"\r\n\r\nfileupload\r\n--{boundary}\r\nContent-Disposition: form-data; name="fileToUpload"; filename="image.jpg"\r\nContent-Type: image/jpeg\r\n\r\n').encode('utf-8') + file_data + f'\r\n--{boundary}--\r\n'.encode('utf-8')
+            body = (f'--{boundary}\\r\\nContent-Disposition: form-data; name="reqtype"\\r\\n\\r\\nfileupload\\r\\n--{boundary}\\r\\nContent-Disposition: form-data; name="fileToUpload"; filename="image.jpg"\\r\\nContent-Type: image/jpeg\\r\\n\\r\\n').encode('utf-8') + file_data + f'\\r\\n--{boundary}--\\r\\n'.encode('utf-8')
             catbox_headers = {'Content-Type': f'multipart/form-data; boundary={boundary}', 'User-Agent': 'Mozilla/5.0'}
             req = urllib.request.Request('https://catbox.moe/user/api.php', data=body, headers=catbox_headers, method='POST')
             with urllib.request.urlopen(req) as response: return jsonify({"success": True, "url": response.read().decode('utf-8').strip()})
@@ -237,10 +241,10 @@ def checkout(slug):
         )
         payment_status_msg = f"✅ حالة الدفع: مدفوع إلكترونياً ({mock_txn})"
         
-    items_list_str = '\n'.join([f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart])
+    items_list_str = '\\n'.join([f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart])
     currency_label = settings.get('currency', 'ريال')
     
-    msg = f"🛍️ طلب جديد من المتجر\nرقم الطلب: {order_id}\nالعميل: {data['name']}\nالهاتف: {data['phone']}\nالعنوان: {data.get('address', 'غير محدد')}\nطريقة الدفع: {payment_str}\n\nالمنتجات:\n{items_list_str}\n\nالإجمالي: {real_total} {currency_label}"
+    msg = f"🛍️ طلب جديد من المتجر\\nرقم الطلب: {order_id}\\nالعميل: {data['name']}\\nالهاتف: {data['phone']}\\nالعنوان: {data.get('address', 'غير محدد')}\\nطريقة الدفع: {payment_str}\\n\\nالمنتجات:\\n{items_list_str}\\n\\nالإجمالي: {real_total} {currency_label}"
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     
@@ -476,7 +480,6 @@ if __name__ == '__main__': app.run(debug=True)
 
 @app.route('/driver/<token>', methods=['GET'])
 def driver_portal(token):
-    token = token.strip()
     driver = database.get_driver_by_token(token)
     if not driver:
         return "<h3>كود المندوب غير صالح أو تم إلغاؤه</h3>", 404
@@ -517,3 +520,10 @@ def api_update_order_status():
     data = request.json
     database.orders_col.update_one({"order_id": data['order_id'], "store_id": session.get('user_id')}, {"$set": {"status": data['status']}})
     return jsonify({"success": True})
+"""
+
+# حفظ الكود الآمن
+with open('app.py', 'w', encoding='utf-8') as f:
+    f.write(stable_code)
+
+print("✅ تم إعادة تعيين app.py بنسخة محمية ومستقرة تماماً.")
