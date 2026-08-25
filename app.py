@@ -62,6 +62,14 @@ import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
+
+@app.after_request
+def add_header(response):
+    if 'text/html' in response.headers.get('Content-Type', ''):
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
 app.secret_key = os.getenv('SECRET_KEY')
 MAIN_DOMAIN = "saas-store-products.vercel.app"
 
@@ -123,8 +131,6 @@ def pwa_manifest(slug):
     logo = settings.get('logo_url') or "https://via.placeholder.com/192x192.png?text=App"
     return jsonify({"name": store_name, "short_name": store_name, "start_url": f"/store/{slug}", "display": "standalone", "background_color": "#ffffff", "theme_color": settings.get('theme_color', '#0d6efd'), "icons": [{"src": logo, "sizes": "192x192", "type": "image/png"}, {"src": logo, "sizes": "512x512", "type": "image/png"}]})
 
-@app.route('/sw.js')
-def service_worker(): return Response("self.addEventListener('install', (e) => { console.log('[TajerGo PWA] Installed'); }); self.addEventListener('fetch', (e) => {});", mimetype="application/javascript")
 
 @app.route('/api/proxy_upload', methods=['POST'])
 def proxy_upload():
