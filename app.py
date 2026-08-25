@@ -254,7 +254,7 @@ def checkout(slug):
     # ==================================
     # الإصلاح هنا: استخدام التشفير الآمن
     # ==================================
-    wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.urllib.parse.urllib.parse.urllib.parse.quote(msg)}"
+    wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.urllib.parse.urllib.parse.urllib.parse.urllib.parse.quote(msg)}"
     
     return jsonify({
         "success": True,
