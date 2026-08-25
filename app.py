@@ -1,3 +1,4 @@
+import urllib.parse
 def extract_clean_products(order):
     """دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن"""
     import json
@@ -244,10 +245,10 @@ def checkout(slug):
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     
     # 🌟 هنا الإصلاح الدقيق والمضمون 100% 🌟
-    wa_link = f"https://wa.me/{wa_phone}?text={{urllib.parse.quote(msg)}}"
+    wa_link = f"https://wa.me/{wa_phone}?text={{urllib.parse.urllib.parse.quote(msg)}}"
     
     # تصحيح الخطأ في دمج المتغير لتجنب أي مشاكل
-    wa_link = "https://wa.me/" + str(wa_phone) + "?text=" + urllib.parse.quote(msg)
+    wa_link = "https://wa.me/" + str(wa_phone) + "?text=" + urllib.parse.urllib.parse.quote(msg)
     
     return jsonify({
         "success": True,
