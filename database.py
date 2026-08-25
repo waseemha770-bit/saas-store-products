@@ -266,7 +266,7 @@ def delete_driver(store_id, phone):
 
 
 def get_driver_by_token(token):
-    return drivers_col.find_one({"token": token.upper()}, {"_id": 0})
+    return drivers_col.find_one({"token": token.lower()}, {"_id": 0})
 
 
 def assign_order_driver(order_id, store_id, driver_name, driver_phone):
