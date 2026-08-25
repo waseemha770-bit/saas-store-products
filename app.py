@@ -63,9 +63,37 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
+from flask import jsonify, Response
+
 @app.route('/sw.js')
-def serve_sw():
-    return app.send_static_file('sw.js')
+def sw_js():
+    js = "self.addEventListener('install', e => { self.skipWaiting(); }); self.addEventListener('fetch', e => {});"
+    return Response(js, mimetype='application/javascript')
+
+@app.route('/dashboard_manifest.json')
+def dash_manifest():
+    return jsonify({
+        "name": "لوحة التاجر | TajerGo",
+        "short_name": "لوحة التاجر",
+        "start_url": "/dashboard",
+        "display": "standalone",
+        "background_color": "#f4f6f9",
+        "theme_color": "#0d6efd",
+        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3050/3050431.png", "sizes": "512x512", "type": "image/png"}]
+    })
+
+@app.route('/manifest/<slug>.json')
+def store_manifest(slug):
+    return jsonify({
+        "name": "متجر " + slug,
+        "short_name": "المتجر",
+        "start_url": "/store/" + slug,
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#0d6efd",
+        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3050/3050431.png", "sizes": "512x512", "type": "image/png"}]
+    })
+
 
 
 @app.after_request

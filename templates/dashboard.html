@@ -66,8 +66,8 @@
     <!-- 2. الطلبات -->
     <div class="tab-pane fade" id="orders" role="tabpanel">
         <div class="row">
-            <div class="col-md-4 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><canvas id="orderChart" style="max-height: 250px;"></canvas></div></div></div>
-            <div class="col-md-8 mb-4">
+            
+            <div class="col-md-12 mb-4">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-3"><h5 class="fw-bold m-0">سجل الطلبات</h5><a href="/export/orders" class="btn btn-success btn-sm fw-bold"><i class="fas fa-file-excel"></i> تصدير</a></div>
@@ -218,8 +218,9 @@
                             
                             <div class="col-md-12 mb-2 border-bottom pb-3"><label class="small fw-bold text-primary"><i class="fas fa-store"></i> شعار متجرك (Store Logo)</label><div class="d-flex align-items-center gap-3 mt-1">{% if settings.get('logo_url') %}<img src="{{ settings.logo_url }}" onerror="fixImg(this)" width="60" height="60" style="object-fit:cover; border-radius:50%; border:2px solid #ccc;">{% endif %}<div class="flex-grow-1"><div class="upload-btn-wrapper mb-0"><button type="button" class="btn btn-outline-primary btn-sm w-100 fw-bold border-2"><i class="fas fa-cloud-upload-alt"></i> رفع شعار المتجر</button><input type="file" accept="image/*" onchange="uploadImageToCloud(this, 'storeLogoInput', 'logoStatus', 'settingsSaveBtn')"></div><small id="logoStatus" class="fw-bold d-block text-secondary" style="font-size:0.8rem;"></small><input type="text" name="logo_url" id="storeLogoInput" class="form-control form-control-sm mt-1" value="{{ settings.get('logo_url', '') }}" placeholder="أو الصق رابط شعار متجرك" dir="ltr"></div></div></div>
                             
-                            <div class="col-md-6"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
-                            <div class="col-md-6"><label class="small fw-bold">اللون الأساسي</label><input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}"></div>
+                            <div class="col-md-4"><label class="small fw-bold">اسم المتجر</label><input name="store_name" class="form-control" value="{{ settings.store_name }}"></div>
+                            <div class="col-md-4"><label class="small fw-bold">اللون الأساسي</label><input type="color" name="theme_color" class="form-control form-control-color w-100" value="{{ settings.theme_color }}"></div>
+                            <div class="col-md-4"><label class="small fw-bold">لون القائمة الجانبية</label><input type="color" name="sidebar_color" class="form-control form-control-color w-100" value="{{ settings.get('sidebar_color', '#212529') }}"></div>
                             <div class="col-md-6"><label class="small fw-bold">الخط (Font)</label><select name="font_family" class="form-select"><option value="Cairo" {% if settings.font_family=='Cairo' %}selected{% endif %}>Cairo</option><option value="Tajawal" {% if settings.font_family=='Tajawal' %}selected{% endif %}>Tajawal</option><option value="Almarai" {% if settings.font_family=='Almarai' %}selected{% endif %}>Almarai</option><option value="Changa" {% if settings.font_family=='Changa' %}selected{% endif %}>Changa</option></select></div>
                             <div class="col-md-6"><label class="small fw-bold">حجم الرأس</label><select name="header_size" class="form-select"><option value="small" {% if settings.header_size=='small' %}selected{% endif %}>صغير</option><option value="medium" {% if settings.header_size=='medium' %}selected{% endif %}>متوسط</option><option value="large" {% if settings.header_size=='large' %}selected{% endif %}>كبير</option></select></div>
                             <div class="col-md-4"><label class="small fw-bold">رقم الواتساب</label><input name="whatsapp" class="form-control" value="{{ settings.whatsapp }}" dir="ltr"></div>
@@ -480,19 +481,7 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
         }
-        var ctxOrder = document.getElementById('orderChart');
-        if(ctxOrder) {
-            new Chart(ctxOrder.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['جديد', 'تجهيز', 'توصيل', 'ملغي'],
-                    datasets: [{
-                        data: [{{ stats.status_counts['جديد 🟡'] | default(0) }}, {{ stats.status_counts['قيد التجهيز 🔵'] | default(0) }}, {{ stats.status_counts['تم التوصيل 🟢'] | default(0) }}, {{ stats.status_counts['ملغي 🔴'] | default(0) }}],
-                        backgroundColor: ['#ffc107', '#0dcaf0', '#198754', '#dc3545'], borderWidth: 2
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font: {family: 'Cairo', size: 12}} } } }
-            });
+        
         }
         
         // 5. شريط تقدم الباقة
