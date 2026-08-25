@@ -4,55 +4,158 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}لوحة التحكم | TajerGo{% endblock %}</title>
+    <link rel="manifest" href="/manifest/{{ store_slug | default('admin') }}.json">
+    <meta name="theme-color" content="{{ settings.theme_color | default('#0d6efd') if settings else '#0d6efd' }}">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Cairo', sans-serif; background-color: #f4f6f9; }
-        .sidebar { min-height: 100vh; background: #212529; color: #fff; padding-top: 20px; }
-        .sidebar .nav-link { color: #adb5bd; text-decoration: none; padding: 12px 15px; display: block; border-radius: 5px; margin-bottom: 5px; transition: 0.2s; font-weight: 600; cursor: pointer; }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active { color: #fff; background: #0d6efd; }
-        .form-control, .form-select { border: 2px solid #b3b3b3; border-radius: 8px; font-weight: bold; }
+        body { font-family: 'Cairo', sans-serif; background-color: #f4f6f9; overflow-x: hidden; }
+        
+        /* جماليات القائمة الجانبية */
+        .sidebar-wrapper {
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: linear-gradient(180deg, {{ settings.sidebar_color|default('#212529') if settings else '#212529' }} 0%, #111 100%);
+            box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+            min-height: 100vh;
+            z-index: 1040;
+            width: 260px;
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+        }
+        .sidebar-wrapper.collapsed { right: -260px; }
+        
+        .sidebar-content { padding-top: 15px; width: 260px; overflow-y: auto; height: 100%; scrollbar-width: none; }
+        .sidebar-content::-webkit-scrollbar { display: none; }
+        
+        .sidebar-content .nav-link { 
+            color: rgba(255,255,255,0.7); 
+            text-decoration: none; 
+            padding: 12px 20px; 
+            display: flex;
+            align-items: center;
+            border-radius: 12px; 
+            margin: 6px 15px; 
+            transition: all 0.3s ease; 
+            font-weight: 600; 
+            cursor: pointer; 
+            position: relative;
+            overflow: hidden;
+        }
+        .sidebar-content .nav-link i { margin-left: 10px; width: 20px; text-align: center; font-size: 1.1rem; }
+        
+        /* تأثيرات التحويم */
+        .sidebar-content .nav-link:hover { 
+            color: #fff; 
+            background: rgba(255,255,255,0.1); 
+            transform: translateX(-5px);
+        }
+        .sidebar-content .nav-link.active { 
+            color: #fff; 
+            background: {{ settings.theme_color|default('#0d6efd') if settings else '#0d6efd' }}; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        /* المحتوى الرئيسي وحركته عند إخفاء القائمة */
+        .main-content {
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            margin-right: 260px;
+            min-height: 100vh;
+            width: calc(100% - 260px);
+        }
+        .main-content.expanded { margin-right: 0; width: 100%; }
+
+        .form-control, .form-select { border: 2px solid #e2e8f0; border-radius: 8px; font-weight: bold; }
         .form-control:focus, .form-select:focus { border-color: #0d6efd; box-shadow: none; }
+        
+        /* تجاوب الشاشات الصغيرة */
+        @media (max-width: 767.98px) {
+            .sidebar-wrapper { right: -260px; }
+            .sidebar-wrapper.show-mobile { right: 0; }
+            .main-content { margin-right: 0; width: 100%; }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark d-md-none px-3 shadow">
-        <a class="navbar-brand fw-bold" href="/dashboard"><i class="fas fa-store me-2"></i> TajerGo</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+    <nav class="navbar navbar-light bg-white border-bottom px-3 shadow-sm sticky-top z-3">
+        <div class="d-flex align-items-center">
+            <button class="btn btn-light border-0 shadow-sm rounded-circle d-flex justify-content-center align-items-center" id="sidebarToggleBtn" style="width: 40px; height: 40px; background: #f8f9fa;">
+                <i class="fas fa-bars text-dark fs-5"></i>
+            </button>
+            <a class="navbar-brand fw-bold text-dark mb-0 ms-3 d-flex align-items-center" href="/dashboard">
+                <i class="fas fa-store text-primary me-2 fs-4"></i> TajerGo
+            </a>
+        </div>
+        <div>
+            {% if not is_super_admin and store_slug %}
+            <a href="/store/{{ store_slug }}" target="_blank" class="btn btn-primary fw-bold px-4 rounded-pill shadow-sm d-flex align-items-center">
+                <i class="fas fa-external-link-alt me-2"></i> عرض المتجر
+            </a>
+            {% endif %}
+        </div>
     </nav>
 
-    <div class="container-fluid">
-        <div class="row">
-            <!-- القائمة الجانبية تعمل كأزرار تبويبات (Tabs) -->
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-                <div class="position-sticky">
-                    <h4 class="text-white text-center d-none d-md-block mb-4 border-bottom pb-3"><i class="fas fa-store me-2"></i> TajerGo</h4>
-                    <ul class="nav flex-column px-2" role="tablist" id="sidebarTabs">
-                        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#analytics" role="tab"><i class="fas fa-chart-pie me-2"></i> الإحصائيات</a></li>
-                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#orders" role="tab"><i class="fas fa-box-open me-2"></i> الطلبات</a></li>
-                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#products" role="tab"><i class="fas fa-tags me-2"></i> المنتجات</a></li>
-                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#drivers-pane" role="tab"><i class="fas fa-motorcycle me-2"></i> المناديب</a></li>
-                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#coupons" role="tab"><i class="fas fa-ticket-alt me-2"></i> الكوبونات</a></li>
-                        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#settings" role="tab"><i class="fas fa-cog me-2"></i> الإعدادات</a></li>
-                        {% if is_super_admin %}
-                        <li class="nav-item"><a class="nav-link text-danger" data-bs-toggle="tab" href="#superadmin" role="tab"><i class="fas fa-crown me-2"></i> الإدارة</a></li>
-                        {% endif %}
-                        <li class="nav-item mt-4"><a class="nav-link text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i> خروج</a></li>
-                    </ul>
+    <div class="d-flex position-relative">
+        <div class="sidebar-wrapper d-flex flex-column" id="sidebarWrapper">
+            <div class="sidebar-content">
+                <div class="text-center mb-4 mt-2 px-3">
+                    <img src="{{ settings.platform_logo if settings and settings.platform_logo else platform_logo }}" onerror="this.src='https://via.placeholder.com/60'" width="70" height="70" class="rounded-circle shadow bg-white p-1 mb-2" style="object-fit:cover; border: 2px solid {{ settings.theme_color|default('#0d6efd') if settings else '#0d6efd' }};">
+                    <h6 class="text-white fw-bold mb-0 mt-2">{{ settings.store_name|default('لوحة التاجر') if settings else 'لوحة التاجر' }}</h6>
                 </div>
-            </nav>
-
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
-                {% block content %}{% endblock %}
-            </main>
+                <ul class="nav flex-column" role="tablist" id="sidebarTabs">
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#analytics" role="tab"><i class="fas fa-chart-pie"></i> الإحصائيات</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#orders" role="tab"><i class="fas fa-box-open"></i> الطلبات</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#products" role="tab"><i class="fas fa-tags"></i> المنتجات</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#drivers-pane" role="tab"><i class="fas fa-motorcycle"></i> المناديب</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#coupons" role="tab"><i class="fas fa-ticket-alt"></i> الكوبونات</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#settings" role="tab"><i class="fas fa-cog"></i> الإعدادات</a></li>
+                    {% if is_super_admin %}
+                    <li class="nav-item"><a class="nav-link text-warning" data-bs-toggle="tab" href="#superadmin" role="tab"><i class="fas fa-crown"></i> الإدارة</a></li>
+                    {% endif %}
+                    <li class="nav-item mt-4 border-top border-secondary pt-3 mx-3"><a class="nav-link text-danger px-2" href="/logout"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+                </ul>
+            </div>
         </div>
+
+        <main class="main-content p-3 p-md-4" id="mainContent">
+            {% block content %}{% endblock %}
+        </main>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // تفعيل PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW ref failed', err));
+            });
+        }
+
+        // إظهار وإخفاء القائمة الجانبية بديناميكية
+        document.getElementById('sidebarToggleBtn').addEventListener('click', function() {
+            let sidebar = document.getElementById('sidebarWrapper');
+            let main = document.getElementById('mainContent');
+            if (window.innerWidth < 768) {
+                sidebar.classList.toggle('show-mobile');
+            } else {
+                sidebar.classList.toggle('collapsed');
+                main.classList.toggle('expanded');
+            }
+        });
+
+        // إغلاق القائمة في الموبايل عند الضغط على أي قسم
+        document.querySelectorAll('#sidebarTabs .nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    document.getElementById('sidebarWrapper').classList.remove('show-mobile');
+                }
+            });
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>
