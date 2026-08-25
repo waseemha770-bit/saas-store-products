@@ -63,6 +63,11 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
+@app.route('/sw.js')
+def serve_sw():
+    return app.send_static_file('sw.js')
+
+
 @app.after_request
 def add_header(response):
     if 'text/html' in response.headers.get('Content-Type', ''):
