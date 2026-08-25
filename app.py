@@ -254,7 +254,7 @@ def checkout(slug):
     # ==================================
     # الإصلاح هنا: استخدام التشفير الآمن
     # ==================================
-    wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.urllib.parse.urllib.parse.urllib.parse.urllib.parse.quote(msg)}"
+    wa_link = f"https://wa.me/{wa_phone}?text={urllib.parse.urllib.parse.urllib.parse.urllib.parse.urllib.parse.urllib.parse.quote(msg)}"
     
     return jsonify({
         "success": True,
@@ -401,9 +401,7 @@ def dashboard():
                 if new_user:
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
                     database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo!", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo", 10)
-                send_telegram_alert(f"🎉 <b>تاجر جديد!</b>
-👤 {request.form.get('name')}
-🔗 {slug}")
+                send_telegram_alert(f"🎉 <b>تاجر جديد!</b>\n👤 {request.form.get('name')}\n🔗 {slug}")
 👤 {request.form.get('name')}
 🔗 {slug}")
                 flash("تم إنشاء المتجر", "success")
