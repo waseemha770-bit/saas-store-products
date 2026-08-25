@@ -86,7 +86,7 @@ def inject_global_vars():
 @app.before_request
 def handle_custom_domains():
     host = request.host.lower()
-    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/manifest', '/sw.js']
+    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/manifest', '/sw.js', '/driver', '/track']
     if not host.endswith('.vercel.app') and not any(request.path.startswith(p) for p in excluded_paths) and host not in ['127.0.0.1:5000', 'localhost:5000']:
         merchant_settings = database.settings_col.find_one({"custom_domain": host})
         if merchant_settings:
