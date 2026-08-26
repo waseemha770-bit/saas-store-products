@@ -22,5 +22,34 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{{ url_for('static', filename='js/dashboard.js') }}?v={{ static_version }}"></script>
     {% block page_scripts %}{% endblock %}
+
+<!-- SIDEBAR_TOGGLE_SCRIPT -->
+<style>
+    /* فرض الإخفاء وتمدد المحتوى */
+    .tajergo-sidebar-hidden { display: none !important; }
+    .tajergo-main-expanded { margin-right: 0 !important; width: 100% !important; max-width: 100% !important; }
+</style>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        let toggleButtons = document.querySelectorAll('.fa-bars');
+        let sidebar = document.querySelector('aside') || document.querySelector('.sidebar') || document.querySelector('[id*="sidebar"]');
+        let mainContent = document.querySelector('main') || document.querySelector('.main-content') || document.querySelector('.page-content') || document.querySelector('[id*="main"]');
+        
+        if (toggleButtons.length > 0 && sidebar) {
+            toggleButtons.forEach(icon => {
+                let btn = icon.closest('button') || icon.closest('a') || icon;
+                btn.style.cursor = 'pointer';
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    sidebar.classList.toggle('tajergo-sidebar-hidden');
+                    if(mainContent) {
+                        mainContent.classList.toggle('tajergo-main-expanded');
+                    }
+                });
+            });
+        }
+    });
+</script>
+<!-- END_SIDEBAR_TOGGLE_SCRIPT -->
 </body>
 </html>
