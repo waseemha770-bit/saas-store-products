@@ -429,223 +429,39 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // 1. إصلاح الصور
-    function fixImg(img){if(!img.dataset.proxied){img.dataset.proxied='true';let src=img.getAttribute('src');if(src&&src!==''&&!src.includes('placeholder')){img.src='https://wsrv.nl/?url='+encodeURIComponent(img.src);}}}
-    
-    // 2. إدارة التبويبات مع Sidebar باستخدام LocalStorage لحفظ التبويب
+    <script>
+    // نظام حفظ التبويب النشط بدقة تامة ومنع العودة للإحصائيات
     document.addEventListener("DOMContentLoaded", function() {
-        function activateTab(tabId) {
-            let tabBtn = document.querySelector(`a[data-bs-target="${tabId}"]`) || document.querySelector(`a[href="${tabId}"]`);
-            if (tabBtn) { new bootstrap.Tab(tabBtn).show(); }
-            
-            // إغلاق القائمة الجانبية في الجوال
-            let sidebarMenu = document.getElementById('sidebarMenu');
-            if (sidebarMenu && sidebarMenu.classList.contains('show')) {
-                let bsCollapse = bootstrap.Collapse.getInstance(sidebarMenu);
-                if (bsCollapse) bsCollapse.hide();
-            }
-            // تحديد الزر كـ Active في القائمة
-            document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
-            if(tabBtn) tabBtn.classList.add('active');
-        }
+        let activeTab = localStorage.getItem('tajergo_active_tab') || '#analytics';
+        let tabBtn = document.querySelector() || document.querySelector();
+        if (tabBtn) { new bootstrap.Tab(tabBtn).show(); }
 
-        let activeTab = localStorage.getItem('tajergo_active_tab') || window.location.hash || '#analytics';
-        activateTab(activeTab);
-
-        document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(btn => {
-            btn.addEventListener('shown.bs.tab', function(e) {
-                let target = e.target.getAttribute('data-bs-target') || e.target.getAttribute('href');
-                localStorage.setItem('tajergo_active_tab', target);
-                if(history.pushState) history.pushState(null, null, target);
-                document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
-                e.target.classList.add('active');
+        document.querySelectorAll('a[data-bs-toggle="tab"], .sidebar .nav-link').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                let target = this.getAttribute('data-bs-target') || this.getAttribute('href');
+                if(target && target.startsWith('#')) {
+                    localStorage.setItem('tajergo_active_tab', target);
+                    document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
+                    this.classList.add('active');
+                }
             });
         });
 
-        // 3. تهيئة حقول مزود الصور
-        toggleProviderFields();
-        
-        // 4. الرسوم البيانية (Charts)
-        var ctxSales = document.getElementById('salesChart');
-        if(ctxSales) {
-            new Chart(ctxSales.getContext('2d'), {
-                type: 'line',
+        // تهيئة الرسم البياني الدائري (orderChart) في الإحصائيات
+        var ctxOrder = document.getElementById('orderChart');
+        if(ctxOrder) {
+            new Chart(ctxOrder.getContext('2d'), {
+                type: 'doughnut',
                 data: {
-                    labels: {{ adv_stats.chart_labels | tojson | safe if adv_stats else '[]' }},
+                    labels: ['جديد', 'تجهيز', 'توصيل', 'ملغي'],
                     datasets: [{
-                        label: 'المبيعات', data: {{ adv_stats.chart_data | tojson | safe if adv_stats else '[]' }},
-                        borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.1)', fill: true, tension: 0.4
+                        data: [{{ stats.status_counts['جديد 🟡'] | default(0) }}, {{ stats.status_counts['قيد التجهيز 🔵'] | default(0) }}, {{ stats.status_counts['تم التوصيل 🟢'] | default(0) }}, {{ stats.status_counts['ملغي 🔴'] | default(0) }}],
+                        backgroundColor: ['#ffc107', '#0dcaf0', '#198754', '#dc3545'], borderWidth: 2
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font: {family: 'Cairo', size: 11}} } } }
             });
         }
-        
-        }
-        
-        // 5. شريط تقدم الباقة
-        {% if not is_super_admin %}
-        let currentProducts = {{ products | length if products else 0 }};
-        let pkgName = `{{ current_user_data.get('package', 'أساسية') if current_user_data else 'أساسية' }}`;
-        let maxLimit = 20; 
-        {% for p in packages %}
-        if (`{{ p.name|default('') }}` === pkgName) {
-            let rawVal = `{{ p.max_products|default('') }}` || `{{ p.pkg_max|default('') }}` || 20;
-            let parsed = parseInt(String(rawVal).replace(/\D/g, ''));
-            maxLimit = isNaN(parsed) ? 999999 : parsed;
-        }
-        {% endfor %}
-        let isUnlimited = (maxLimit >= 100000);
-        let percent = isUnlimited ? 100 : Math.min((currentProducts / maxLimit) * 100, 100);
-        let barColor = percent >= 100 ? 'bg-danger' : (percent >= 80 ? 'bg-warning' : 'bg-success');
-        let txtColor = percent >= 100 ? 'text-danger' : 'text-success';
-        let displayLimit = isUnlimited ? '<i class="fas fa-infinity fs-6"></i>' : maxLimit;
-        
-        let progressHtml = `
-        <div id="tajergo-progress-bar" class="card border-0 shadow-sm mb-4" style="border-radius: 16px; background: #fff;">
-            <div class="card-body p-3 p-md-4">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="d-flex align-items-center gap-3"><div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;"><i class="fas fa-box-open fs-4"></i></div><div><h6 class="fw-bold mb-1 text-dark">استهلاك الباقة</h6><small class="text-muted fw-bold">باقتك: <span class="badge bg-light text-dark border px-2">${pkgName}</span></small></div></div>
-                    <div class="text-end"><h3 class="fw-bold mb-0 ${txtColor}" dir="ltr">${currentProducts} <span class="text-muted fs-5">/ ${displayLimit}</span></h3></div>
-                </div>
-                ${!isUnlimited ? `
-                <div class="progress mt-3" style="height: 10px; border-radius: 50rem;"><div class="progress-bar ${barColor} progress-bar-striped progress-bar-animated" style="width: ${percent}%; border-radius: 50rem;"></div></div>
-                <div class="d-flex justify-content-between mt-2 px-1"><small class="text-muted fw-bold" style="font-size: 0.75rem;">إجمالي المنتجات</small><small class="fw-bold ${txtColor}" style="font-size: 0.75rem;">%${Math.round(percent)} مستهلك</small></div>
-                ` : `<div class="alert alert-success border-0 bg-success bg-opacity-10 py-2 mt-3 mb-0 text-center rounded-3 fw-bold">باقتك لا محدودة، أضف المنتجات بحرية!</div>`}
-            </div>
-        </div>`;
-        let productsTab = document.getElementById('products');
-        if (productsTab && !document.getElementById('tajergo-progress-bar')) { productsTab.insertAdjacentHTML('afterbegin', progressHtml); }
-        {% endif %}
     });
-
-    // 6. دوال المناديب
-    function copyDriverPortalLink(token) {
-        const input = document.getElementById('link-' + token);
-        input.select(); document.execCommand('copy'); alert('✅ تم نسخ الرابط');
-    }
-    function submitNewDriver(e) {
-        e.preventDefault();
-        const name = document.getElementById('driverNameInput').value.trim();
-        const phone = document.getElementById('driverPhoneInput').value.trim();
-        fetch('/api/drivers/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, phone: phone }) })
-        .then(r => r.json()).then(data => { if (data.success) { alert('✅ تم الإضافة'); location.reload(); } else { alert('خطأ: ' + (data.error || 'تعذر الإضافة')); }});
-    }
-    function deleteDriver(token) {
-        if (!confirm('هل أنت متأكد من حذف هذا المندوب؟')) return;
-        fetch('/api/drivers/delete/' + token, { method: 'POST' }).then(r => r.json()).then(data => { if (data.success) location.reload(); });
-    }
-
-    // 7. دوال الطلبات
-    function updateOrderStatus(orderId, newStatus) {
-        fetch('/api/orders/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: orderId, status: newStatus }) })
-        .then(r => r.json()).then(data => { location.reload(); }).catch(() => location.reload());
-    }
-    function assignOrderToDriver(orderId, selectEl) {
-        const selectedOption = selectEl.options[selectEl.selectedIndex];
-        const driverName = selectedOption.getAttribute('data-name');
-        const driverPhone = selectedOption.getAttribute('data-phone');
-        if (!driverPhone) return;
-        selectEl.disabled = true;
-        fetch('/api/orders/assign-driver', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ order_id: orderId, driver_name: driverName, driver_phone: driverPhone }) })
-        .then(r => r.json()).then(data => { if (data.success) { alert('✅ تم إسناد الطلب للمندوب: ' + driverName); location.reload(); } else { alert('حدث خطأ'); selectEl.disabled = false; }})
-        .catch(() => { alert('فشل الاتصال'); selectEl.disabled = false; });
-    }
-
-    // 8. دوال المنتجات والصور (بتقنية Fallback)
-    function handleCategoryChange(selectObj) { let inputField = document.getElementById('newCategoryInput'); if (selectObj.value === 'NEW_CATEGORY') { inputField.style.display = 'block'; inputField.required = true; document.getElementById('finalCategory').value = inputField.value; } else { inputField.style.display = 'none'; inputField.required = false; document.getElementById('finalCategory').value = selectObj.value; } }
-    function updateFinalCategory() { if (document.getElementById('categorySelect').value === 'NEW_CATEGORY') { document.getElementById('finalCategory').value = document.getElementById('newCategoryInput').value; } }
-    function submitProductForm() { let select = document.getElementById('categorySelect'); if(select.value === "") { alert("اختر تصنيفاً!"); return; } if(select.value === 'NEW_CATEGORY' && document.getElementById('newCategoryInput').value.trim() === "") { alert("اكتب التصنيف الجديد!"); return; } document.getElementById('addProductForm').submit(); }
-    function filterAdminProducts() {
-        let term = document.getElementById('adminProductSearch').value.toLowerCase(); let cat = document.getElementById('adminCategoryFilter').value; let rows = document.querySelectorAll('.admin-product-row');
-        rows.forEach(row => { let name = row.getAttribute('data-name').toLowerCase(); let rowCat = row.getAttribute('data-cat'); let matchName = name.includes(term); let matchCat = (cat === 'ALL' || rowCat === cat); row.style.display = (matchName && matchCat) ? '' : 'none'; });
-    }
-
-    const PROVIDER = '{{ settings.get("img_provider", "catbox") }}'; 
-    const USER_API_KEY = '{{ settings.get("img_api_key", "") }}'; 
-    const CLOUD_NAME = '{{ settings.get("cloudinary_name", "") }}'; 
-    const CLOUD_PRESET = '{{ settings.get("cloudinary_preset", "") }}';
-
-    function toggleProviderFields() { 
-        let provider = document.getElementById('providerSelect') ? document.getElementById('providerSelect').value : 'catbox'; 
-        if(provider === 'cloudinary') { 
-            document.getElementById('basicProviderField').style.display = 'none'; 
-            document.querySelectorAll('.cloudinary-fields').forEach(el => el.style.display = 'block'); 
-        } else if (provider === 'catbox') {
-            document.getElementById('basicProviderField').style.display = 'none'; 
-            document.querySelectorAll('.cloudinary-fields').forEach(el => el.style.display = 'none'); 
-        } else { 
-            document.getElementById('basicProviderField').style.display = 'block'; 
-            document.querySelectorAll('.cloudinary-fields').forEach(el => el.style.display = 'none'); 
-        } 
-    }
-
-    async function uploadImageToCloud(fileInput, hiddenUrlId, statusId, btnId) {
-        let file = fileInput.files[0]; if (!file) return;
-        let statusText = document.getElementById(statusId); let urlInput = document.getElementById(hiddenUrlId); let submitBtn = document.getElementById(btnId);
-        
-        if (PROVIDER === 'cloudinary' && (!CLOUD_NAME || !CLOUD_PRESET)) { statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> أدخل إعدادات الكلاوديناري.'; statusText.className = "small fw-bold mt-1 d-block text-danger"; return; }
-        if (PROVIDER !== 'cloudinary' && PROVIDER !== 'catbox' && !USER_API_KEY) { statusText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> أدخل مفتاح الـ API.'; statusText.className = "small fw-bold mt-1 d-block text-danger"; return; }
-        
-        statusText.innerHTML = `<i class="fas fa-spinner fa-spin text-primary"></i> جاري التجهيز...`; statusText.className = "small fw-bold mt-1 d-block text-primary"; if(submitBtn) submitBtn.disabled = true;
-
-        let reader = new FileReader(); reader.readAsDataURL(file);
-        reader.onload = function(event) {
-            let img = new Image(); img.src = event.target.result;
-            img.onload = async function() {
-                let canvas = document.createElement('canvas'); let MAX_WIDTH = 600; let scaleSize = MAX_WIDTH / img.width;
-                if (scaleSize < 1) { canvas.width = MAX_WIDTH; canvas.height = img.height * scaleSize; } else { canvas.width = img.width; canvas.height = img.height; }
-                let ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                let base64Image = canvas.toDataURL('image/jpeg', 0.7);
-                
-                try {
-                    statusText.innerHTML = `<i class="fas fa-spinner fa-spin text-primary"></i> جاري الرفع (المسار 1)...`;
-                    let payload = { provider: document.getElementById('providerSelect') ? document.getElementById('providerSelect').value : PROVIDER, api_key: USER_API_KEY, cloud_name: CLOUD_NAME, preset: CLOUD_PRESET, image_base64: base64Image };
-                    let response = await fetch('/api/proxy_upload', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error('Proxy HTTP Error');
-                    let data = await response.json();
-                    if (data.success && data.url) { 
-                        urlInput.value = data.url; statusText.innerHTML = '<i class="fas fa-check-circle"></i> تم الرفع!'; statusText.className = "small fw-bold mt-1 d-block text-success"; 
-                    } else { throw new Error(data.error || 'Proxy Failed'); }
-                } catch (error) { 
-                    statusText.innerHTML = `<i class="fas fa-spinner fa-spin text-warning"></i> فشل المسار 1، جاري المحاولة (المسار 2)...`;
-                    try {
-                        let fetchRes = await fetch(base64Image); let blob = await fetchRes.blob(); let formData = new FormData(); let uploadedUrl = '';
-                        let currentProvider = document.getElementById('providerSelect') ? document.getElementById('providerSelect').value : PROVIDER;
-                        if (currentProvider === 'catbox') { 
-                            formData.append('reqtype', 'fileupload'); formData.append('fileToUpload', blob, 'image.jpg'); 
-                            let r = await fetch('https://catbox.moe/user/api.php', { method: 'POST', body: formData }); let txt = await r.text(); 
-                            if (txt.startsWith('http')) uploadedUrl = txt; else throw new Error(); 
-                        } else if (currentProvider === 'freeimagehost') { 
-                            formData.append('key', USER_API_KEY); formData.append('source', base64Image.split(',')[1]); formData.append('action', 'upload'); formData.append('format', 'json'); 
-                            let r = await fetch('https://freeimage.host/api/1/upload', { method: 'POST', body: formData }); let d = await r.json(); 
-                            if (d.status_code === 200) uploadedUrl = d.image.url; else throw new Error(); 
-                        } else if (currentProvider === 'cloudinary') { 
-                            formData.append("file", blob); formData.append("upload_preset", CLOUD_PRESET); 
-                            let r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData }); let d = await r.json(); 
-                            if (d.secure_url) uploadedUrl = d.secure_url; else throw new Error(); 
-                        } else if (currentProvider === 'imgur') { 
-                            formData.append("image", blob); 
-                            let r = await fetch('https://api.imgur.com/3/image', { method: 'POST', headers: { 'Authorization': 'Client-ID ' + USER_API_KEY }, body: formData }); let d = await r.json(); 
-                            if (d.success) uploadedUrl = d.data.link; else throw new Error(); 
-                        } else if (currentProvider === 'postimages') { 
-                            formData.append("file", blob); 
-                            let r = await fetch('https://postimages.org/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + USER_API_KEY }, body: formData }); let d = await r.json(); 
-                            if (d.url) uploadedUrl = d.url; else throw new Error(); 
-                        } else { 
-                            formData.append("image", blob); 
-                            let r = await fetch('https://api.imgbb.com/1/upload?key=' + USER_API_KEY, { method: 'POST', body: formData }); let d = await r.json(); 
-                            if (d.success) uploadedUrl = d.data.url; else throw new Error(); 
-                        }
-                        urlInput.value = uploadedUrl; statusText.innerHTML = '<i class="fas fa-check-circle"></i> تم الرفع!'; statusText.className = "small fw-bold mt-1 d-block text-success";
-                    } catch (fallbackError) {
-                        statusText.innerHTML = '<i class="fas fa-times-circle"></i> فشل الرفع تماماً! استخدم Catbox.'; statusText.className = "small fw-bold mt-1 d-block text-danger"; urlInput.value = '';
-                    }
-                }
-                if(submitBtn) submitBtn.disabled = false;
-            }
-        };
-    }
-</script>
+    </script>
 {% endblock %}
