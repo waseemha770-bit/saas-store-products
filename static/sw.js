@@ -1,8 +1,14 @@
+const CACHE_NAME = 'tajergo-pwa-v2';
 
-const CACHE_NAME = 'tajergo-pwa-v1';
 self.addEventListener('install', (e) => {
   self.skipWaiting();
 });
+
 self.addEventListener('fetch', (e) => {
-  // تمرير الطلبات للسيرفر بدون تعطيل العمليات الديناميكية
+  e.respondWith(
+    fetch(e.request).catch((error) => {
+      console.error('Network Error:', error);
+      return new Response('حدث خطأ في الاتصال بالشبكة.', { status: 408 });
+    })
+  );
 });

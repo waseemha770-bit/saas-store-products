@@ -540,5 +540,37 @@ def api_update_order_status():
     return jsonify({"success": True})
 
 
+
+# --- PWA Routes ---
+@app.route('/manifest.json')
+def pwa_manifest():
+    from flask import jsonify
+    try:
+        return jsonify({
+            "name": "متجر عرض المنتجات ",
+            "short_name": "TajerGo",
+            "start_url": "/",
+            "display": "standalone",
+            "background_color": "#ffffff",
+            "theme_color": "#4e73df",
+            "icons": [
+                {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+                {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+            ]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/sw.js')
+def service_worker():
+    from flask import send_from_directory, make_response
+    try:
+        response = make_response(send_from_directory('static', 'sw.js'))
+        response.headers['Content-Type'] = 'application/javascript'
+        response.headers['Cache-Control'] = 'no-cache'
+        return response
+    except Exception as e:
+        return str(e), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
