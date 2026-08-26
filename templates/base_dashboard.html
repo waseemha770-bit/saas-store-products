@@ -9,6 +9,18 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}?v={{ static_version }}">
     {% block head_extra %}{% endblock %}
+
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#4e73df">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW setup failed'));
+        });
+      }
+    </script>
+
 </head>
 <body>
     {% include 'partials/topbar.html' %}
