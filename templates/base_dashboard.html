@@ -2,65 +2,33 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <!-- إجبار المتصفح على عرض نسخة الكمبيوتر كإعداد افتراضي -->
     <meta name="viewport" content="width=1280">
     <title>{% block title %}لوحة التحكم | TajerGo{% endblock %}</title>
-    <!-- ربط ملف الـ PWA للوحة التحكم -->
     <link rel="manifest" href="/dashboard_manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; overflow-x: hidden; }
-        
-        /* تصميم القائمة الجانبية الجذاب والتدرج اللوني */
         #sidebar {
-            width: 260px;
-            min-height: 100vh;
+            width: 260px; min-height: 100vh;
             background: linear-gradient(180deg, {{ settings.sidebar_color|default('#212529') if settings else '#212529' }} 0%, #111 100%);
-            box-shadow: -4px 0 20px rgba(0,0,0,0.15);
-            transition: all 0.3s ease;
-            position: fixed;
-            right: 0;
-            top: 0;
-            z-index: 1000;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.15); transition: all 0.3s ease; position: fixed; right: 0; top: 0; z-index: 1000;
         }
         #sidebar.hidden { right: -260px; }
-        
-        #sidebar .nav-link {
-            color: rgba(255,255,255,0.75);
-            padding: 12px 20px;
-            margin: 5px 15px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-        }
+        #sidebar .nav-link { color: rgba(255,255,255,0.75); padding: 12px 20px; margin: 5px 15px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; }
         #sidebar .nav-link i { width: 25px; text-align: center; margin-left: 10px; font-size: 1.1rem; }
         #sidebar .nav-link:hover { color: #fff; background: rgba(255,255,255,0.1); transform: translateX(-5px); }
         #sidebar .nav-link.active { color: #fff; background: {{ settings.theme_color|default('#0d6efd') if settings else '#0d6efd' }}; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-
-        /* منطقة المحتوى */
-        #main-content {
-            margin-right: 260px;
-            width: calc(100% - 260px);
-            transition: all 0.3s ease;
-            min-height: 100vh;
-        }
+        #main-content { margin-right: 260px; width: calc(100% - 260px); transition: all 0.3s ease; min-height: 100vh; }
         #main-content.expanded { margin-right: 0; width: 100%; }
-
-        /* الشريط العلوي */
         .top-navbar { background: #fff; border-bottom: 1px solid #e9ecef; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 999; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
-        
         .form-control, .form-select { border: 2px solid #e2e8f0; border-radius: 8px; font-weight: bold; }
         .form-control:focus, .form-select:focus { border-color: #0d6efd; box-shadow: none; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <!-- القائمة الجانبية -->
     <div id="sidebar">
         <div class="text-center py-4 px-3 border-bottom border-secondary border-opacity-25">
             <img src="{{ settings.platform_logo if settings and settings.platform_logo else platform_logo }}" onerror="this.src='https://via.placeholder.com/60'" width="70" height="70" class="rounded-circle shadow-sm bg-white p-1 mb-2" style="object-fit:cover; border: 2px solid {{ settings.theme_color|default('#0d6efd') if settings else '#0d6efd' }};">
@@ -82,19 +50,17 @@
         </div>
     </div>
 
-    <!-- المحتوى الرئيسي -->
     <div id="main-content">
-        <!-- الشريط العلوي مع زر الإخفاء وزر المتجر -->
         <div class="top-navbar">
             <div class="d-flex align-items-center">
                 <button id="toggleSidebar" class="btn btn-light rounded-circle shadow-sm border" style="width: 45px; height: 45px;"><i class="fas fa-bars fs-5"></i></button>
-                
+                <h5 class="mb-0 ms-3 fw-bold text-dark d-none d-md-block">TajerGo Dashboard</h5>
             </div>
             <div class="d-flex gap-2">
                 {% if is_super_admin %}
-                    
+                    <span class="badge bg-danger fs-6 px-4 py-2 rounded-pill shadow-sm"><i class="fas fa-shield-alt me-1"></i> الإدارة العليا</span>
                 {% else %}
-                    <!-- زر الانتقال المباشر للمتجر -->
+                    <!-- زر الانتقال المباشر للمتجر مع الرابط الصحيح -->
                     <a href="/store/{{ store_slug }}" target="_blank" class="btn btn-primary fw-bold shadow-sm rounded-pill px-4">
                         <i class="fas fa-external-link-alt me-2"></i> عرض المتجر
                     </a>
@@ -110,13 +76,11 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // دالة التحكم في إظهار وإخفاء القائمة الجانبية لتوسيع الشاشة
         document.getElementById('toggleSidebar').addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('hidden');
             document.getElementById('main-content').classList.toggle('expanded');
         });
 
-        // تسجيل الـ PWA للوحة التاجر
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); });
         }
