@@ -541,9 +541,10 @@ def api_update_order_status():
 
 
 
+
 # --- PWA Routes ---
-@app.route('/manifest.json')
-def pwa_manifest():
+@app.route('/manifest.json', endpoint='tajergo_manifest_unique')
+def tajergo_manifest_unique():
     from flask import jsonify
     try:
         return jsonify({
@@ -561,8 +562,8 @@ def pwa_manifest():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/sw.js')
-def service_worker():
+@app.route('/sw.js', endpoint='tajergo_sw_unique')
+def tajergo_sw_unique():
     from flask import send_from_directory, make_response
     try:
         response = make_response(send_from_directory('static', 'sw.js'))
