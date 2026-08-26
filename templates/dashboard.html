@@ -12,9 +12,22 @@
 {% endblock %}
 
 {% block content %}
+<!-- رسائل النظام -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- الحاوية الرئيسية للتبويبات -->
 <div class="tab-content" id="dashboardContent">
 
-    <!-- 1. الإحصائيات (بها الدائرة الملونة) -->
+    <!-- 1. الإحصائيات -->
     <div class="tab-pane fade show active" id="analytics" role="tabpanel">
         <div class="row mb-4">
             <div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold">صافي المبيعات 💰</h6><h3 class="mb-0">{{ '{:,.2f}'.format(adv_stats.net_sales) if adv_stats else '0' }} <small>{{ settings.currency }}</small></h3><small>نمو: <span dir="ltr">{{ '{:,.1f}'.format(adv_stats.growth_rate) if adv_stats else '0' }}%</span></small></div></div></div>
@@ -23,7 +36,7 @@
             <div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0 h-100" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">قاعدة العملاء 👥</h6><h3 class="mb-0">{{ adv_stats.customers_count if adv_stats else '0' }}</h3><small>رسوم التوصيل: {{ '{:,.2f}'.format(adv_stats.delivery_fees) if adv_stats else '0' }}</small></div></div></div>
         </div>
         
-        <!-- الرسوم البيانية -->
+        <!-- الرسوم البيانية (الدائرة + الخط) -->
         <div class="row mb-4">
             <div class="col-md-4 mb-3">
                 <div class="card shadow-sm border-0 h-100">
@@ -50,7 +63,7 @@
         </div>
     </div>
 
-    <!-- 2. الطلبات (أصبحت واسعة وبدون الدائرة) -->
+    <!-- 2. الطلبات -->
     <div class="tab-pane fade" id="orders" role="tabpanel">
         <div class="card shadow-sm border-0 mb-4 h-100">
             <div class="card-body">
@@ -226,6 +239,14 @@
                 </div>
             </div>
             <div class="col-lg-4 mb-4">
+                <!-- تليجرام -->
+                <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+                    <div class="card-header bg-white border-0 pt-4 pb-0"><h6 class="fw-bold text-dark"><i class="fab fa-telegram text-info fs-5 me-2"></i> إشعارات الطلبات الفورية (تليجرام)</h6></div>
+                    <div class="card-body">
+                        <form method="POST" action="/dashboard"><input type="hidden" name="action" value="save_telegram_settings"><div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" id="enable_telegram" name="enable_telegram" {% if settings.get('enable_telegram') %}checked{% endif %}><label class="form-check-label fw-bold" for="enable_telegram">تفعيل إرسال الطلبات إلى تليجرام</label></div><div class="mb-3"><label class="form-label fw-bold small">معرف الدردشة (Chat ID)</label><input type="text" class="form-control bg-light border-0" name="telegram_chat_id" value="{{ settings.get('telegram_chat_id', '') }}" dir="ltr"></div><button type="submit" class="btn btn-dark w-100 fw-bold rounded-pill shadow-sm"><i class="fas fa-save me-1"></i> حفظ إعدادات تليجرام</button></form>
+                    </div>
+                </div>
+                <!-- المرور -->
                 <div class="card shadow-sm border-0 h-100 border-top border-4 border-warning">
                     <div class="card-body">
                         <h5 class="fw-bold mb-3 text-dark"><i class="fas fa-shield-alt text-warning"></i> كلمة المرور</h5>
@@ -239,7 +260,10 @@
     <!-- 7. الإدارة -->
     {% if is_super_admin %}
     <div class="tab-pane fade" id="superadmin" role="tabpanel">
-        <div class="row"><div class="col-12"><div class="card border-primary shadow-sm"><div class="card-body"><h5 class="fw-bold text-primary mb-3">📦 إدارة الباقات</h5><div class="table-responsive"><table class="table table-sm"><thead><tr><th>الباقة</th><th>السعر</th><th>الحد</th><th>إجراء</th></tr></thead><tbody>{% for pkg in packages %}<tr><td>{{ pkg.name }}</td><td>{{ pkg.price }}</td><td>{{ pkg.max_products }}</td><td><button class="btn btn-sm btn-danger" onclick="submitJsAction('delete_package', null, null, null, '{{ pkg._id }}')">حذف</button></td></tr>{% endfor %}</tbody></table></div></div></div></div></div>
+        <div class="row">
+            <div class="col-12 mb-4"><div class="card border-primary shadow-sm"><div class="card-body"><h5 class="fw-bold text-primary mb-3">📦 إدارة الباقات</h5><div class="row"><div class="col-md-4 mb-3"><form method="POST" class="p-3 bg-light rounded border"><input type="hidden" name="action" value="add_package"><label class="small fw-bold">اسم الباقة</label><input type="text" name="pkg_name" class="form-control mb-2" required><label class="small fw-bold">السعر</label><input type="text" name="pkg_price" class="form-control mb-2" required><label class="small fw-bold">الحد الأقصى للمنتجات</label><input type="number" name="pkg_max" class="form-control mb-2" required><label class="small fw-bold">المميزات</label><input type="text" name="pkg_features" class="form-control mb-3"><button class="btn btn-primary w-100 fw-bold">إضافة الباقة</button></form></div><div class="col-md-8"><div class="table-responsive"><table class="table table-sm"><thead><tr><th>الباقة</th><th>السعر</th><th>الحد</th><th>إجراء</th></tr></thead><tbody>{% for pkg in packages %}<tr><td>{{ pkg.name }}</td><td>{{ pkg.price }}</td><td>{{ pkg.max_products }}</td><td><button class="btn btn-sm btn-danger" onclick="submitJsAction('delete_package', null, null, null, '{{ pkg._id }}')">حذف</button></td></tr>{% endfor %}</tbody></table></div></div></div></div></div></div>
+            <div class="col-12"><div class="card border-danger shadow-sm"><div class="card-body"><h5 class="fw-bold text-danger mb-3">🏢 المتاجر المشتركة</h5><div class="table-responsive"><table class="table table-hover align-middle text-center"><thead class="table-light"><tr><th>التاجر</th><th>الرابط</th><th>الباقة</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>{% for m in merchants %}<tr><td class="fw-bold">{{ m.username }}<br><small class="text-muted">Pass: {{ m.password }}</small></td><td dir="ltr">{{ m.store_slug }}</td><td><span class="badge bg-secondary">{{ m.package | default('أساسية') }}</span></td><td>{% if m.active == 'TRUE' %}<span class="badge bg-success">نشط</span>{% else %}<span class="badge bg-danger">موقوف</span>{% endif %}</td><td><button class="btn btn-sm btn-outline-warning" onclick="submitJsAction('toggle_status', null, null, null, '{{ m.id }}')"><i class="fas fa-power-off"></i></button><button class="btn btn-sm btn-danger" onclick="submitJsAction('delete_merchant', null, null, null, '{{ m.id }}', 'تأكيد الحذف النهائي؟')"><i class="fas fa-trash"></i></button></td></tr>{% endfor %}</tbody></table></div></div></div></div>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -254,57 +278,30 @@
 
 {% block extra_js %}
 <script>
-    // 1. نظام التبويبات الصارم (يمنع التداخل والتكدس نهائياً)
+    // نظام التبويبات القوي (يعتمد على Bootstrap النظيف لمنع التكدس)
     document.addEventListener("DOMContentLoaded", function() {
-        // إيقاف التفعيل الافتراضي لـ Bootstrap لمنع التداخل
-        document.querySelectorAll('#sidebarTabs .nav-link').forEach(el => {
-            el.removeAttribute('data-bs-toggle');
-        });
-
-        function activateTab(targetId) {
-            // إخفاء جميع التبويبات تماماً وبشكل إجباري
-            document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.classList.remove('show', 'active');
-                pane.style.display = 'none'; 
-            });
-            
-            // إظهار التبويب المطلوب فقط
-            let targetPane = document.querySelector(targetId);
-            if (targetPane) {
-                targetPane.classList.add('show', 'active');
-                targetPane.style.display = 'block';
+        let activeTab = localStorage.getItem('tajergo_active_tab');
+        if (activeTab) {
+            let tabBtn = document.querySelector(`button[data-bs-target="${activeTab}"]`) || document.querySelector(`a[href="${activeTab}"]`);
+            if (tabBtn) {
+                let tab = new bootstrap.Tab(tabBtn);
+                tab.show();
             }
-
-            // تحديث حالة الأزرار في القائمة الجانبية
-            document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
-            let activeLink = document.querySelector(`#sidebarTabs .nav-link[href="${targetId}"]`) || document.querySelector(`#sidebarTabs .nav-link[data-bs-target="${targetId}"]`);
-            if (activeLink) activeLink.classList.add('active');
-
-            // حفظ التبويب للرجوع إليه بعد الحفظ
-            localStorage.setItem('tajergo_active_tab', targetId);
         }
 
-        // الاستماع للنقرات على القائمة الجانبية
-        document.querySelectorAll('#sidebarTabs .nav-link').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                let target = this.getAttribute('data-bs-target') || this.getAttribute('href');
-                if (target && target.startsWith('#')) {
-                    activateTab(target);
-                    // إغلاق القائمة في الجوال للاستفادة من المساحة
-                    if (window.innerWidth < 768) {
-                        let sidebar = document.getElementById('sidebar');
-                        if(sidebar) sidebar.classList.add('hidden');
-                    }
-                }
+        // الاستماع والاحتفاظ بالتبويب النشط في الذاكرة
+        document.querySelectorAll('button[data-bs-toggle="tab"], .sidebar .nav-link').forEach(btn => {
+            btn.addEventListener('shown.bs.tab', function(e) {
+                let target = e.target.getAttribute('data-bs-target') || e.target.getAttribute('href');
+                localStorage.setItem('tajergo_active_tab', target);
+                
+                document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
+                let match = document.querySelector(`.sidebar .nav-link[data-bs-target="${target}"]`) || document.querySelector(`.sidebar .nav-link[href="${target}"]`);
+                if(match) match.classList.add('active');
             });
         });
 
-        // التفعيل عند التحميل
-        let savedTab = localStorage.getItem('tajergo_active_tab') || '#analytics';
-        activateTab(savedTab);
-
-        // 2. الرسوم البيانية الدائرية والخطية في الإحصائيات
+        // الرسوم البيانية الدائرية والخطية
         var ctxOrder = document.getElementById('orderChart');
         if(ctxOrder) {
             new Chart(ctxOrder.getContext('2d'), { type: 'doughnut', data: { labels: ['جديد', 'تجهيز', 'توصيل', 'ملغي'], datasets: [{ data: [{{ stats.status_counts['جديد 🟡'] | default(0) }}, {{ stats.status_counts['قيد التجهيز 🔵'] | default(0) }}, {{ stats.status_counts['تم التوصيل 🟢'] | default(0) }}, {{ stats.status_counts['ملغي 🔴'] | default(0) }}], backgroundColor: ['#ffc107', '#0dcaf0', '#198754', '#dc3545'], borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font: {family: 'Cairo', size: 11}} } } } });
@@ -315,18 +312,18 @@
         }
     });
 
-    // العمليات السريعة (JS Actions)
     function submitJsAction(action, orderId=null, status=null, driverPhone=null, itemId=null, confirmMsg=null) {
+        if(confirmMsg && !confirm(confirmMsg)) return;
         document.getElementById('jsAction').value = action;
         if(orderId) document.getElementById('jsOrderId').value = orderId;
         if(status) document.getElementById('jsNewStatus').value = status;
         if(driverPhone) document.getElementById('jsDriverPhone').value = driverPhone;
-        if(itemId) { if(action==='delete_product') document.getElementById('jsProductId').value = itemId; else if(action==='delete_coupon') document.getElementById('jsCouponId').value = itemId; else if(action==='delete_package') document.getElementById('jsPkgId').value = itemId; }
+        if(itemId) { if(action==='delete_product') document.getElementById('jsProductId').value = itemId; else if(action==='delete_coupon') document.getElementById('jsCouponId').value = itemId; else if(action==='delete_package') document.getElementById('jsPkgId').value = itemId; else if(action==='delete_merchant' || action==='toggle_status') document.getElementById('jsUserId').value = itemId;}
         document.getElementById('jsActionForm').submit();
     }
 
-    // دوال الفلترة والصور
     function filterAdminProducts() { let t = document.getElementById('adminProductSearch').value.toLowerCase(), c = document.getElementById('adminCategoryFilter').value; document.querySelectorAll('.admin-product-row').forEach(r => { let n = r.getAttribute('data-name').toLowerCase(), rc = r.getAttribute('data-cat'); r.style.display = (n.includes(t) && (c === 'ALL' || rc === c)) ? '' : 'none'; }); }
     function toggleProviderFields() { let v = document.getElementById('providerSelect')?document.getElementById('providerSelect').value:'catbox'; document.getElementById('basicProviderField').style.display = (v==='catbox'||v==='cloudinary')?'none':'block'; document.querySelectorAll('.cloudinary-fields').forEach(e => e.style.display = v==='cloudinary'?'block':'none'); }
+    function fixImg(img){if(!img.dataset.proxied){img.dataset.proxied='true';let src=img.getAttribute('src');if(src&&src!==''&&!src.includes('placeholder')){img.src='https://wsrv.nl/?url='+encodeURIComponent(img.src);}}}
 </script>
 {% endblock %}
