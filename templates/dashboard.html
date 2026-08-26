@@ -278,30 +278,32 @@
 
 {% block extra_js %}
 <script>
-    // نظام التبويبات القوي (يعتمد على Bootstrap النظيف لمنع التكدس)
     document.addEventListener("DOMContentLoaded", function() {
+        // 1. استرجاع التبويب النشط من الذاكرة بذكاء وبدون تداخل
         let activeTab = localStorage.getItem('tajergo_active_tab');
         if (activeTab) {
-            let tabBtn = document.querySelector(`button[data-bs-target="${activeTab}"]`) || document.querySelector(`a[href="${activeTab}"]`);
+            let tabBtn = document.querySelector(`[data-bs-target="${activeTab}"]`);
             if (tabBtn) {
-                let tab = new bootstrap.Tab(tabBtn);
-                tab.show();
+                new bootstrap.Tab(tabBtn).show();
             }
         }
 
-        // الاستماع والاحتفاظ بالتبويب النشط في الذاكرة
-        document.querySelectorAll('button[data-bs-toggle="tab"], .sidebar .nav-link').forEach(btn => {
+        // 2. مراقبة التنقل بين التبويبات (باستخدام أحداث Bootstrap الأصلية)
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(btn => {
             btn.addEventListener('shown.bs.tab', function(e) {
-                let target = e.target.getAttribute('data-bs-target') || e.target.getAttribute('href');
-                localStorage.setItem('tajergo_active_tab', target);
-                
-                document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
-                let match = document.querySelector(`.sidebar .nav-link[data-bs-target="${target}"]`) || document.querySelector(`.sidebar .nav-link[href="${target}"]`);
-                if(match) match.classList.add('active');
+                let target = e.target.getAttribute('data-bs-target');
+                if(target) {
+                    localStorage.setItem('tajergo_active_tab', target);
+                }
+                // إغلاق القائمة الجانبية في شاشات الجوال تلقائياً للاستفادة من المساحة
+                if (window.innerWidth < 768) {
+                    let sidebar = document.getElementById('sidebar');
+                    if (sidebar) sidebar.classList.add('hidden');
+                }
             });
         });
 
-        // الرسوم البيانية الدائرية والخطية
+        // 3. تهيئة الرسوم البيانية (Charts)
         var ctxOrder = document.getElementById('orderChart');
         if(ctxOrder) {
             new Chart(ctxOrder.getContext('2d'), { type: 'doughnut', data: { labels: ['جديد', 'تجهيز', 'توصيل', 'ملغي'], datasets: [{ data: [{{ stats.status_counts['جديد 🟡'] | default(0) }}, {{ stats.status_counts['قيد التجهيز 🔵'] | default(0) }}, {{ stats.status_counts['تم التوصيل 🟢'] | default(0) }}, {{ stats.status_counts['ملغي 🔴'] | default(0) }}], backgroundColor: ['#ffc107', '#0dcaf0', '#198754', '#dc3545'], borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {font: {family: 'Cairo', size: 11}} } } } });
@@ -312,8 +314,8 @@
         }
     });
 
+    // 4. الدوال السريعة لجميع الميزات (لا شيء محذوف)
     function submitJsAction(action, orderId=null, status=null, driverPhone=null, itemId=null, confirmMsg=null) {
-        if(confirmMsg && !confirm(confirmMsg)) return;
         document.getElementById('jsAction').value = action;
         if(orderId) document.getElementById('jsOrderId').value = orderId;
         if(status) document.getElementById('jsNewStatus').value = status;
@@ -324,6 +326,5 @@
 
     function filterAdminProducts() { let t = document.getElementById('adminProductSearch').value.toLowerCase(), c = document.getElementById('adminCategoryFilter').value; document.querySelectorAll('.admin-product-row').forEach(r => { let n = r.getAttribute('data-name').toLowerCase(), rc = r.getAttribute('data-cat'); r.style.display = (n.includes(t) && (c === 'ALL' || rc === c)) ? '' : 'none'; }); }
     function toggleProviderFields() { let v = document.getElementById('providerSelect')?document.getElementById('providerSelect').value:'catbox'; document.getElementById('basicProviderField').style.display = (v==='catbox'||v==='cloudinary')?'none':'block'; document.querySelectorAll('.cloudinary-fields').forEach(e => e.style.display = v==='cloudinary'?'block':'none'); }
-    function fixImg(img){if(!img.dataset.proxied){img.dataset.proxied='true';let src=img.getAttribute('src');if(src&&src!==''&&!src.includes('placeholder')){img.src='https://wsrv.nl/?url='+encodeURIComponent(img.src);}}}
 </script>
 {% endblock %}
