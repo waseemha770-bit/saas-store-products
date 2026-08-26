@@ -9,6 +9,7 @@
 - Hosting: Vercel Serverless
 - Frontend: HTML + Bootstrap RTL + JavaScript
 - PWA: `/sw.js` واحد + Manifest ديناميكي عبر `/manifest/<slug>.json`
+- هوية PWA: شعار كل متجر من `settings.logo_url` هو أيقونة التطبيق والـfavicon و`apple-touch-icon`، مع أيقونة TajerGo كبديل عند عدم وجود شعار.
 
 ## لوحة التاجر
 - `templates/base_dashboard.html`: القالب الأساسي.
