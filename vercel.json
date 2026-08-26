@@ -53,7 +53,7 @@
       ]
     },
     {
-      "source": "/static/(.*\\.(css|js))",
+      "source": "/static/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
