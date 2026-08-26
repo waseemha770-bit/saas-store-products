@@ -254,23 +254,55 @@
 
 {% block extra_js %}
 <script>
-    // 1. نظام التبويبات القوي لمنع القفز التلقائي للإحصائيات 100%
+    // 1. نظام التبويبات الصارم (يمنع التداخل والتكدس نهائياً)
     document.addEventListener("DOMContentLoaded", function() {
-        let activeTab = localStorage.getItem('tajergo_active_tab') || '#analytics';
-        let tabBtn = document.querySelector(`button[data-bs-target="${activeTab}"]`) || document.querySelector(`a[href="${activeTab}"]`);
-        if (tabBtn) { new bootstrap.Tab(tabBtn).show(); }
+        // إيقاف التفعيل الافتراضي لـ Bootstrap لمنع التداخل
+        document.querySelectorAll('#sidebarTabs .nav-link').forEach(el => {
+            el.removeAttribute('data-bs-toggle');
+        });
 
-        document.querySelectorAll('button[data-bs-toggle="tab"], .sidebar .nav-link').forEach(btn => {
+        function activateTab(targetId) {
+            // إخفاء جميع التبويبات تماماً وبشكل إجباري
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('show', 'active');
+                pane.style.display = 'none'; 
+            });
+            
+            // إظهار التبويب المطلوب فقط
+            let targetPane = document.querySelector(targetId);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+                targetPane.style.display = 'block';
+            }
+
+            // تحديث حالة الأزرار في القائمة الجانبية
+            document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
+            let activeLink = document.querySelector(`#sidebarTabs .nav-link[href="${targetId}"]`) || document.querySelector(`#sidebarTabs .nav-link[data-bs-target="${targetId}"]`);
+            if (activeLink) activeLink.classList.add('active');
+
+            // حفظ التبويب للرجوع إليه بعد الحفظ
+            localStorage.setItem('tajergo_active_tab', targetId);
+        }
+
+        // الاستماع للنقرات على القائمة الجانبية
+        document.querySelectorAll('#sidebarTabs .nav-link').forEach(btn => {
             btn.addEventListener('click', function(e) {
+                e.preventDefault();
                 let target = this.getAttribute('data-bs-target') || this.getAttribute('href');
-                if(target && target.startsWith('#')) {
-                    localStorage.setItem('tajergo_active_tab', target);
-                    document.querySelectorAll('#sidebarTabs .nav-link').forEach(a => a.classList.remove('active'));
-                    let match = document.querySelector(`.sidebar .nav-link[data-bs-target="${target}"]`) || document.querySelector(`.sidebar .nav-link[href="${target}"]`);
-                    if(match) match.classList.add('active');
+                if (target && target.startsWith('#')) {
+                    activateTab(target);
+                    // إغلاق القائمة في الجوال للاستفادة من المساحة
+                    if (window.innerWidth < 768) {
+                        let sidebar = document.getElementById('sidebar');
+                        if(sidebar) sidebar.classList.add('hidden');
+                    }
                 }
             });
         });
+
+        // التفعيل عند التحميل
+        let savedTab = localStorage.getItem('tajergo_active_tab') || '#analytics';
+        activateTab(savedTab);
 
         // 2. الرسوم البيانية الدائرية والخطية في الإحصائيات
         var ctxOrder = document.getElementById('orderChart');
@@ -285,7 +317,6 @@
 
     // العمليات السريعة (JS Actions)
     function submitJsAction(action, orderId=null, status=null, driverPhone=null, itemId=null, confirmMsg=null) {
-        if(confirmMsg && !confirm(confirmMsg)) return;
         document.getElementById('jsAction').value = action;
         if(orderId) document.getElementById('jsOrderId').value = orderId;
         if(status) document.getElementById('jsNewStatus').value = status;
@@ -297,6 +328,5 @@
     // دوال الفلترة والصور
     function filterAdminProducts() { let t = document.getElementById('adminProductSearch').value.toLowerCase(), c = document.getElementById('adminCategoryFilter').value; document.querySelectorAll('.admin-product-row').forEach(r => { let n = r.getAttribute('data-name').toLowerCase(), rc = r.getAttribute('data-cat'); r.style.display = (n.includes(t) && (c === 'ALL' || rc === c)) ? '' : 'none'; }); }
     function toggleProviderFields() { let v = document.getElementById('providerSelect')?document.getElementById('providerSelect').value:'catbox'; document.getElementById('basicProviderField').style.display = (v==='catbox'||v==='cloudinary')?'none':'block'; document.querySelectorAll('.cloudinary-fields').forEach(e => e.style.display = v==='cloudinary'?'block':'none'); }
-    function fixImg(img){if(!img.dataset.proxied){img.dataset.proxied='true';let src=img.getAttribute('src');if(src&&src!==''&&!src.includes('placeholder')){img.src='https://wsrv.nl/?url='+encodeURIComponent(img.src);}}}
 </script>
 {% endblock %}
