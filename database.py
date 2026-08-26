@@ -1,11 +1,11 @@
 from pymongo import MongoClient
 import uuid, os
 from datetime import datetime
+import config
 
 # الاتصال بقاعدة البيانات
-MONGO_URI = os.getenv("MONGO_URI")
-client = MongoClient(MONGO_URI)
-db = client['tajergo_db']
+client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=5000)
+db = client[config.MONGO_DB_NAME]
 
 # المجموعات (Collections)
 users_col = db['users']
@@ -204,15 +204,16 @@ def add_driver(store_id, name, phone):
         import secrets
         clean_phone = str(phone).strip()
         clean_name = str(name).strip()
-        existing = db.drivers.find_one({"store_id": store_id, "phone": clean_phone})
+        existing = drivers_col.find_one({"store_id": store_id, "phone": clean_phone})
         if not existing:
-            db.drivers.insert_one({
+            token = secrets.token_hex(8)
+            drivers_col.insert_one({
                 "store_id": store_id,
                 "name": clean_name,
                 "phone": clean_phone,
-                "token": secrets.token_hex(8) # توليد رمز أمان سري للمندوب الجديد
+                "token": token
             })
-            return True
+            return token
         return False
     except Exception as e:
         print("Driver Insert Error:", e)
@@ -223,14 +224,14 @@ def get_store_drivers(store_id):
     try:
         import secrets
         from bson.objectid import ObjectId
-        drivers = list(db.drivers.find({"store_id": store_id}).sort('_id', -1))
+        drivers = list(drivers_col.find({"store_id": store_id}).sort('_id', -1))
         for d in drivers:
             d_id_str = str(d['_id'])
             d['_id'] = d_id_str
             # إذا كان المندوب لا يملك رمز بوابة، نقوم بتوليده وحفظه فوراً
             if 'token' not in d:
                 new_token = secrets.token_hex(8)
-                db.drivers.update_one({"_id": ObjectId(d_id_str)}, {"$set": {"token": new_token}})
+                drivers_col.update_one({"_id": ObjectId(d_id_str)}, {"$set": {"token": new_token}})
                 d['token'] = new_token
         return drivers
     except Exception as e:
@@ -238,26 +239,9 @@ def get_store_drivers(store_id):
         return []
 
 
-def add_driver(store_id, name, phone):
-    try:
-        clean_phone = str(phone).strip()
-        clean_name = str(name).strip()
-        existing = db.drivers.find_one({"store_id": store_id, "phone": clean_phone})
-        if not existing:
-            db.drivers.insert_one({
-                "store_id": store_id,
-                "name": clean_name,
-                "phone": clean_phone
-            })
-            return True
-        return False
-    except Exception as e:
-        print("Driver Insert Error:", e)
-        return False
-
 def delete_driver(store_id, phone):
     try:
-        db.drivers.delete_one({"store_id": store_id, "phone": str(phone).strip()})
+        drivers_col.delete_one({"store_id": store_id, "phone": str(phone).strip()})
         return True
     except Exception as e:
         print("Driver Delete Error:", e)
@@ -271,7 +255,7 @@ def get_driver_by_token(token):
 
 def assign_order_driver(order_id, store_id, driver_name, driver_phone):
     return orders_col.update_one(
-        {"order_id": str(order_id)},
+        {"order_id": str(order_id), "store_id": store_id},
         {"$set": {
             "driver_name": driver_name,
             "driver_phone": driver_phone,

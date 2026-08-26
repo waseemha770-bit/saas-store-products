@@ -5,71 +5,19 @@
     <title>{{ settings.store_name }}</title>
     <link rel="manifest" href="/manifest/{{ user.store_slug }}.json">
     <meta name="theme-color" content="{{ settings.theme_color|default('#0d6efd') }}">
-    <script>function fixImg(img){if(!img.dataset.proxied){img.dataset.proxied='true';let src=img.getAttribute('src');if(src&&src!==''&&!src.includes('placeholder')){img.src='https://wsrv.nl/?url='+encodeURIComponent(img.src);}}}</script>
-    <link href="https://fonts.googleapis.com/css2?family={{ settings.font_family|default('Cairo') }}:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family={{ settings.font_family|default('Cairo') }}:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/store.css') }}?v={{ static_version }}">
     <style>
-        :root { --main-color: {{ settings.theme_color|default('#0d6efd') }}; --surface-color: #f8f9fa; --card-shadow: 0 8px 24px rgba(0,0,0,0.04); --hover-shadow: 0 12px 32px rgba(0,0,0,0.1); }
-        body { font-family: '{{ settings.font_family|default('Cairo') }}', sans-serif; background-color: #f2f5f9; padding-bottom: 25px; color: #333; }
-
-        /* Hero Section */
-        {% if settings.header_size == 'small' %} .hero-section { padding: 40px 0 30px; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; margin-bottom: 25px; } .hero-title { font-size: 1.8rem; } .store-logo { width: 80px; height: 80px; }
-        {% elif settings.header_size == 'large' %} .hero-section { padding: 80px 0 60px; border-bottom-left-radius: 50px; border-bottom-right-radius: 50px; margin-bottom: 35px; } .hero-title { font-size: 3.5rem; } .store-logo { width: 120px; height: 120px; }
-        {% else %} .hero-section { padding: 60px 0 40px; border-bottom-left-radius: 40px; border-bottom-right-radius: 40px; margin-bottom: 30px; } .hero-title { font-size: 2.5rem; } .store-logo { width: 100px; height: 100px; } {% endif %}
-
-        .hero-section { background: linear-gradient(135deg, {{ settings.theme_color|default("#0d6efd") }} 0%, #2b2b2b 100%); color: white; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.08); position: relative; overflow: hidden; }
-        .hero-section::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml;utf8,<svg opacity="0.05" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="none"/><circle cx="50" cy="50" r="40" stroke="white" stroke-width="2" fill="none"/></svg>') repeat; pointer-events: none; }
-        .store-logo { object-fit: cover; border-radius: 50%; border: 4px solid rgba(255,255,255,0.9); box-shadow: 0 8px 20px rgba(0,0,0,0.15); background-color: #fff; margin-bottom: 15px; position: relative; z-index: 1; transition: transform 0.3s ease; }
-        .store-logo:hover { transform: scale(1.05); }
-
-        /* Search, Sort & Actions */
-        .search-bar-container { background: #fff; border-radius: 50rem; padding: 5px; box-shadow: var(--card-shadow); transition: box-shadow 0.3s ease; }
-        .search-bar-container:focus-within { box-shadow: var(--hover-shadow); }
-        .search-bar-container input { border: none !important; box-shadow: none !important; font-weight: 600; }
-        .sort-select { background-color: #fff; border: 1px solid #eaeaea; border-radius: 50rem; padding: 8px 15px; font-weight: 700; color: #555; box-shadow: var(--card-shadow); cursor: pointer; outline: none; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url('data:image/svg+xml;utf8,<svg fill="%23555" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position: left 10px center; padding-left: 35px;}
-        .sort-select:focus { border-color: var(--main-color); box-shadow: var(--hover-shadow); }
-        .btn-share { border-radius: 50rem; padding: 8px 15px; font-weight: bold; }
-
-        /* Tabs */
-        .category-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 5px 5px 20px 5px; margin-bottom: 10px; gap: 12px; scrollbar-width: none; }
-        .category-tabs .nav-link { border-radius: 50rem; white-space: nowrap; color: #555; font-weight: 700; background-color: #fff; border: 1px solid #eaeaea; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); padding: 8px 24px; }
-        .category-tabs .nav-link.active { background-color: var(--main-color); color: white; border-color: var(--main-color); box-shadow: 0 6px 15px rgba(0,0,0,0.1); transform: translateY(-2px); }
-
-        /* Product Cards */
-        .product-card { border: none; border-radius: 20px; box-shadow: var(--card-shadow); overflow: hidden; background: #fff; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-        .product-card:hover { transform: translateY(-5px); box-shadow: var(--hover-shadow); }
-        .img-wrapper { position: relative; width: 100%; padding-top: 100%; background-color: #fff; cursor: pointer; overflow: hidden; border-bottom: 1px solid #f0f0f0; }
-        .product-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; padding: 0; transition: transform 0.5s ease; }
-        .product-card:hover .product-img { transform: scale(1.05); }
-
-        .product-title { font-size: 1rem; font-weight: 800; color: #2c3e50; line-height: 1.4; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .product-price { font-size: 1.25rem; font-weight: 800; color: var(--main-color); }
-        .product-price small { font-size: 0.85rem; color: #888; font-weight: 600; }
-
-        .btn-custom { background-color: var(--main-color); color: white; font-weight: 700; border-radius: 12px; padding: 10px; transition: all 0.2s; border: none; }
-        .btn-custom:hover { filter: brightness(1.1); transform: scale(1.02); }
-        .btn-secondary-custom { background-color: #e9ecef; color: #6c757d; font-weight: 700; border-radius: 12px; padding: 10px; border: none; }
-
-        /* Rating & Badges */
-        .rating-badge { display: inline-flex; align-items: center; background: #fff8e1; color: #ffb300; padding: 4px 10px; border-radius: 50rem; font-size: 0.8rem; font-weight: 800; cursor: pointer; transition: background 0.2s; margin-bottom: 8px;}
-        .rating-badge:hover { background: #ffecb3; }
-        .tags-container { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 12px; }
-        .tag-badge { background: #f8f9fa; border: 1px solid #e9ecef; color: #6c757d; font-size: 0.7rem; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
-
-        /* Floating Cart */
-        #floating-cart { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); background: rgba(13, 110, 253, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 50rem; padding: 12px 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); cursor: pointer; z-index: 1000; font-weight: 800; font-size: 1.1rem; display: none; width: auto; white-space: nowrap; transition: all 0.3s ease; }
-        #floating-cart:hover { transform: translateX(-50%) scale(1.05); }
-
-        /* Modals & Support */
-        .modal-content { border-radius: 24px; border: none; }
-        .modal-header { border-bottom: 1px solid #f0f0f0; border-radius: 24px 24px 0 0; }
-        .support-card { background: #fff; border: none; border-radius: 20px; padding: 20px; box-shadow: var(--card-shadow); margin-top: 30px; text-align: center; }
-        .btn-support-wa { background-color: #25D366; color: white; border-radius: 50rem; padding: 10px 22px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s; box-shadow: 0 4px 15px rgba(37, 211, 102, 0.2); }
-        .btn-support-wa:hover { background-color: #1ebe57; color: white; transform: translateY(-2px); }
-    </style>
+:root {
+    --main-color: {{ settings.theme_color|default('#0d6efd') }};
+    --store-font: '{{ settings.font_family|default('Cairo') }}';
+}
+</style>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v={{ static_version }}"></script>
 </head>
-<body>
+<body class="header-{{ settings.header_size|default('medium') }}">
     <div class="hero-section">
         <div class="container d-flex flex-column align-items-center justify-content-center">
             {% if settings.get('logo_url') and settings.logo_url.strip() != '' %}
@@ -144,7 +92,7 @@
                                 {% endif %}
 
                                 <div>
-                                    <div class="rating-badge" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "'")|replace('"', '"') }}')" title="اضغط لتقييم المنتج">
+                                    <div class="rating-badge" onclick="openRatingModal('{{ p.id }}', '{{ p.name|replace("'", "\'")|replace('"', '\"') }}')" title="اضغط لتقييم المنتج">
                                         <i class="fas fa-star me-1"></i> <span id="display-avg-{{ p.id }}">{{ p.rating|default(0)|float|round(1) }}</span>
                                         <span class="text-muted ms-1 small" id="display-count-{{ p.id }}">({{ p.reviews|default(0) }})</span>
                                     </div>
@@ -230,7 +178,6 @@
                     {% if settings.wallet_provider == 'jawali' %}(جوالي)
                     {% elif settings.wallet_provider == 'floosak' %}(فلوسك)
                     {% elif settings.wallet_provider == 'kuraimi' %}(ام فلوس - الكريمي)
-                    {% elif settings.wallet_provider == 'jeeb' %}(محفظة جيب)
                     {% else %}(محفظة إلكترونية){% endif %}
                 </option>
             {% endif %}
@@ -253,9 +200,13 @@
 
     <!-- Rating Modal -->
     <div class="modal fade" id="globalRatingModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content shadow-lg"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold text-dark" id="ratingModalHeaderTitle"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center pt-2 pb-3"><p id="ratingModalProductName" class="text-secondary small fw-bold mb-3"></p><div class="d-flex justify-content-center flex-row-reverse mb-3" id="interactive-stars" onmouseleave="resetHover()"><svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div><div class="mb-2"><button id="confirmRatingBtn" class="btn btn-warning btn-sm px-4 fw-bold rounded-pill shadow-sm" disabled>تأكيد التقييم</button></div><p id="ratingModalMessage" class="fw-bold text-success d-none mb-0 small"></p></div></div></div></div>
-    <style>.modal-star:hover, .modal-star:hover ~ .modal-star { fill: #ffc107 !important; transform: scale(1.15); } .star-selected { fill: #ffc107 !important; }</style>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+:root {
+    --main-color: {{ settings.theme_color|default('#0d6efd') }};
+    --store-font: '{{ settings.font_family|default('Cairo') }}';
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
 

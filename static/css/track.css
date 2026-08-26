@@ -1,0 +1,13 @@
+body { font-family: 'Cairo', sans-serif; background-color: #f4f7fb; color: #333; }
+        .track-card { border-radius: 20px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .stepper { display: flex; justify-content: space-between; position: relative; margin: 30px 0; }
+        .stepper::before { content: ''; position: absolute; top: 22px; left: 10%; right: 10%; height: 4px; background: #e0e0e0; z-index: 1; }
+        .stepper-progress { position: absolute; top: 22px; right: 10%; height: 4px; background: #198754; z-index: 2; transition: width 0.5s ease; }
+        .step-item { position: relative; z-index: 3; text-align: center; width: 25%; }
+        .step-icon { width: 48px; height: 48px; border-radius: 50%; background: #e0e0e0; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 1.2rem; transition: all 0.3s ease; }
+        .step-item.active .step-icon { background: #0d6efd; box-shadow: 0 0 0 6px rgba(13,110,253,0.2); }
+        .step-item.completed .step-icon { background: #198754; }
+        .step-item.canceled .step-icon { background: #dc3545; }
+        .step-label { font-size: 0.85rem; font-weight: 700; color: #6c757d; }
+        .step-item.active .step-label { color: #0d6efd; }
+        .step-item.completed .step-label { color: #198754; }

@@ -57,60 +57,32 @@ def extract_clean_products(order):
     return parsed
 
 import re
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, send_from_directory
 import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
+import config
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
-
-from flask import jsonify, Response
-
-@app.route('/sw.js')
-def sw_js():
-    js = "self.addEventListener('install', e => { self.skipWaiting(); }); self.addEventListener('fetch', e => {});"
-    return Response(js, mimetype='application/javascript')
-
-@app.route('/dashboard_manifest.json')
-def dash_manifest():
-    return jsonify({
-        "name": "لوحة التاجر | TajerGo",
-        "short_name": "لوحة التاجر",
-        "start_url": "/dashboard",
-        "display": "standalone",
-        "background_color": "#f4f6f9",
-        "theme_color": "#0d6efd",
-        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3050/3050431.png", "sizes": "512x512", "type": "image/png"}]
-    })
-
-@app.route('/manifest/<slug>.json')
-def store_manifest(slug):
-    return jsonify({
-        "name": "متجر " + slug,
-        "short_name": "المتجر",
-        "start_url": "/store/" + slug,
-        "display": "standalone",
-        "background_color": "#ffffff",
-        "theme_color": "#0d6efd",
-        "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3050/3050431.png", "sizes": "512x512", "type": "image/png"}]
-    })
-
-
+app.secret_key = config.SECRET_KEY
+MAIN_DOMAIN = config.MAIN_DOMAIN
+STATIC_VERSION = config.STATIC_VERSION
 
 @app.after_request
-def add_header(response):
-    if 'text/html' in response.headers.get('Content-Type', ''):
+def apply_cache_policy(response):
+    path = request.path
+    if path == '/sw.js' or path.startswith('/manifest/') or path.startswith('/api/') or path == '/dashboard' or path.startswith('/store/'):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
+    elif path.startswith('/static/'):
+        response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
     return response
-app.secret_key = os.getenv('SECRET_KEY')
-MAIN_DOMAIN = "saas-store-products.vercel.app"
 
 def send_telegram_alert(message):
     try:
-        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        bot_token = config.TELEGRAM_BOT_TOKEN
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        data = json.dumps({"chat_id": os.getenv("TELEGRAM_CHAT_ID"), "text": message, "parse_mode": "HTML"}).encode('utf-8')
+        data = json.dumps({"chat_id": config.TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}).encode('utf-8')
         req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
         with urllib.request.urlopen(req, timeout=3) as response: pass
     except: pass
@@ -122,7 +94,7 @@ def inject_global_vars():
     if admin:
         sett = database.settings_col.find_one({"u_id": admin['id']})
         if sett and sett.get('platform_logo'): logo = sett.get('platform_logo')
-    return dict(platform_logo=logo)
+    return dict(platform_logo=logo, static_version=config.STATIC_VERSION)
 
 @app.before_request
 def handle_custom_domains():
@@ -164,6 +136,8 @@ def pwa_manifest(slug):
     logo = settings.get('logo_url') or "https://via.placeholder.com/192x192.png?text=App"
     return jsonify({"name": store_name, "short_name": store_name, "start_url": f"/store/{slug}", "display": "standalone", "background_color": "#ffffff", "theme_color": settings.get('theme_color', '#0d6efd'), "icons": [{"src": logo, "sizes": "192x192", "type": "image/png"}, {"src": logo, "sizes": "512x512", "type": "image/png"}]})
 
+@app.route('/sw.js')
+def service_worker(): return send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
 
 @app.route('/api/proxy_upload', methods=['POST'])
 def proxy_upload():
@@ -392,8 +366,11 @@ def dashboard():
             d_name = request.form.get('driver_name') or request.form.get('name')
             d_phone = request.form.get('driver_phone') or request.form.get('phone')
             if d_name and d_phone:
-                database.add_driver(session['user_id'], d_name, d_phone)
-                flash(f"تم إضافة المندوب {d_name} بنجاح 🛵", "success")
+                created = database.add_driver(session['user_id'], d_name, d_phone)
+                if created:
+                    flash(f"تم إضافة المندوب {d_name} بنجاح 🛵", "success")
+                else:
+                    flash("هذا المندوب موجود مسبقًا أو تعذر إنشاءه", "warning")
             else:
                 flash("يرجى إدخال اسم ورقم المندوب", "danger")
         elif action == 'delete_driver':
@@ -511,17 +488,18 @@ def dashboard():
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
-if __name__ == '__main__': app.run(debug=True)
-
 @app.route('/driver/<token>', methods=['GET'])
-def driver_portal():
-    from flask import request
-    token = request.args.get('token', '')
-    token = token.strip()
+@app.route('/delivery', methods=['GET'])
+def driver_portal(token=None):
+    token = (token or request.args.get('token', '')).strip()
     driver = database.get_driver_by_token(token)
     if not driver:
         return "<h3>كود المندوب غير صالح أو تم إلغاؤه</h3>", 404
-    orders = list(database.orders_col.find({"driver_phone": driver['phone'], "status": {"$in": ["مع المندوب للتوصيل 🚚", "قيد التجهيز 🔵"]}}).sort('_id', -1))
+    orders = list(database.orders_col.find({
+        "store_id": driver.get('store_id'),
+        "driver_phone": driver.get('phone'),
+        "status": {"$in": ["مع المندوب للتوصيل 🚚", "قيد التجهيز 🔵"]}
+    }).sort('_id', -1))
     return render_template('driver.html', driver=driver, orders=orders)
 
 @app.route('/driver/complete/<order_id>', methods=['POST'])
@@ -529,7 +507,7 @@ def driver_complete_order(order_id):
     token = request.form.get('token')
     driver = database.get_driver_by_token(token)
     if not driver: return jsonify({"error": "Unauthorized"}), 403
-    database.orders_col.update_one({"order_id": order_id, "driver_phone": driver['phone']}, {"$set": {"status": "تم التوصيل 🟢", "delivered_at": datetime.now().strftime("%Y-%m-%d %H:%M")}})
+    database.orders_col.update_one({"order_id": order_id, "store_id": driver.get('store_id'), "driver_phone": driver['phone']}, {"$set": {"status": "تم التوصيل 🟢", "delivered_at": datetime.now().strftime("%Y-%m-%d %H:%M")}})
     return redirect(f"/driver/{token}")
 
 @app.route('/api/drivers/add', methods=['POST'])
@@ -537,6 +515,8 @@ def api_add_driver():
     if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
     data = request.json
     token = database.add_driver(session['user_id'], data['name'], data['phone'])
+    if not token:
+        return jsonify({"success": False, "error": "المندوب موجود بالفعل أو تعذر إنشاؤه"}), 400
     return jsonify({"success": True, "token": token})
 
 @app.route('/api/orders/assign-driver', methods=['POST'])
@@ -558,3 +538,7 @@ def api_update_order_status():
     data = request.json
     database.orders_col.update_one({"order_id": data['order_id'], "store_id": session.get('user_id')}, {"$set": {"status": data['status']}})
     return jsonify({"success": True})
+
+
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -86,7 +86,7 @@ done
 
 cd ..
 
-if [ "$choice" == "2" ]; then
+if [ "$CHOICE" == "2" ]; then
     rm -rf "$TARGET_DIR"
 fi
 

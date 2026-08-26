@@ -1,0 +1,18 @@
+body { font-family: 'Cairo', sans-serif; background-color: #f4f6f9; }
+        .form-control, .form-select { border: 2px solid #b3b3b3 !important; border-radius: 8px; padding: 10px 15px; background-color: #fcfcfc; font-weight: bold; color: #333; transition: all 0.3s ease; }
+        .form-control:focus, .form-select:focus { border-color: #0d6efd !important; background-color: #fff; box-shadow: 0 0 8px rgba(13, 110, 253, 0.3); outline: none; }
+        .card { border-radius: 12px; }
+        .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; margin-bottom: 5px; }
+        .upload-btn-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; }
+        .divider-text { display: flex; align-items: center; text-align: center; color: #888; font-weight: bold; margin: 8px 0; }
+        .divider-text::before, .divider-text::after { content: ''; flex: 1; border-bottom: 1px dashed #ccc; }
+        .divider-text:not(:empty)::before { margin-left: .5em; } .divider-text:not(:empty)::after { margin-right: .5em; }
+
+/* Dashboard navigation: keep all tabs accessible on small screens. */
+#myTab {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+}
+#myTab .nav-item { flex: 0 0 auto; }
+#myTab .nav-link { white-space: nowrap; }

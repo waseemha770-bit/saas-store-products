@@ -1,25 +1,36 @@
-# 🧠 سياق مشروع منصة المتاجر (SaaS Store Context)
+# 🧠 سياق المشروع الحالي — TajerGo
 
-## 📌 نظرة عامة
-هذا المشروع عبارة عن منصة SaaS (البرمجيات كخدمة) مبنية بلغة Python (إطار عمل Flask). تتيح المنصة للتجار إنشاء متاجرهم الخاصة، إدارة المنتجات، استقبال الطلبات عبر الواتساب، وإدارة مناديب التوصيل.
+## الحالة المعتمدة
+هذا الملف يصف النسخة الحالية من المشروع فقط، ولا يعتمد على سياقات قديمة.
 
-## 🏗️ البنية التقنية (Architecture)
-- **الخلفية (Backend):** Python / Flask
-- **الواجهة الأمامية (Frontend):** HTML, Bootstrap 5, FontAwesome, JavaScript
-- **الاستضافة (Hosting):** Vercel (Serverless Functions)
-- **قاعدة البيانات:** تعتمد على ملفات مخصصة (يتم إدارتها عبر `database.py`)
-- **تطبيقات الويب التقدمية (PWA):** مدعوم عبر `sw.js` وملفات `manifest`.
+## Architecture
+- Backend: Python / Flask
+- Database: MongoDB
+- Hosting: Vercel Serverless
+- Frontend: HTML + Bootstrap RTL + JavaScript
+- PWA: `/sw.js` واحد + Manifest ديناميكي عبر `/manifest/<slug>.json`
 
-## ⚙️ آليات العمل الحرجة (Critical Mechanics)
-1. **نظام التوجيه (Routing & Vercel):**
-   - لتجنب حظر جدار Vercel (Edge Router) لمسارات الديناميكية، نستخدم ملف `vercel.json` يحتوي على `rewrites` لتوجيه كل الطلبات `/(.*)` إلى `app.py`.
-2. **بوابة المناديب (Driver Portal):**
-   - المسار: `/delivery?token=...`
-   - **السبب:** تم استخدام نظام المعاملات (Query Parameters) بدلاً من المسارات الفرعية (`/driver/token`) لمنع Vercel من تخزين صفحات الخطأ (404 Cache) ولضمان وصول الرابط دائماً إلى كود بايثون.
-3. **نظام النطاقات المتعددة (Multi-tenant SaaS):**
-   - يتم تحديد المتجر الذي يزوره العميل بناءً على النطاق الفرعي (Subdomain) أو المسار، ويقوم `app.py` بتصفية وعرض بيانات التاجر الصحيح تلقائياً.
+## لوحة التاجر
+- `templates/base_dashboard.html`: القالب الأساسي.
+- `templates/dashboard.html`: محتوى لوحة التاجر.
+- `templates/partials/`: العناصر المشتركة مثل الشريط العلوي والتبويبات والنوافذ المشتركة.
+- `static/css/dashboard.css`: تنسيقات لوحة التاجر.
+- `static/js/dashboard.js`: وظائف الأزرار والتبويبات والتعامل مع API.
 
-## 🚀 الميزات القادمة (Roadmap)
-- نظام تتبع الطلبات للعملاء (`/track`).
-- نظام الكوبونات والخصومات.
-- إعدادات حدود باقات التجار.
+## قاعدة البيانات
+جميع عمليات MongoDB في `database.py`. المجموعات الحالية تشمل:
+`users`, `products`, `settings`, `orders`, `coupons`, `packages`, `drivers`.
+
+## التخزين المؤقت
+الصفحات الديناميكية والمتاجر وواجهات API وManifest وService Worker تستخدم `no-store`.
+ملفات CSS/JS الثابتة تستخدم Cache طويلًا مع رقم إصدار في الرابط.
+
+## قواعد التطوير
+- لا تستخدم `re.sub()` لتعديل ملفات المشروع.
+- لا تنشئ ملفات `fix_*.py` أو `update_*.py` لتنفيذ تعديلات مؤقتة.
+- لا تكرر الدوال أو الأزرار أو Service Worker أو Manifest.
+- أي وظيفة جديدة يجب أن يكون لها Route واضح، وواجهة واضحة، ومعالجة أخطاء واضحة.
+- أي تعديل في لوحة التاجر يجب اختباره على الهاتف والكمبيوتر.
+
+## النشر
+Local → GitHub → Vercel → MongoDB.

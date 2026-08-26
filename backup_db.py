@@ -11,14 +11,16 @@ from bson import json_util
 
 # إنشاء مجلد يحمل تاريخ ووقت اليوم
 backup_folder = f"TajerGo_Backup_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-os.makedirs(backup_folder, exist_key=True)
+os.makedirs(backup_folder, exist_ok=True)
 
 collections = {
     'users': database.users_col,
     'products': database.products_col,
     'settings': database.settings_col,
     'orders': database.orders_col,
-    'coupons': database.coupons_col
+    'coupons': database.coupons_col,
+    'packages': database.packages_col,
+    'drivers': database.drivers_col
 }
 
 print(f"📥 جاري سحب بيانات المنصة إلى المجلد المحلي: {backup_folder}...")

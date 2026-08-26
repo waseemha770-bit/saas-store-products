@@ -1,0 +1,65 @@
+<div class="modal fade" id="guideModal" tabindex="-1" aria-labelledby="guideModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="guideModalLabel"><i class="fas fa-cloud"></i> دليل الربط السحابي للصور</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <ul class="nav nav-pills mb-4 gap-2" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation"><button class="nav-link active fw-bold border" data-bs-toggle="pill" data-bs-target="#catboxGuide" type="button" role="tab">Catbox 🚀</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold border" data-bs-toggle="pill" data-bs-target="#imgbbGuide" type="button" role="tab">ImgBB</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold border" data-bs-toggle="pill" data-bs-target="#freeimageGuide" type="button" role="tab">FreeImage</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold border" data-bs-toggle="pill" data-bs-target="#imgurGuide" type="button" role="tab">Imgur</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold border" data-bs-toggle="pill" data-bs-target="#postimgGuide" type="button" role="tab">Postimages</button></li>
+                        <li class="nav-item" role="presentation"><button class="nav-link fw-bold text-info border border-info" data-bs-toggle="pill" data-bs-target="#cloudinaryGuide" type="button" role="tab">Cloudinary</button></li>
+                    </ul>
+                    <div class="tab-content border rounded p-4 bg-light shadow-sm" id="pills-tabContent">
+                        <div class="tab-pane fade show active" id="catboxGuide" role="tabpanel">
+                            <h6 class="fw-bold text-success mb-3">شرح منصة Catbox.moe (الخيار الأسهل والافتراضي):</h6>
+                            <div class="mb-2"><span class="badge bg-success me-2">1</span> مجانية بالكامل وتسمح برفع صور بحجم يصل لـ 200 ميجابايت.</div>
+                            <div class="mb-2"><span class="badge bg-success me-2">2</span> <b>لا تحتاج لأي تسجيل دخول أو مفاتيح API أبداً!</b></div>
+                            <div class="mb-2"><span class="badge bg-success me-2">3</span> فقط اخترها من القائمة واضغط حفظ، وستعمل فوراً.</div>
+                        </div>
+                        <div class="tab-pane fade" id="imgbbGuide" role="tabpanel">
+                            <h6 class="fw-bold text-primary mb-3">خطوات ربط منصة ImgBB:</h6>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">1</span> افتح موقع <a href="https://api.imgbb.com/" target="_blank" class="fw-bold">api.imgbb.com</a> وقم بتسجيل الدخول.</div>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">2</span> اضغط على زر <b>Add API Key</b> لتحصل على الرمز السري.</div>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">3</span> انسخ الرمز الطويل، ثم ارجع هنا والصقه في خانة <b>(مفتاح الربط API Key)</b>.</div>
+                            <div class="alert alert-danger mt-3 small fw-bold mb-0"><i class="fas fa-exclamation-triangle"></i> تنبيه: هذه المنصة قد تكون محظورة في بعض الدول، إذا فشل الرفع استخدم Cloudinary.</div>
+                        </div>
+                        <div class="tab-pane fade" id="freeimageGuide" role="tabpanel">
+                            <h6 class="fw-bold text-primary mb-3">شرح منصة FreeImage.host:</h6>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">1</span> سجل حساب في <a href="https://freeimage.host/" target="_blank">freeimage.host</a>.</div>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">2</span> اذهب لصفحة الـ API وانسخ الرمز السري والصقه في خانة مفتاح الربط.</div>
+                        </div>
+                        <div class="tab-pane fade" id="imgurGuide" role="tabpanel">
+                            <h6 class="fw-bold text-primary mb-3">خطوات ربط منصة Imgur:</h6>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">1</span> سجل حساباً في <a href="https://imgur.com/register" target="_blank" class="fw-bold">imgur.com</a>.</div>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">2</span> اذهب إلى <a href="https://api.imgur.com/oauth2/addclient" target="_blank" class="fw-bold">صفحة إنشاء تطبيق جديد</a>.</div>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">3</span> اختر <i>OAuth 2.0 authorization without a callback URL</i>.</div>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">4</span> سيظهر لك <b>Client ID</b>، انسخه والصقه في خانة <b>(مفتاح الربط)</b>.</div>
+                        </div>
+                        <div class="tab-pane fade" id="postimgGuide" role="tabpanel">
+                            <h6 class="fw-bold text-primary mb-3">معلومات منصة Postimages:</h6>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">1</span> افتح موقع <a href="https://postimages.org/" target="_blank" class="fw-bold">postimages.org</a>.</div>
+                            <div class="mb-2"><span class="badge bg-secondary me-2">2</span> تتطلب هذه المنصة أحياناً مراسلة الدعم للحصول على مفتاح API خاص.</div>
+                            <div class="alert alert-warning mt-3 small fw-bold mb-0">💡 ملاحظة: كبديل سريع، يمكنك رفع الصور لديهم يدوياً ونسخ <b>الرابط المباشر للصورة</b>، ثم وضعه في حقل إضافة المنتج مباشرة.</div>
+                        </div>
+                        <div class="tab-pane fade" id="cloudinaryGuide" role="tabpanel">
+                            <h6 class="fw-bold text-info mb-3">خطوات ربط Cloudinary (الخيار الأفضل والمضمون 100%):</h6>
+                            <div class="mb-2"><span class="badge bg-info text-dark me-2">1</span> سجل حساباً مجانياً في <a href="https://cloudinary.com/" target="_blank" class="fw-bold text-info">Cloudinary.com</a>.</div>
+                            <div class="mb-2"><span class="badge bg-info text-dark me-2">2</span> من لوحة التحكم الرئيسية، انسخ اسم السحابة الخاص بك <b>Cloud Name</b>.</div>
+                            <div class="mb-2"><span class="badge bg-info text-dark me-2">3</span> اذهب إلى الإعدادات <b>Settings</b> ⚙️ (أسفل اليسار) ثم اختر <b>Upload</b>.</div>
+                            <div class="mb-2"><span class="badge bg-info text-dark me-2">4</span> انزل لأسفل واضغط على الرابط الأزرق <b>Add upload preset</b>.</div>
+                            <div class="mb-2"><span class="badge bg-info text-dark me-2">5</span> اجعل خيار <i>Signing Mode</i> يساوي <b>Unsigned</b> واضغط حفظ.</div>
+                            <div class="mb-2"><span class="badge bg-info text-dark me-2">6</span> انسخ اسم الـ Preset الذي ظهر لك، والصقه مع الـ Cloud Name في إعدادات متجرك!</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white border-top">
+                    <button type="button" class="btn btn-secondary fw-bold px-4" data-bs-dismiss="modal">فهمت، إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
