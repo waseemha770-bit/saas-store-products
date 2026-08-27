@@ -272,7 +272,19 @@ def checkout(slug):
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     wa_link = "https://wa.me/" + str(wa_phone) + "?text=" + urllib.parse.quote(msg)
-    
+        # --- كود إرسال الإشعار إلى التليجرام للتاجر ---
+    if settings.get('enable_telegram') and settings.get('telegram_chat_id'):
+        try:
+            bot_token = config.TELEGRAM_BOT_TOKEN
+            if bot_token:
+                t_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                t_data = json.dumps({"chat_id": settings.get('telegram_chat_id'), "text": msg}).encode('utf-8')
+                req = urllib.request.Request(t_url, data=t_data, headers={'Content-Type': 'application/json'}, method='POST')
+                urllib.request.urlopen(req, timeout=3)
+        except Exception as e:
+            pass
+    # -----------------------------------------------
+
     return jsonify({
         "success": True,
         "order_id": order_id,
