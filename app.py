@@ -399,24 +399,19 @@ def dashboard():
             flash("تم حذف المندوب 🗑️", "danger")
         elif action == 'add_coupon': database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
         elif action == 'delete_coupon': database.delete_coupon(request.form.get('coupon_id'), session['user_id']); flash("تم حذف الكوبون", "danger")
-        elif action == 'change_password':
+                elif action == 'change_password':
             old_p, new_p, confirm_p = request.form.get('old_password', ''), request.form.get('new_password', ''), request.form.get('confirm_password', '')
             if new_p != confirm_p: flash("كلمة المرور غير متطابقة", "danger")
             else: flash("تم التغيير" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
-                elif action == 'save_telegram_settings':
-            telegram_data = {
-                'enable_telegram': True if request.form.get('enable_telegram') else False,
-                'telegram_chat_id': request.form.get('telegram_chat_id', '').strip()
-            }
-            database.update_settings(session['user_id'], telegram_data)
-            flash('تم حفظ إعدادات تليجرام بنجاح', 'success')
-                    elif action == 'save_telegram_settings':
+        
+        elif action == 'save_telegram_settings':
             telegram_data = {
                 'enable_telegram': True if request.form.get('enable_telegram') else False,
                 'telegram_chat_id': request.form.get('telegram_chat_id', '').strip()
             }
             database.update_settings(session['user_id'], telegram_data)
             flash("تم حفظ إعدادات تليجرام بنجاح", "success")
+
 
         elif action == 'save_settings':
             settings_data = {
