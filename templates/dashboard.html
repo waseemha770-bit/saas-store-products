@@ -7,62 +7,7 @@
 
         <div class="tab-content">
 
-<!-- تبويب إدارة المناديب -->
-<div class="tab-pane fade" id="drivers-pane" role="tabpanel">
-    <div class="d-flex justify-content-between align-items-center mb-4 mt-3">
-        <h5 class="fw-bold text-dark mb-0"><i class="fas fa-motorcycle text-primary me-2"></i> فريق مناديب التوصيل</h5>
-        <button class="btn btn-primary btn-sm rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addDriverModal">
-            <i class="fas fa-plus-circle me-1"></i> إضافة مندوب جديد
-        </button>
-    </div>
-
-    <div class="row g-3" id="driversListContainer">
-        {% if drivers %}
-            {% for d in drivers %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div>
-                            <h6 class="fw-bold mb-1 text-dark">{{ d.get('name', '') }}</h6>
-                            <span class="text-muted small"><i class="fas fa-phone-alt me-1 text-success"></i> {{ d.get('phone', '') }}</span>
-                        </div>
-                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small rounded-pill">نشط 🟢</span>
-                    </div>
-                    
-                    <div class="bg-light p-2 rounded-3 my-2 small">
-                        <span class="text-muted d-block mb-1">رابط بوابة المندوب:</span>
-                        <div class="input-group input-group-sm">
-                            <input type="text" class="form-control border-0 bg-white" value="{{ request.host_url }}driver/{{ d.get('token', d.get('_id', '')) }}" id="link-{{ d.get('token', d.get('_id', '')) }}" readonly>
-                            <button class="btn btn-outline-primary" onclick="copyDriverPortalLink('{{ d.get('token', d.get('_id', '')) }}')" title="نسخ الرابط"><i class="fas fa-copy"></i></button>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
-                        <a href="https://wa.me/{{ d.get('phone', '') }}?text={{ ('مرحباً ' + d.get('name', '') + '، هذا هو رابط بوابة استلام مهام التوصيل الخاصة بك:%0A' + request.host_url + 'driver/' + d.get('token', d.get('_id', '')))|urlencode }}" target="_blank" class="btn btn-sm btn-outline-success rounded-pill px-2 fw-bold">
-                            <i class="fab fa-whatsapp me-1"></i> إرسال الرابط
-                        </a>
-                        <button class="btn btn-sm btn-outline-danger rounded-pill px-2" onclick="deleteDriver('{{ d.get('token', d.get('_id', '')) }}')">
-                            <i class="fas fa-trash-alt"></i> حذف
-                        </button>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        {% else %}
-            <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm">
-                <i class="fas fa-motorcycle fs-1 text-muted mb-3 opacity-50"></i>
-                <h6 class="text-muted fw-bold">لم تقم بإضافة أي مندوب توصيل بعد</h6>
-                <p class="text-muted small">أضف مناديبك وشاركهم روابط بواباتهم الميدانية لاستلام وتوصيل الطلبات.</p>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Modal إضافة مندوب جديد -->
-{% include 'partials/add_driver_modal.html' %}
-
-            
-    <div class="tab-pane fade show active" id="analytics">
+    <div class="tab-pane fade" id="analytics">
         <div class="row mb-4">
             <div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">صافي المبيعات 💰</h6><h3 class="mb-0">{{ '{:,.2f}'.format(adv_stats.net_sales) }} <small>{{ settings.currency }}</small></h3><small>نمو: <span dir="ltr">{{ '{:,.1f}'.format(adv_stats.growth_rate) }}%</span></small></div></div></div>
             <div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">إجمالي الطلبات 📦</h6><h3 class="mb-0">{{ adv_stats.total_orders }}</h3><small>مكتملة: {{ adv_stats.completed_orders }} | ملغاة: {{ adv_stats.canceled_orders }}</small></div></div></div>
@@ -79,108 +24,140 @@
             <div class="col-md-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h6 class="fw-bold text-danger border-bottom pb-2">⚠️ الأقل مبيعًا</h6><ul class="list-group list-group-flush mt-3">{% for p_name, qty in adv_stats.least_sellers %}<li class="list-group-item d-flex justify-content-between align-items-center px-0"><span class="text-truncate" style="max-width: 150px;">{{ p_name }}</span><span class="badge bg-danger rounded-pill">{{ qty }} قطعة</span></li>{% else %}<li class="list-group-item text-center text-muted">لا يوجد بيانات</li>{% endfor %}</ul></div></div></div>
         </div>
     </div>
+    
     <div class="tab-pane fade" id="orders">
-<div class="row mb-4" style="display:none;"><div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الطلبات</h6><h3 class="mb-0">{{ stats.total_orders }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الأرباح</h6><h3 class="mb-0">{{ stats.total_revenue }} <small>{{ settings.currency }}</small></h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">جديدة</h6><h3 class="mb-0">{{ stats.status_counts['جديد 🟡'] }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-info text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">تجهيز</h6><h3 class="mb-0">{{ stats.status_counts['قيد التجهيز 🔵'] }}</h3></div></div></div></div><div class="row"><div class="col-md-4 mb-4" style="display:none;"><div class="card shadow-sm border-0 h-100"><div class="card-body"><canvas id="orderChart" style="max-height: 250px;"></canvas></div></div></div><div class="col-md-12 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body"><a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a>
+        <div class="row mb-4" style="display:none;"><div class="col-md-3 col-6 mb-2"><div class="card bg-primary text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الطلبات</h6><h3 class="mb-0">{{ stats.total_orders }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-success text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">الأرباح</h6><h3 class="mb-0">{{ stats.total_revenue }} <small>{{ settings.currency }}</small></h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card text-dark shadow-sm border-0" style="background-color:#ffc107;"><div class="card-body"><h6 class="fw-bold">جديدة</h6><h3 class="mb-0">{{ stats.status_counts['جديد 🟡'] }}</h3></div></div></div><div class="col-md-3 col-6 mb-2"><div class="card bg-info text-white shadow-sm border-0"><div class="card-body"><h6 class="fw-bold">تجهيز</h6><h3 class="mb-0">{{ stats.status_counts['قيد التجهيز 🔵'] }}</h3></div></div></div></div><div class="row"><div class="col-md-4 mb-4" style="display:none;"><div class="card shadow-sm border-0 h-100"><div class="card-body"><canvas id="orderChart" style="max-height: 250px;"></canvas></div></div></div>
+        <div class="col-md-12 mb-4"><div class="card shadow-sm border-0 h-100"><div class="card-body">
+        <a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a>
 
-<div class="table-responsive bg-white rounded-4 shadow-sm border p-2">
-    <table class="table table-hover align-middle mb-0 text-center">
-        <thead class="table-light">
-            <tr class="text-secondary small fw-bold">
-                <th style="width: 110px;">رقم الطلب</th>
-                <th class="text-start">العميل والهاتف</th>
-                <th class="text-start">المنتجات</th>
-                <th>الإجمالي</th>
-                <th>الحالة الحالية</th>
-                <th class="text-primary"><i class="fas fa-motorcycle me-1"></i> المندوب المسؤول</th>
-                <th>تحديث الحالة</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% if orders %}
-                {% for o in orders %}
-                <tr>
-                    <td>
-                        <span class="fw-bold text-dark d-block mb-1">{{ o.order_id }}</span>
-                        <a href="/track/{{ o.order_id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-0" style="font-size: 0.72rem;">
-                            <i class="fas fa-truck-fast"></i> تتبع
-                        </a>
-                    </td>
+        <div class="table-responsive bg-white rounded-4 shadow-sm border p-2">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-light">
+                    <tr class="text-secondary small fw-bold">
+                        <th style="width: 130px;">رقم الطلب</th>
+                        <th class="text-start">العميل والهاتف</th>
+                        <th class="text-start">المنتجات</th>
+                        <th>الإجمالي</th>
+                        <th>الحالة الحالية</th>
+                        <th class="text-primary"><i class="fas fa-motorcycle me-1"></i> المندوب</th>
+                        <th>تحديث الحالة</th>
+                    </tr>
+                    <!-- حقول فلترة الطلبات -->
+                    <tr class="bg-light">
+                        <th><input type="text" id="filterOrdId" class="form-control form-control-sm border-primary shadow-sm" placeholder="🔍 فلترة بالرقم..." onkeyup="filterOrdersTable()"></th>
+                        <th><input type="text" id="filterOrdCust" class="form-control form-control-sm border-primary shadow-sm" placeholder="🔍 فلترة بالعميل أو الهاتف..." onkeyup="filterOrdersTable()"></th>
+                        <th></th>
+                        <th></th>
+                        <th>
+                            <select id="filterOrdStat" class="form-select form-select-sm border-primary shadow-sm fw-bold" onchange="filterOrdersTable()">
+                                <option value="">كل الحالات</option>
+                                <option value="جديد 🟡">جديد 🟡</option>
+                                <option value="مدفوع 🟢">مدفوع 🟢</option>
+                                <option value="قيد التجهيز 🔵">قيد التجهيز 🔵</option>
+                                <option value="تم التوصيل 🟢">تم التوصيل 🟢</option>
+                                <option value="ملغي 🔴">ملغي 🔴</option>
+                            </select>
+                        </th>
+                        <th></th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    {% if orders %}
+                        {% for o in orders %}
+                        <tr class="order-row">
+                            <td>
+                                <span class="fw-bold text-dark d-block mb-1">{{ o.order_id }}</span>
+                                <a href="/track/{{ o.order_id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-0" style="font-size: 0.72rem;">
+                                    <i class="fas fa-truck-fast"></i> تتبع
+                                </a>
+                            </td>
 
-                    <td class="text-start">
-                        <div class="fw-bold text-dark">👤 {{ o.customer_name }}</div>
-                        <div class="small text-muted"><i class="fas fa-phone-alt text-success me-1"></i> {{ o.customer_phone }}</div>
-                        {% if o.customer_address %}
-                        <div class="small text-muted text-truncate" style="max-width: 140px;">📍 {{ o.customer_address }}</div>
-                        {% endif %}
-                    </td>
+                            <td class="text-start">
+                                <div class="fw-bold text-dark">👤 {{ o.customer_name }}</div>
+                                <div class="small text-muted"><i class="fas fa-phone-alt text-success me-1"></i> {{ o.customer_phone }}</div>
+                                {% if o.customer_address %}
+                                <div class="small text-muted text-truncate" style="max-width: 140px;">📍 {{ o.customer_address }}</div>
+                                {% endif %}
+                            </td>
 
-                    <td class="text-start">
-                        <div class="small" style="max-height: 100px; overflow-y: auto; line-height: 1.6;">
-                            {% if o.cart_items %}
-                                {% for i in o.cart_items %}
-                                    <div class="text-dark fw-bold">▪️ {{ i.name }} <span class="badge bg-light text-secondary border px-1" style="font-size: 0.72rem;">x{{ i.qty }}</span></div>
-                                {% endfor %}
-                            {% elif o.get('cart_items', []) %}
-                                <div class="text-dark fw-bold">{{ o.get('cart_items', []) }}</div>
-                            {% else %}
-                                <span class="text-muted small">-</span>
-                            {% endif %}
-                        </div>
-                    </td>
+                            <td class="text-start">
+                                <div class="small" style="max-height: 100px; overflow-y: auto; line-height: 1.6;">
+                                    {% if o.cart_items %}
+                                        {% for i in o.cart_items %}
+                                            <div class="text-dark fw-bold">▪️ {{ i.name }} <span class="badge bg-light text-secondary border px-1" style="font-size: 0.72rem;">x{{ i.qty }}</span></div>
+                                        {% endfor %}
+                                    {% elif o.get('cart_items', []) %}
+                                        <div class="text-dark fw-bold">{{ o.get('cart_items', []) }}</div>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </div>
+                            </td>
 
-                    <td>
-                        <span class="fw-bold text-success fs-6">{{ o.total }}</span>
-                    </td>
+                            <td>
+                                <span class="fw-bold text-success fs-6">{{ o.total }}</span>
+                            </td>
 
-                    <td>
-                        <span class="badge {% if 'توصيل' in o.status or 'مدفوع' in o.status %}bg-success{% elif 'مع المندوب' in o.status %}bg-primary{% elif 'تجهيز' in o.status %}bg-info text-dark{% elif 'ملغي' in o.status %}bg-danger{% else %}bg-warning text-dark{% endif %} px-2 py-1 rounded-pill small">
-                            {{ o.status }}
-                        </span>
-                    </td>
+                            <td>
+                                <span class="badge {% if 'توصيل' in o.status or 'مدفوع' in o.status %}bg-success{% elif 'مع المندوب' in o.status %}bg-primary{% elif 'تجهيز' in o.status %}bg-info text-dark{% elif 'ملغي' in o.status %}bg-danger{% else %}bg-warning text-dark{% endif %} px-2 py-1 rounded-pill small">
+                                    {{ o.status }}
+                                </span>
+                            </td>
 
-                    <td>
-                        <select class="form-select form-select-sm rounded-pill border-primary border-opacity-50 shadow-sm fw-bold mx-auto" 
-                                style="min-width: 135px; font-size: 0.78rem;" 
-                                onchange="assignOrderToDriver('{{ o.order_id }}', this)">
-                            <option value="">{% if o.driver_name %}🛵 {{ o.driver_name }}{% else %}-- تعيين مندوب --{% endif %}</option>
-                            {% if drivers %}
-                                {% for d in drivers %}
-                                <option value="{{ d.get('phone', '') }}" data-name="{{ d.get('name', '') }}" data-phone="{{ d.get('phone', '') }}" {% if o.driver_phone == d.get('phone', '') %}selected{% endif %}>
-                                    🛵 {{ d.get('name', '') }}
-                                </option>
-                                {% endfor %}
-                            {% else %}
-                                <option disabled>(أضف مناديب أولاً)</option>
-                            {% endif %}
-                        </select>
-                    </td>
+                            <td>
+                                <select class="form-select form-select-sm rounded-pill border-primary border-opacity-50 shadow-sm fw-bold mx-auto" 
+                                        style="min-width: 135px; font-size: 0.78rem;" 
+                                        onchange="assignOrderToDriver('{{ o.order_id }}', this)">
+                                    <option value="">{% if o.driver_name %}🛵 {{ o.driver_name }}{% else %}-- تعيين مندوب --{% endif %}</option>
+                                    {% if drivers %}
+                                        {% for d in drivers %}
+                                        <option value="{{ d.get('phone', '') }}" data-name="{{ d.get('name', '') }}" data-phone="{{ d.get('phone', '') }}" {% if o.driver_phone == d.get('phone', '') %}selected{% endif %}>
+                                            🛵 {{ d.get('name', '') }}
+                                        </option>
+                                        {% endfor %}
+                                    {% else %}
+                                        <option disabled>(أضف مناديب أولاً)</option>
+                                    {% endif %}
+                                </select>
+                            </td>
 
-                    <td>
-                        <div class="btn-group btn-group-sm" role="group">
-                            <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'جديد 🟡')" class="btn btn-outline-warning py-0 px-1" style="font-size: 0.7rem;">جديد 🟡</button>
-                            <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'مدفوع 🟢')" class="btn btn-outline-success py-0 px-1" style="font-size: 0.7rem;">مدفوع 🟢</button>
-                            <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'قيد التجهيز 🔵')" class="btn btn-outline-info py-0 px-1" style="font-size: 0.7rem;">تجهيز 🔵</button>
-                            <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'تم التوصيل 🟢')" class="btn btn-outline-success py-0 px-1" style="font-size: 0.7rem;">توصيل 🟢</button>
-                            <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'ملغي 🔴')" class="btn btn-outline-danger py-0 px-1" style="font-size: 0.7rem;">ملغي 🔴</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            {% else %}
-                <tr>
-                    <td colspan="7" class="text-center py-5 text-muted">
-                        <i class="fas fa-box-open fs-1 mb-2 opacity-50 d-block"></i>
-                        لا توجد طلبات مسجلة حتى الآن
-                    </td>
-                </tr>
-            {% endif %}
-        </tbody>
-    </table>
-</div>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'جديد 🟡')" class="btn btn-outline-warning py-0 px-1" style="font-size: 0.7rem;">جديد 🟡</button>
+                                    <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'مدفوع 🟢')" class="btn btn-outline-success py-0 px-1" style="font-size: 0.7rem;">مدفوع 🟢</button>
+                                    <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'قيد التجهيز 🔵')" class="btn btn-outline-info py-0 px-1" style="font-size: 0.7rem;">تجهيز 🔵</button>
+                                    <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'تم التوصيل 🟢')" class="btn btn-outline-success py-0 px-1" style="font-size: 0.7rem;">توصيل 🟢</button>
+                                    <button type="button" onclick="updateOrderStatus('{{ o.order_id }}', 'ملغي 🔴')" class="btn btn-outline-danger py-0 px-1" style="font-size: 0.7rem;">ملغي 🔴</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-box-open fs-1 mb-2 opacity-50 d-block"></i>
+                                لا توجد طلبات مسجلة حتى الآن
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
 
-</div></div></div></div></div>
+        </div></div></div></div>
+    </div>
 
-            <div class="tab-pane fade" id="products">
+            <!-- تبويب المنتجات (تم تعيينه ليكون النشط افتراضياً) -->
+            <div class="tab-pane fade show active" id="products">
+                
+                <!-- قائمة الوحدات المشتركة للإضافة والتعديل بحرية -->
+                <datalist id="unit-options">
+                    <option value="حبة"></option><option value="كجم"></option><option value="جرام"></option><option value="لتر"></option>
+                    <option value="مل"></option><option value="كرتون"></option><option value="درزن"></option><option value="طقم"></option>
+                    <option value="متر"></option><option value="خدمة"></option>
+                </datalist>
+
                 <div class="card shadow-sm border-0 mb-4 border-top border-4 border-primary">
                     <div class="card-body">
                         <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle text-primary"></i> إضافة منتج</h5>
@@ -199,19 +176,8 @@
                                 <input name="stock" type="number" class="form-control" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="small fw-bold">الوحدة</label>
-                                <select name="unit" class="form-select" required>
-                                    <option value="حبة" selected>حبة</option>
-                                    <option value="كجم">كجم</option>
-                                    <option value="جرام">جرام</option>
-                                    <option value="لتر">لتر</option>
-                                    <option value="مل">مل</option>
-                                    <option value="كرتون">كرتون</option>
-                                    <option value="درزن">درزن</option>
-                                    <option value="طقم">طقم</option>
-                                    <option value="متر">متر</option>
-                                    <option value="خدمة">خدمة</option>
-                                </select>
+                                <label class="small fw-bold text-success"><i class="fas fa-balance-scale"></i> الوحدة (اختر أو اكتب)</label>
+                                <input type="text" name="unit" class="form-control border-success" list="unit-options" placeholder="مثال: حبة، كجم..." value="حبة" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="small fw-bold">التصنيف</label>
@@ -318,12 +284,8 @@
                                                             <input name="stock" type="number" class="form-control" value="{{ p.stock }}" required>
                                                         </div>
                                                         <div class="col-4">
-                                                            <label class="small fw-bold">الوحدة</label>
-                                                            <select name="unit" class="form-select" required>
-                                                                {% for u in ['حبة','كجم','جرام','لتر','مل','كرتون','درزن','طقم','متر','خدمة'] %}
-                                                                <option value="{{ u }}" {% if p.get('unit', 'حبة') == u %}selected{% endif %}>{{ u }}</option>
-                                                                {% endfor %}
-                                                            </select>
+                                                            <label class="small fw-bold text-success"><i class="fas fa-balance-scale"></i> الوحدة</label>
+                                                            <input type="text" name="unit" class="form-control border-success" list="unit-options" value="{{ p.get('unit', 'حبة') }}" required>
                                                         </div>
                                                         <div class="col-12">
                                                             <label class="small fw-bold">التصنيف</label>
@@ -355,80 +317,62 @@
                 </div>
             </div>
 
-            <!-- تبويب إدارة المناديب -->
-            <div class="tab-pane fade" id="drivers">
-                <div class="row">
-                    <!-- نموذج إضافة مندوب -->
-                    <div class="col-md-5 mb-4">
-                        <div class="card shadow-sm border-0 border-top border-4 border-info">
-                            <div class="card-body">
-                                <h5 class="fw-bold mb-3 text-info"><i class="fas fa-motorcycle"></i> إضافة مندوب توصيل</h5>
-                                <form method="POST">
-                                    <input type="hidden" name="action" value="add_driver">
-                                    <div class="mb-3">
-                                        <label class="small fw-bold">اسم المندوب</label>
-                                        <input type="text" name="driver_name" class="form-control" placeholder="مثال: أحمد محمد" required>
-                                    </div>
-                                    <div class="mb-4">
-                                        <label class="small fw-bold">رقم هاتف المندوب (للتواصل وتعيين الطلبات)</label>
-                                        <input type="text" name="driver_phone" class="form-control" placeholder="مثال: 771234567" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-info w-100 fw-bold text-white shadow-sm">حفظ بيانات المندوب 🛵</button>
-                                </form>
-                            </div>
-                        </div>
+            <!-- تبويب إدارة المناديب المتكامل -->
+            <div class="tab-pane fade" id="drivers-pane">
+                <div class="d-flex justify-content-between align-items-center mb-4 mt-3 bg-white p-3 rounded shadow-sm border border-info border-start-0 border-end-0 border-bottom-0 border-4">
+                    <div>
+                        <h5 class="fw-bold text-info mb-1"><i class="fas fa-motorcycle me-2"></i> إدارة فريق التوصيل</h5>
+                        <small class="text-muted fw-bold">أضف مناديبك وشاركهم روابط الاستلام.</small>
                     </div>
-                    <!-- جدول قائمة المناديب -->
-                    <div class="col-md-7 mb-4">
-                        <div class="card shadow-sm border-0">
-                            <div class="card-body">
-                                <h5 class="fw-bold mb-3"><i class="fas fa-users"></i> قائمة مناديب المتجر</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-hover align-middle text-center">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>اسم المندوب</th>
-                                                <th>رقم الهاتف</th>
-                                                <th>إجراء</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% if drivers %}
-                                                {% for d in drivers %}
-                                                <tr>
-                                                    <td class="fw-bold text-dark text-start">🛵 {{ d.get('name', '') }}</td>
-                                                    <td>
-                                                        <a href="tel:{{ d.get('phone', '') }}" class="text-decoration-none text-muted fw-bold">
-                                                            <i class="fas fa-phone-alt text-success me-1"></i>{{ d.get('phone', '') }}
-                                                        </a>
-                                                    </td>
-                                                    <td>
-                                                        <form method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا المندوب؟');">
-                                                            <input type="hidden" name="action" value="delete_driver">
-                                                            <input type="hidden" name="driver_phone" value="{{ d.get('phone', '') }}">
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2">
-                                                                <i class="fas fa-trash"></i>
-                                                            </button>
-                                                        </form>
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
-                                            {% else %}
-                                                <tr>
-                                                    <td colspan="3" class="text-muted py-4">
-                                                        <i class="fas fa-motorcycle fs-2 mb-2 opacity-50 d-block"></i>
-                                                        لا يوجد مناديب مسجلين حالياً. أضف مندوبك الأول من النموذج الجانبي.
-                                                    </td>
-                                                </tr>
-                                            {% endif %}
-                                        </tbody>
-                                    </table>
+                    <button class="btn btn-info btn-sm rounded-pill text-white px-4 py-2 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addDriverModal">
+                        <i class="fas fa-plus-circle me-1"></i> مندوب جديد
+                    </button>
+                </div>
+
+                <div class="row g-3" id="driversListContainer">
+                    {% if drivers %}
+                        {% for d in drivers %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white h-100">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <div>
+                                        <h6 class="fw-bold mb-1 text-dark">{{ d.get('name', '') }}</h6>
+                                        <span class="text-muted small"><i class="fas fa-phone-alt me-1 text-success"></i> {{ d.get('phone', '') }}</span>
+                                    </div>
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 small rounded-pill">نشط 🟢</span>
+                                </div>
+                                
+                                <div class="bg-light p-2 rounded-3 my-2 small border border-light">
+                                    <span class="text-muted d-block mb-1 fw-bold">رابط البوابة الميدانية:</span>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control border-0 bg-white" value="{{ request.host_url }}driver/{{ d.get('token', d.get('_id', '')) }}" id="link-{{ d.get('token', d.get('_id', '')) }}" readonly>
+                                        <button class="btn btn-outline-primary" onclick="copyDriverPortalLink('{{ d.get('token', d.get('_id', '')) }}')" title="نسخ الرابط"><i class="fas fa-copy"></i></button>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                                    <a href="https://wa.me/{{ d.get('phone', '') }}?text={{ ('مرحباً ' + d.get('name', '') + '، هذا هو رابط بوابة استلام مهام التوصيل الخاصة بك:%0A' + request.host_url + 'driver/' + d.get('token', d.get('_id', '')))|urlencode }}" target="_blank" class="btn btn-sm btn-success rounded-pill px-3 fw-bold shadow-sm">
+                                        <i class="fab fa-whatsapp me-1"></i> إرسال الرابط
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold" onclick="deleteDriver('{{ d.get('token', d.get('_id', '')) }}')">
+                                        <i class="fas fa-trash-alt me-1"></i> إزالة
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="col-12 text-center py-5 bg-white rounded-4 shadow-sm border border-light">
+                            <i class="fas fa-motorcycle fs-1 text-muted mb-3 opacity-50 d-block"></i>
+                            <h6 class="text-muted fw-bold">لم تقم بإضافة أي مندوب توصيل بعد</h6>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
+
+            <!-- Modal إضافة مندوب جديد -->
+            {% include 'partials/add_driver_modal.html' %}
+
 
             <div class="tab-pane fade" id="coupons"><div class="row"><div class="col-md-5 mb-4"><div class="card shadow-sm border-0 border-top border-4 border-warning"><div class="card-body"><h5 class="fw-bold mb-3"><i class="fas fa-ticket-alt text-warning"></i> إنشاء كوبون خصم</h5><form method="POST"><input type="hidden" name="action" value="add_coupon"><div class="mb-3"><label class="small fw-bold">كود الكوبون (مثال: KSA20)</label><input type="text" name="code" class="form-control" required style="text-transform: uppercase;"></div><div class="mb-4"><label class="small fw-bold">نسبة الخصم المئوية (%)</label><input type="number" name="discount" class="form-control" placeholder="مثال: 15" required min="1" max="99"></div><button type="submit" class="btn btn-warning w-100 fw-bold text-dark shadow-sm">تفعيل الكوبون</button></form></div></div></div><div class="col-md-7"><div class="card shadow-sm border-0"><div class="card-body"><h5 class="fw-bold mb-3">الكوبونات الفعالة</h5><div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th>كود الكوبون</th><th>نسبة الخصم</th><th>إجراءات</th></tr></thead><tbody>{% for c in coupons %}<tr><td class="fw-bold text-primary fs-5">{{ c.code }}</td><td><span class="badge bg-success fs-6">{{ c.discount }}%</span></td><td><form method="POST" onsubmit="return confirm('إلغاء هذا الكوبون؟');"><input type="hidden" name="action" value="delete_coupon"><input type="hidden" name="coupon_id" value="{{ c.id }}"><button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="3" class="text-muted py-3 text-center fw-bold">لا توجد كوبونات فعالة حالياً</td></tr>{% endfor %}</tbody></table></div></div></div></div></div></div>
 
@@ -554,6 +498,25 @@
 
 {% block page_scripts %}
 <script>
+function filterOrdersTable() {
+    let idFilter = document.getElementById('filterOrdId').value.toLowerCase();
+    let custFilter = document.getElementById('filterOrdCust').value.toLowerCase();
+    let statFilter = document.getElementById('filterOrdStat').value.toLowerCase();
+    
+    let rows = document.querySelectorAll('#ordersTableBody tr.order-row');
+    rows.forEach(row => {
+        let idTxt = row.cells[0].innerText.toLowerCase();
+        let custTxt = row.cells[1].innerText.toLowerCase();
+        let statTxt = row.cells[4].innerText.toLowerCase();
+        
+        if (idTxt.includes(idFilter) && custTxt.includes(custFilter) && statTxt.includes(statFilter)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
 function toggleProviderFields() { 
             let provider = document.getElementById('providerSelect').value; 
             if(provider === 'cloudinary') { 
