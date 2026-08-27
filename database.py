@@ -63,7 +63,7 @@ def edit_merchant_info(user_id, new_slug, new_package):
 # ==========================================
 def get_settings(user_id):
     setting = settings_col.find_one({"u_id": user_id})
-    return setting if setting else {'store_name': 'متجري', 'store_desc': 'وصف المتجر', 'whatsapp': '', 'currency': 'ريال', 'theme_color': '#0d6efd', 'font_family': 'Cairo'}
+    return setting if setting else {'store_name': 'متجري', 'store_desc': 'وصف المتجر', 'whatsapp': '', 'currency': 'ريال', 'theme_color': '#0d6efd', 'font_family': 'Cairo', 'welcome_message': 'أهلاً بك في متجرنا! نتمنى لك تسوقاً ممتعاً.'}
 
 def update_settings(user_id, data): 
     settings_col.update_one({"u_id": user_id}, {"$set": data}, upsert=True)
@@ -71,15 +71,15 @@ def update_settings(user_id, data):
 # ==========================================
 # إدارة المنتجات
 # ==========================================
-def add_product(user_id, name, desc, price, cat, img, stock):
+def add_product(user_id, name, desc, price, cat, img, stock, unit='حبة'):
     try: 
-        products_col.insert_one({"id": f"P-{uuid.uuid4().hex[:6]}", "u_id": user_id, "name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock), "created_at": datetime.now(), "ratings_sum": 0, "ratings_count": 0, "rated_ips": {}})
+        products_col.insert_one({"id": f"P-{uuid.uuid4().hex[:6]}", "u_id": user_id, "name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock), "unit": unit, "created_at": datetime.now(), "ratings_sum": 0, "ratings_count": 0, "rated_ips": {}})
         return True
     except: return False
 
-def edit_product(product_id, user_id, name, desc, price, cat, img, stock):
+def edit_product(product_id, user_id, name, desc, price, cat, img, stock, unit='حبة'):
     try: 
-        products_col.update_one({"id": product_id, "u_id": user_id}, {"$set": {"name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock)}})
+        products_col.update_one({"id": product_id, "u_id": user_id}, {"$set": {"name": name, "description": desc, "price": float(price), "category": cat, "image_url": img, "stock": int(stock), "unit": unit}})
         return True
     except: return False
 
@@ -544,4 +544,3 @@ def check_merchant_product_limit(user_id):
     except Exception as e:
         print("Limit Error:", e)
         return True, 0, 999999, "خطأ", ""
-

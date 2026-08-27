@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{{ settings.store_name }}</title>
     <link rel="manifest" href="/manifest/{{ user.store_slug }}.json">
+    
     {% if settings.get('logo_url') and settings.logo_url.strip() != '' %}
     <link rel="icon" href="{{ settings.logo_url }}">
     <link rel="apple-touch-icon" href="{{ settings.logo_url }}">
@@ -11,23 +13,56 @@
     <link rel="icon" href="{{ url_for('static', filename='icon-512.png') }}?v={{ static_version }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}?v={{ static_version }}">
     {% endif %}
+    
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="{{ settings.store_name }}">
     <meta name="theme-color" content="{{ settings.theme_color|default('#0d6efd') }}">
-<link href="https://fonts.googleapis.com/css2?family={{ settings.font_family|default('Cairo') }}:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- تسريع تحميل الخطوط -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family={{ settings.font_family|default('Cairo') }}:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/store.css') }}?v={{ static_version }}">
+    
     <style>
-:root {
-    --main-color: {{ settings.theme_color|default('#0d6efd') }};
-    --store-font: '{{ settings.font_family|default('Cairo') }}';
-}
-</style>
-    <script src="{{ url_for('static', filename='js/app.js') }}?v={{ static_version }}"></script>
+        :root {
+            --main-color: {{ settings.theme_color|default('#0d6efd') }};
+            --store-font: '{{ settings.font_family|default('Cairo') }}';
+        }
+    </style>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v={{ static_version }}" defer></script>
 </head>
 <body class="header-{{ settings.header_size|default('medium') }}">
+
+    <!-- النافذة الترحيبية للعميل -->
+    {% if settings.get('welcome_message') and settings.welcome_message.strip() != '' %}
+    <div class="modal fade" id="welcomeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg text-center" style="border-radius: 24px; overflow: hidden;">
+                <div class="modal-body p-5">
+                    <div class="mb-4 position-relative">
+                        {% if settings.get('logo_url') %}
+                        <img src="{{ settings.logo_url }}" class="rounded-circle shadow" width="90" height="90" style="object-fit: contain; border: 3px solid var(--main-color); background: #fff;">
+                        {% else %}
+                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center mx-auto shadow" style="width: 90px; height: 90px;">
+                            <i class="fas fa-store text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <h4 class="fw-bold text-dark mb-3">أهلاً بك في {{ settings.store_name }}!</h4>
+                    <p class="text-muted fw-bold mb-4" style="line-height: 1.7; font-size: 1.1rem;">{{ settings.welcome_message }}</p>
+                    <button type="button" class="btn btn-primary btn-lg rounded-pill px-5 fw-bold shadow-sm w-100" data-bs-dismiss="modal" style="background-color: var(--main-color); border: none;">تصفح المنتجات 🚀</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="hero-section">
         <div class="container d-flex flex-column align-items-center justify-content-center">
             {% if settings.get('logo_url') and settings.logo_url.strip() != '' %}
@@ -57,7 +92,7 @@
                 </select>
             </div>
             <div class="col-6 col-md-3 text-end order-3 order-md-3">
-                <button class="btn btn-outline-primary w-100 btn-share bg-white h-100" onclick="shareStore()"><i class="fas fa-share-nodes"></i> مشاركة</button>
+                <button class="btn btn-outline-primary w-100 btn-share bg-white h-100 fw-bold" onclick="shareStore()"><i class="fas fa-share-nodes"></i> شارك المتجر</button>
             </div>
         </div>
     </div>
@@ -84,20 +119,21 @@
                             <textarea id="raw-desc-{{ p.id }}" style="display:none;">{{ p.description }}</textarea>
                             <textarea id="raw-img-{{ p.id }}" style="display:none;">{{ p.image_url }}</textarea>
 
-                            <div class="img-wrapper" onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}')" title="عرض التفاصيل">
+                            <!-- إضافة وحدة المنتج ضمن معاملات النافذة -->
+                            <div class="img-wrapper" onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}', '{{ p.get('unit', 'حبة') }}')" title="عرض التفاصيل">
                                 <img src="{{ p.image_url if p.image_url else 'https://via.placeholder.com/400x300?text=بدون+صورة' }}" onerror="fixImg(this)" class="product-img" loading="lazy">
                             </div>
                             <div class="card-body p-3 d-flex flex-column">
-                                <h6 class="product-title" style="cursor:pointer;" onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}')">{{ p.name }}</h6>
+                                <h6 class="product-title" style="cursor:pointer;" onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}', '{{ p.get('unit', 'حبة') }}')">{{ p.name }}</h6>
 
                                 {% if p.description %}
                                 <p class="text-muted mb-2" style="font-size: 0.8rem; line-height: 1.5;">
                                     {{ p.description | truncate(45, False, '...') }}
-                                    <span onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}')" class="text-primary fw-bold ms-1" style="cursor:pointer; font-size: 0.8rem; text-decoration: none;"><i class="fas fa-info-circle me-1"></i>التفاصيل</span>
+                                    <span onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}', '{{ p.get('unit', 'حبة') }}')" class="text-primary fw-bold ms-1" style="cursor:pointer; font-size: 0.8rem; text-decoration: none;"><i class="fas fa-info-circle me-1"></i>التفاصيل</span>
                                 </p>
                                 {% else %}
                                 <div class="mb-2">
-                                    <span onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}')" class="badge bg-light text-primary border px-2 py-1 shadow-sm" style="cursor:pointer;"><i class="fas fa-info-circle me-1"></i>التفاصيل</span>
+                                    <span onclick="openDetailsModal('{{ p.id }}', '{{ p.price }}', '{{ p.get('unit', 'حبة') }}')" class="badge bg-light text-primary border px-2 py-1 shadow-sm" style="cursor:pointer;"><i class="fas fa-info-circle me-1"></i>التفاصيل</span>
                                 </div>
                                 {% endif %}
 
@@ -118,7 +154,7 @@
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <div class="product-price">
                                             {% if p.price and p.price|string != "0" and p.price|string != "None" and p.price|string != "" %}
-                                                {{ p.price }} <small>{{ settings.currency }}</small>
+                                                {{ p.price }} <small>{{ settings.currency }} / {{ p.get('unit', 'حبة') }}</small>
                                             {% else %}
                                                 <span class="badge bg-secondary fs-6">السعر عند الطلب</span>
                                             {% endif %}
@@ -188,6 +224,7 @@
                     {% if settings.wallet_provider == 'jawali' %}(جوالي)
                     {% elif settings.wallet_provider == 'floosak' %}(فلوسك)
                     {% elif settings.wallet_provider == 'kuraimi' %}(ام فلوس - الكريمي)
+                    {% elif settings.wallet_provider == 'jeeb' %}(محفظة جيب)
                     {% else %}(محفظة إلكترونية){% endif %}
                 </option>
             {% endif %}
@@ -206,18 +243,30 @@
     <button id="btn-submit" class="btn btn-success btn-lg w-100 fw-bold shadow-sm rounded-pill" onclick="checkout()"><i class="fab fa-whatsapp fs-5 me-1"></i> إرسال الطلب</button></div></div></div></div>
 
     <!-- Details Modal -->
-    <div class="modal fade" id="detailsModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content shadow-lg overflow-hidden"><div class="modal-header bg-light border-0"><h5 class="modal-title fw-bold text-dark" id="detailsName"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div style="background:#f8f9fa; text-align:center; border-bottom:1px solid #eaeaea;"><img id="detailsImg" src="" onerror="fixImg(this)" style="max-height:350px; max-width:100%; object-fit:contain; padding:20px;"></div><div class="p-4"><h3 class="text-primary fw-bold border-bottom pb-3 mb-3"><span id="detailsPrice"></span> <small class="fs-6 text-muted">{{ settings.currency }}</small></h3><h6 class="fw-bold mb-2 text-dark"><i class="fas fa-align-right text-primary me-1"></i> تفاصيل المنتج:</h6><p id="detailsDesc" class="text-muted" style="line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap;"></p></div></div><div class="modal-footer bg-light border-0 p-3"><button id="detailsAddToCartBtn" class="btn btn-primary w-100 fw-bold py-3 fs-5 rounded-pill"><i class="fas fa-cart-plus me-1"></i> إضافة إلى السلة</button></div></div></div></div>
+    <div class="modal fade" id="detailsModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content shadow-lg overflow-hidden"><div class="modal-header bg-light border-0"><h5 class="modal-title fw-bold text-dark" id="detailsName"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0"><div style="background:#f8f9fa; text-align:center; border-bottom:1px solid #eaeaea;"><img id="detailsImg" src="" onerror="fixImg(this)" style="max-height:350px; max-width:100%; object-fit:contain; padding:20px;"></div><div class="p-4"><h3 class="text-primary fw-bold border-bottom pb-3 mb-3"><span id="detailsPrice"></span> <small class="fs-6 text-muted">{{ settings.currency }} <span id="detailsUnit"></span></small></h3><h6 class="fw-bold mb-2 text-dark"><i class="fas fa-align-right text-primary me-1"></i> تفاصيل المنتج:</h6><p id="detailsDesc" class="text-muted" style="line-height: 1.8; font-size: 0.95rem; white-space: pre-wrap;"></p></div></div>
+    <!-- Footer with Share and Add to Cart -->
+    <div class="modal-footer bg-light border-0 p-3 flex-nowrap">
+        <button id="detailsShareBtn" class="btn btn-outline-secondary py-3 px-4 rounded-pill me-2 shadow-sm" title="مشاركة المنتج"><i class="fas fa-share-nodes"></i></button>
+        <button id="detailsAddToCartBtn" class="btn btn-primary w-100 fw-bold py-3 fs-5 rounded-pill shadow-sm"><i class="fas fa-cart-plus me-1"></i> إضافة إلى السلة</button>
+    </div>
+    </div></div></div>
 
     <!-- Rating Modal -->
     <div class="modal fade" id="globalRatingModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content shadow-lg"><div class="modal-header border-0 pb-0"><h6 class="modal-title fw-bold text-dark" id="ratingModalHeaderTitle"><i class="fas fa-star text-warning"></i> تقييم المنتج</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body text-center pt-2 pb-3"><p id="ratingModalProductName" class="text-secondary small fw-bold mb-3"></p><div class="d-flex justify-content-center flex-row-reverse mb-3" id="interactive-stars" onmouseleave="resetHover()"><svg data-val="5" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="4" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="3" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="2" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg><svg data-val="1" class="modal-star" width="34" height="34" viewBox="0 0 24 24" fill="#e4e5e9" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="cursor:pointer; margin:0 3px; transition: transform 0.2s;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div><div class="mb-2"><button id="confirmRatingBtn" class="btn btn-warning btn-sm px-4 fw-bold rounded-pill shadow-sm" disabled>تأكيد التقييم</button></div><p id="ratingModalMessage" class="fw-bold text-success d-none mb-0 small"></p></div></div></div></div>
-    <style>
-:root {
-    --main-color: {{ settings.theme_color|default('#0d6efd') }};
-    --store-font: '{{ settings.font_family|default('Cairo') }}';
-}
-</style>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
     <script>
+        // إظهار الرسالة الترحيبية لمرة واحدة فقط للزائر
+        document.addEventListener("DOMContentLoaded", function() {
+            if (document.getElementById('welcomeModal') && !sessionStorage.getItem('tajergo_welcome_shown')) {
+                setTimeout(() => {
+                    let welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
+                    welcomeModal.show();
+                    sessionStorage.setItem('tajergo_welcome_shown', 'true');
+                }, 800);
+            }
+        });
+
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
 
         function toggleWalletInput() {
@@ -273,16 +322,57 @@
             tab.addEventListener('shown.bs.tab', function () { if(document.getElementById('sortSelect').value !== 'default') { sortProducts(); } });
         });
 
-        function shareStore() { if (navigator.share) { navigator.share({ title: '{{ settings.store_name }}', text: 'تسوق أفضل المنتجات!', url: window.location.href }); } else { navigator.clipboard.writeText(window.location.href); alert("تم النسخ!"); } }
+        // مشاركة المتجر ككل
+        function shareStore() { 
+            const storeUrl = window.location.origin + window.location.pathname;
+            if (navigator.share) { navigator.share({ title: '{{ settings.store_name }}', text: 'تسوق أفضل المنتجات من متجرنا!', url: storeUrl }); } 
+            else { navigator.clipboard.writeText(storeUrl); alert("تم نسخ رابط المتجر!"); } 
+        }
+
+        // مشاركة منتج معين ببياناته وصورته ورابط المتجر
+        async function shareProduct(name, desc, imgUrl) {
+            const storeUrl = window.location.origin + window.location.pathname;
+            const shareText = `🛍️ متوفر الآن: ${name}\n\n${desc ? desc.substring(0, 60) + '...' : ''}\n\nللطلب، تفضل بزيارة متجرنا عبر الرابط:\n`;
+            
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: name,
+                        text: shareText,
+                        url: storeUrl
+                    });
+                } catch(err) { console.log('Share canceled', err); }
+            } else {
+                navigator.clipboard.writeText(shareText + storeUrl);
+                alert("تم نسخ تفاصيل المنتج والرابط بنجاح!");
+            }
+        }
+
         let cart = []; let cartModalInstance = null; let detailsModalInstance = null; let currentDiscountPercent = 0; let currentDiscountInfo = '';
         document.addEventListener("DOMContentLoaded", function(){ cartModalInstance = new bootstrap.Modal(document.getElementById('cartModal')); detailsModalInstance = new bootstrap.Modal(document.getElementById('detailsModal')); });
 
-        function openDetailsModal(id, price) {
-            let name = document.getElementById('raw-name-' + id).value.trim(); let desc = document.getElementById('raw-desc-' + id).value.trim(); let imgUrl = document.getElementById('raw-img-' + id).value.trim();
+        // تعديل الدالة لاستقبال الوحدة وتفعيل زر المشاركة
+        function openDetailsModal(id, price, unit) {
+            let name = document.getElementById('raw-name-' + id).value.trim(); 
+            let desc = document.getElementById('raw-desc-' + id).value.trim(); 
+            let imgUrl = document.getElementById('raw-img-' + id).value.trim();
+            
             document.getElementById('detailsName').innerText = name;
-            let detailsImg = document.getElementById('detailsImg'); detailsImg.removeAttribute('data-proxied'); detailsImg.src = imgUrl || 'https://via.placeholder.com/800x600?text=بدون+صورة';
-            document.getElementById('detailsPrice').innerText = price; document.getElementById('detailsDesc').innerText = desc || 'لا يوجد وصف متاح لهذا المنتج.';
-            let addBtn = document.getElementById('detailsAddToCartBtn'); addBtn.onclick = function() { addToCart(name, price); detailsModalInstance.hide(); }; detailsModalInstance.show();
+            let detailsImg = document.getElementById('detailsImg'); 
+            detailsImg.removeAttribute('data-proxied'); 
+            detailsImg.src = imgUrl || 'https://via.placeholder.com/800x600?text=بدون+صورة';
+            
+            document.getElementById('detailsPrice').innerText = price; 
+            document.getElementById('detailsUnit').innerText = '/ ' + (unit || 'حبة');
+            document.getElementById('detailsDesc').innerText = desc || 'لا يوجد وصف متاح لهذا المنتج.';
+            
+            let addBtn = document.getElementById('detailsAddToCartBtn'); 
+            addBtn.onclick = function() { addToCart(name, price); detailsModalInstance.hide(); }; 
+            
+            let shareBtn = document.getElementById('detailsShareBtn');
+            shareBtn.onclick = function() { shareProduct(name, desc, imgUrl); };
+
+            detailsModalInstance.show();
         }
 
         function addToCart(name, price) { let item = cart.find(i => i.name === name); if(item) { item.qty++; } else { cart.push({name: name, price: price, qty: 1}); } updateCartUI(); }

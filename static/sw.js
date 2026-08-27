@@ -1,5 +1,5 @@
-const CACHE_NAME = 'tajergo-static-v20260825-2';
-const STATIC_EXTENSIONS = /\.(?:css|js|png|jpg|jpeg|webp|svg|woff2?)$/i;
+const CACHE_NAME = 'tajergo-cache-v20260827';
+const STATIC_EXTENSIONS = /\.(?:css|js|png|jpg|jpeg|webp|svg|woff2?|ico)$/i;
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -19,29 +19,35 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url);
 
-  // Dynamic pages/API: always use the network so new products/settings/orders
-  // are never hidden by an old Service Worker cache.
-  if (request.mode === 'navigate' || url.pathname.startsWith('/api/') ||
-      url.pathname.startsWith('/store/') || url.pathname.startsWith('/dashboard') ||
-      url.pathname.startsWith('/manifest/')) {
+  // 1. مسارات الـ API والـ Manifest: دائماً من الشبكة لضمان التحديث الفوري
+  if (url.pathname.startsWith('/api/') || url.pathname.includes('manifest')) {
     event.respondWith(fetch(request));
     return;
   }
 
-  if (!url.pathname.startsWith('/static/') || !STATIC_EXTENSIONS.test(url.pathname)) {
+  // 2. صفحات الموقع (HTML): استراتيجية Network First لتلبية شروط تثبيت التطبيق (PWA)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
+    );
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then(cached => {
-      const network = fetch(request).then(response => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
-        }
-        return response;
-      });
-      return cached || network;
-    })
-  );
+  // 3. الملفات الثابتة والصور: استراتيجية Stale-While-Revalidate لسرعة تحميل خارقة
+  if (url.pathname.startsWith('/static/') || STATIC_EXTENSIONS.test(url.pathname)) {
+    event.respondWith(
+      caches.match(request).then(cachedResponse => {
+        const fetchPromise = fetch(request).then(networkResponse => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, responseToCache));
+          }
+          return networkResponse;
+        }).catch(() => { /* تجاهل أخطاء الشبكة للملفات الثابتة */ });
+        
+        // إرجاع الكاش فوراً إن وجد (للسرعة)، وإلا انتظار الشبكة
+        return cachedResponse || fetchPromise;
+      })
+    );
+  }
 });

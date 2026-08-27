@@ -66,7 +66,7 @@ STATIC_VERSION = config.STATIC_VERSION
 @app.after_request
 def apply_cache_policy(response):
     path = request.path
-    if path == '/sw.js' or path.startswith('/manifest/') or path.startswith('/api/') or path == '/dashboard' or path.startswith('/store/'):
+    if path == '/sw.js' or path.startswith('/manifest/') or path == '/dashboard_manifest.json' or path.startswith('/api/') or path == '/dashboard' or path.startswith('/store/'):
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'
         response.headers['Expires'] = '0'
@@ -77,6 +77,7 @@ def apply_cache_policy(response):
 def send_telegram_alert(message):
     try:
         bot_token = config.TELEGRAM_BOT_TOKEN
+        if not bot_token: return
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         data = json.dumps({"chat_id": config.TELEGRAM_CHAT_ID, "text": message, "parse_mode": "HTML"}).encode('utf-8')
         req = urllib.request.Request(url, data=data, headers={'Content-Type': 'application/json'}, method='POST')
@@ -95,7 +96,7 @@ def inject_global_vars():
 @app.before_request
 def handle_custom_domains():
     host = request.host.lower()
-    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/manifest', '/sw.js', '/delivery', '/track']
+    excluded_paths = ['/login', '/logout', '/dashboard', '/api/', '/export', '/manifest', '/dashboard_manifest.json', '/sw.js', '/delivery', '/track']
     if not host.endswith('.vercel.app') and not any(request.path.startswith(p) for p in excluded_paths) and host not in ['127.0.0.1:5000', 'localhost:5000']:
         merchant_settings = database.settings_col.find_one({"custom_domain": host})
         if merchant_settings:
@@ -122,6 +123,21 @@ def home():
 
 @app.route('/store/<slug>')
 def view_store(slug): return view_store_logic(slug)
+
+@app.route('/dashboard_manifest.json')
+def dashboard_manifest():
+    return jsonify({
+        "name": "لوحة تحكم المنصة",
+        "short_name": "اللوحة",
+        "start_url": "/dashboard",
+        "display": "standalone",
+        "background_color": "#f8f9fa",
+        "theme_color": "#212529",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
+        ]
+    })
 
 @app.route('/manifest/<slug>.json')
 def pwa_manifest(slug):
@@ -272,7 +288,8 @@ def checkout(slug):
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     wa_link = "https://wa.me/" + str(wa_phone) + "?text=" + urllib.parse.quote(msg)
-        # --- كود إرسال الإشعار إلى التليجرام للتاجر ---
+    
+    # إرسال الإشعار للتاجر
     if settings.get('enable_telegram') and settings.get('telegram_chat_id'):
         try:
             bot_token = config.TELEGRAM_BOT_TOKEN
@@ -283,7 +300,6 @@ def checkout(slug):
                 urllib.request.urlopen(req, timeout=3)
         except Exception as e:
             pass
-    # -----------------------------------------------
 
     return jsonify({
         "success": True,
@@ -377,10 +393,13 @@ def dashboard():
                     (request.form.get('price') or 0), 
                     request.form.get('cat'), 
                     request.form.get('img'), 
-                    request.form.get('stock')
+                    request.form.get('stock'),
+                    request.form.get('unit', 'حبة') # تمرير نوع الوحدة
                 )
                 flash(f"تم إضافة المنتج بنجاح 📦 ({cur_cnt + 1} من {max_lim})", "success")
-        elif action == 'edit_product': database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock')); flash("تم التعديل", "success")
+        elif action == 'edit_product': 
+            database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock'), request.form.get('unit', 'حبة'))
+            flash("تم التعديل", "success")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
         elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
         elif action == 'add_driver':
@@ -428,7 +447,8 @@ def dashboard():
                 'wallet_provider': request.form.get('wallet_provider', ''), 
                 'wallet_merchant_id': request.form.get('wallet_merchant_id', '').strip(), 
                 'wallet_api_key': request.form.get('wallet_api_key', '').strip(), 
-                'wallet_secret': request.form.get('wallet_secret', '').strip()
+                'wallet_secret': request.form.get('wallet_secret', '').strip(),
+                'welcome_message': request.form.get('welcome_message', '').strip() # حفظ رسالة الترحيب
             }
             if is_super_admin and request.form.get('platform_logo'): settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
             database.update_settings(session['user_id'], settings_data); flash("تم الحفظ بنجاح", "success")
@@ -436,12 +456,15 @@ def dashboard():
         elif action == 'delete_package' and is_super_admin: database.delete_package(request.form.get('pkg_id')); flash("تم الحذف", "danger")
         elif action == 'add_merchant' and is_super_admin:
             slug = request.form.get('slug', '').strip()
-            if database.create_new_merchant(request.form.get('name'), slug, request.form.get('password', '').strip()):
+            m_name = request.form.get('name')
+            if database.create_new_merchant(m_name, slug, request.form.get('password', '').strip()):
                 new_user = database.users_col.find_one({"store_slug": slug})
                 if new_user:
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
-                    database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo!", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo", 10)
+                    database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo!", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo", 10, "حبة")
                 
+                # إرسال إشعار للمنصة بانضمام تاجر جديد
+                send_telegram_alert(f"🚀 <b>تاجر جديد انضم للمنصة!</b>\n\n<b>الاسم:</b> {m_name}\n<b>الرابط:</b> {slug}\n<b>الباقة:</b> {request.form.get('package', 'أساسية')}")
                 flash("تم إنشاء المتجر", "success")
             else: flash("الرابط محجوز", "danger")
         elif action == 'toggle_status' and is_super_admin: database.toggle_user_status(request.form.get('user_id'), request.form.get('current_status'))
