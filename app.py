@@ -4,7 +4,6 @@ def extract_clean_products(order):
     import json
     parsed = []
     
-    # أ) فحص حقل السلة (cart) سواء كان مصفوفة أو نص JSON
     cart = order.get('cart')
     if isinstance(cart, str):
         try:
@@ -26,7 +25,6 @@ def extract_clean_products(order):
         qty = cart.get('qty') or 1
         parsed.append(f"{name} (x{qty})")
 
-    # ب) فحص حقل items إذا لم نجد منتجات في السلة
     if not parsed:
         raw_items = order.get('items')
         if isinstance(raw_items, str) and raw_items.strip():
@@ -43,14 +41,12 @@ def extract_clean_products(order):
                 elif isinstance(it, str) and it.strip():
                     parsed.append(it.strip())
 
-    # ج) فحص الحقول الفردية القديمة
     if not parsed:
         p_name = order.get('product_name') or order.get('item_name')
         if p_name:
             qty = order.get('qty') or 1
             parsed.append(f"{p_name} (x{qty})")
 
-    # في حال انعدام البيانات تماماً
     if not parsed:
         parsed.append("منتج")
 
@@ -129,7 +125,6 @@ def view_store(slug): return view_store_logic(slug)
 
 @app.route('/manifest/<slug>.json')
 def pwa_manifest(slug):
-    """إنشاء Manifest مستقل لكل متجر باستخدام شعار المتجر كأيقونة للتطبيق."""
     user = database.get_user_by_slug(slug)
     if not user:
         return abort(404)
@@ -276,11 +271,6 @@ def checkout(slug):
     msg = f"🛍️ طلب جديد من المتجر\nرقم الطلب: {order_id}\nالعميل: {data['name']}\nالهاتف: {data['phone']}\nالعنوان: {data.get('address', 'غير محدد')}\nطريقة الدفع: {payment_str}\n\nالمنتجات:\n{items_list_str}\n\nالإجمالي: {real_total} {currency_label}"
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
-    
-    # 🌟 هنا الإصلاح الدقيق والمضمون 100% 🌟
-    wa_link = f"https://wa.me/{wa_phone}?text={{urllib.parse.quote(msg)}}"
-    
-    # تصحيح الخطأ في دمج المتغير لتجنب أي مشاكل
     wa_link = "https://wa.me/" + str(wa_phone) + "?text=" + urllib.parse.quote(msg)
     
     return jsonify({
@@ -364,7 +354,6 @@ def dashboard():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'add_product':
-            # فحص الباقة والحد الأقصى قبل الإضافة
             can_add, cur_cnt, max_lim, pkg_n, err_msg = database.check_merchant_product_limit(session['user_id'])
             if not can_add:
                 flash(err_msg, "danger")
@@ -399,7 +388,7 @@ def dashboard():
             flash("تم حذف المندوب 🗑️", "danger")
         elif action == 'add_coupon': database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
         elif action == 'delete_coupon': database.delete_coupon(request.form.get('coupon_id'), session['user_id']); flash("تم حذف الكوبون", "danger")
-                elif action == 'change_password':
+        elif action == 'change_password':
             old_p, new_p, confirm_p = request.form.get('old_password', ''), request.form.get('new_password', ''), request.form.get('confirm_password', '')
             if new_p != confirm_p: flash("كلمة المرور غير متطابقة", "danger")
             else: flash("تم التغيير" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
@@ -411,7 +400,6 @@ def dashboard():
             }
             database.update_settings(session['user_id'], telegram_data)
             flash("تم حفظ إعدادات تليجرام بنجاح", "success")
-
 
         elif action == 'save_settings':
             settings_data = {
@@ -518,6 +506,7 @@ def dashboard():
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
+
 @app.route('/driver/<token>', methods=['GET'])
 @app.route('/delivery', methods=['GET'])
 def driver_portal(token=None):
@@ -568,7 +557,6 @@ def api_update_order_status():
     data = request.json
     database.orders_col.update_one({"order_id": data['order_id'], "store_id": session.get('user_id')}, {"$set": {"status": data['status']}})
     return jsonify({"success": True})
-
 
 if __name__ == '__main__':
     app.run(debug=True)
