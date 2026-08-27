@@ -16,3 +16,19 @@ body { font-family: 'Cairo', sans-serif; background-color: #f4f6f9; }
 }
 #myTab .nav-item { flex: 0 0 auto; }
 #myTab .nav-link { white-space: nowrap; }
+/* تأثير التحميل النبضي للصور */
+.img-wrapper, .store-logo, td img {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeletonLoading 1.5s infinite;
+    position: relative;
+}
+@keyframes skeletonLoading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+img { 
+    /* إخفاء تأثير التحميل بمجرد ظهور الصورة الفعلية فوقه */
+    position: relative; 
+    z-index: 1; 
+}

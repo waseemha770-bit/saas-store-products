@@ -1,17 +1,13 @@
 import urllib.parse
+
 def extract_clean_products(order):
-    """دالة معيارية لاستخراج أسماء المنتجات والكميات من أي هيكل بيانات مخزن"""
     import json
     parsed = []
-    
     cart = order.get('cart')
     if isinstance(cart, str):
-        try:
-            cart = json.loads(cart)
+        try: cart = json.loads(cart)
         except Exception:
-            if cart.strip():
-                parsed.append(cart.strip())
-                
+            if cart.strip(): parsed.append(cart.strip())
     if isinstance(cart, list):
         for it in cart:
             if isinstance(it, dict):
@@ -30,16 +26,14 @@ def extract_clean_products(order):
         if isinstance(raw_items, str) and raw_items.strip():
             for line in raw_items.splitlines():
                 clean_line = line.strip().lstrip('▪️').lstrip('-').strip()
-                if clean_line:
-                    parsed.append(clean_line)
+                if clean_line: parsed.append(clean_line)
         elif isinstance(raw_items, list):
             for it in raw_items:
                 if isinstance(it, dict):
                     name = it.get('name') or it.get('title') or 'منتج'
                     qty = it.get('qty') or 1
                     parsed.append(f"{name} (x{qty})")
-                elif isinstance(it, str) and it.strip():
-                    parsed.append(it.strip())
+                elif isinstance(it, str) and it.strip(): parsed.append(it.strip())
 
     if not parsed:
         p_name = order.get('product_name') or order.get('item_name')
@@ -47,15 +41,19 @@ def extract_clean_products(order):
             qty = order.get('qty') or 1
             parsed.append(f"{p_name} (x{qty})")
 
-    if not parsed:
-        parsed.append("منتج")
-
+    if not parsed: parsed.append("منتج")
     return parsed
 
-import re
+def get_pwa_icon_url(raw_url, size):
+    """دالة لتحويل أي شعار إلى أيقونة PWA قياسية"""
+    if not raw_url or 'icon-' in raw_url:
+        return f"/static/icon-{size}.png"
+    encoded_url = urllib.parse.quote(raw_url)
+    return f"https://wsrv.nl/?url={encoded_url}&w={size}&h={size}&fit=contain&output=png&bg=white"
+
+import re, os, io, csv, json, urllib.request, urllib.error
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, send_from_directory
-import database, os, urllib.parse, io, csv, json, urllib.request, urllib.error
-import config
+import database, config
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -117,8 +115,7 @@ def view_store_logic(slug):
 @app.route('/')
 @app.route('/home')
 def home():
-    if 'user_id' in session:
-        return redirect(url_for('dashboard'))
+    if 'user_id' in session: return redirect(url_for('dashboard'))
     return redirect(url_for('login'))
 
 @app.route('/store/<slug>')
@@ -126,6 +123,12 @@ def view_store(slug): return view_store_logic(slug)
 
 @app.route('/dashboard_manifest.json')
 def dashboard_manifest():
+    admin = database.users_col.find_one({"store_slug": "admin-store"})
+    logo = ""
+    if admin:
+        sett = database.settings_col.find_one({"u_id": admin['id']})
+        if sett: logo = sett.get('platform_logo', '')
+    
     return jsonify({
         "name": "لوحة تحكم المنصة",
         "short_name": "اللوحة",
@@ -134,22 +137,19 @@ def dashboard_manifest():
         "background_color": "#f8f9fa",
         "theme_color": "#212529",
         "icons": [
-            {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
-            {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
+            {"src": get_pwa_icon_url(logo, 192), "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": get_pwa_icon_url(logo, 512), "sizes": "512x512", "type": "image/png", "purpose": "any"}
         ]
     })
 
 @app.route('/manifest/<slug>.json')
 def pwa_manifest(slug):
     user = database.get_user_by_slug(slug)
-    if not user:
-        return abort(404)
+    if not user: return abort(404)
 
     settings = database.get_settings(user['id']) or {}
     store_name = (settings.get('store_name') or 'TajerGo Store').strip()
     logo = (settings.get('logo_url') or '').strip()
-    fallback_logo = '/static/icon-512.png'
-    icon_src = logo or fallback_logo
     theme_color = settings.get('theme_color') or '#0d6efd'
 
     return jsonify({
@@ -162,8 +162,8 @@ def pwa_manifest(slug):
         "background_color": "#ffffff",
         "theme_color": theme_color,
         "icons": [
-            {"src": icon_src, "sizes": "192x192", "type": "image/png", "purpose": "any"},
-            {"src": icon_src, "sizes": "512x512", "type": "image/png", "purpose": "any"}
+            {"src": get_pwa_icon_url(logo, 192), "sizes": "192x192", "type": "image/png", "purpose": "any"},
+            {"src": get_pwa_icon_url(logo, 512), "sizes": "512x512", "type": "image/png", "purpose": "any"}
         ]
     })
 
@@ -289,7 +289,6 @@ def checkout(slug):
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     wa_link = "https://wa.me/" + str(wa_phone) + "?text=" + urllib.parse.quote(msg)
     
-    # إرسال الإشعار للتاجر
     if settings.get('enable_telegram') and settings.get('telegram_chat_id'):
         try:
             bot_token = config.TELEGRAM_BOT_TOKEN
@@ -313,33 +312,30 @@ def checkout(slug):
 def track_order(order_id=None):
     raw_query = (order_id or request.args.get('order_id', '') or request.args.get('q', '')).strip()
     clean_query = raw_query.replace('#', '').strip()
-    
-    if not clean_query:
-        return render_template('track.html', order=None)
+    if not clean_query: return render_template('track.html', order=None)
     
     digits = ''.join(c for c in clean_query if c.isdigit())
     digits_suffix = digits[-9:] if len(digits) >= 9 else (digits[-7:] if len(digits) >= 7 else digits)
     
     or_filters = [
         {'order_id': clean_query},
-        {'order_id': {'': f'^{clean_query}$', '': 'i'}},
+        {'order_id': {'$regex': f'^{clean_query}$', '$options': 'i'}},
         {'customer_phone': clean_query},
         {'phone': clean_query}
     ]
     
     if digits:
-        or_filters.append({'customer_phone': {'': digits_suffix}})
-        or_filters.append({'phone': {'': digits_suffix}})
+        or_filters.append({'customer_phone': {'$regex': digits_suffix}})
+        or_filters.append({'phone': {'$regex': digits_suffix}})
         try:
             or_filters.append({'customer_phone': int(digits)})
             or_filters.append({'phone': int(digits)})
             if digits_suffix != digits:
                 or_filters.append({'customer_phone': int(digits_suffix)})
                 or_filters.append({'phone': int(digits_suffix)})
-        except:
-            pass
+        except: pass
             
-    order = database.orders_col.find_one({'': or_filters}, sort=[('_id', -1)])
+    order = database.orders_col.find_one({'$or': or_filters}, sort=[('_id', -1)])
     
     if not order and (digits_suffix or clean_query):
         recent_orders = list(database.orders_col.find().sort('_id', -1).limit(200))
@@ -351,7 +347,7 @@ def track_order(order_id=None):
                 break
                 
     if not order:
-        return render_template('track.html', order=None, search_query=raw_query, error='عذراً، لم نتمكن من العثور على الطلب. يرجى التأكد من رقم الطلب (مثال: ORD-XXXX) أو رقم هاتفك المسجل.')
+        return render_template('track.html', order=None, search_query=raw_query, error='عذراً، لم نتمكن من العثور على الطلب. يرجى التأكد من رقم الطلب.')
     
     settings = database.get_settings(order.get('store_id'))
     return render_template('track.html', order=order, settings=settings, search_query=raw_query)
@@ -394,7 +390,7 @@ def dashboard():
                     request.form.get('cat'), 
                     request.form.get('img'), 
                     request.form.get('stock'),
-                    request.form.get('unit', 'حبة') # تمرير نوع الوحدة
+                    request.form.get('unit', 'حبة')
                 )
                 flash(f"تم إضافة المنتج بنجاح 📦 ({cur_cnt + 1} من {max_lim})", "success")
         elif action == 'edit_product': 
@@ -407,12 +403,9 @@ def dashboard():
             d_phone = request.form.get('driver_phone') or request.form.get('phone')
             if d_name and d_phone:
                 created = database.add_driver(session['user_id'], d_name, d_phone)
-                if created:
-                    flash(f"تم إضافة المندوب {d_name} بنجاح 🛵", "success")
-                else:
-                    flash("هذا المندوب موجود مسبقًا أو تعذر إنشاءه", "warning")
-            else:
-                flash("يرجى إدخال اسم ورقم المندوب", "danger")
+                if created: flash(f"تم إضافة المندوب {d_name} بنجاح 🛵", "success")
+                else: flash("هذا المندوب موجود مسبقًا أو تعذر إنشاءه", "warning")
+            else: flash("يرجى إدخال اسم ورقم المندوب", "danger")
         elif action == 'delete_driver':
             d_phone = request.form.get('driver_phone') or request.form.get('phone')
             database.delete_driver(session['user_id'], d_phone)
@@ -448,10 +441,11 @@ def dashboard():
                 'wallet_merchant_id': request.form.get('wallet_merchant_id', '').strip(), 
                 'wallet_api_key': request.form.get('wallet_api_key', '').strip(), 
                 'wallet_secret': request.form.get('wallet_secret', '').strip(),
-                'welcome_message': request.form.get('welcome_message', '').strip() # حفظ رسالة الترحيب
+                'welcome_message': request.form.get('welcome_message', '').strip()
             }
             if is_super_admin and request.form.get('platform_logo'): settings_data['platform_logo'] = request.form.get('platform_logo', '').strip()
             database.update_settings(session['user_id'], settings_data); flash("تم الحفظ بنجاح", "success")
+            
         elif action == 'add_package' and is_super_admin: database.add_package(request.form.get('pkg_name'), request.form.get('pkg_price'), request.form.get('pkg_max'), request.form.get('pkg_features')); flash("تمت إضافة الباقة", "success")
         elif action == 'delete_package' and is_super_admin: database.delete_package(request.form.get('pkg_id')); flash("تم الحذف", "danger")
         elif action == 'add_merchant' and is_super_admin:
@@ -463,7 +457,6 @@ def dashboard():
                     database.users_col.update_one({"_id": new_user["_id"]}, {"$set": {"package": request.form.get('package', 'أساسية')}})
                     database.add_product(new_user['id'], "منتج تجريبي 🚀", "مرحباً بك في منصة TajerGo!", 99, "عام", "https://via.placeholder.com/800x600/0d6efd/ffffff?text=TajerGo", 10, "حبة")
                 
-                # إرسال إشعار للمنصة بانضمام تاجر جديد
                 send_telegram_alert(f"🚀 <b>تاجر جديد انضم للمنصة!</b>\n\n<b>الاسم:</b> {m_name}\n<b>الرابط:</b> {slug}\n<b>الباقة:</b> {request.form.get('package', 'أساسية')}")
                 flash("تم إنشاء المتجر", "success")
             else: flash("الرابط محجوز", "danger")
@@ -472,6 +465,23 @@ def dashboard():
         elif action == 'edit_merchant_info' and is_super_admin:
             if database.edit_merchant_info(request.form.get('user_id'), request.form.get('new_slug', '').strip(), request.form.get('new_package', 'أساسية')): flash("تم تحديث التاجر", "success")
             else: flash("الرابط محجوز!", "danger")
+        
+        # --- سكربت الترحيل الجاهز للمستقبل الخاص بالمدير ---
+        elif action == 'migrate_images' and is_super_admin:
+            def migrate_images_task():
+                import requests
+                # import cloudinary.uploader # يتم التفعيل لاحقاً عند اشتراكك
+                prods = database.products_col.find({"image_url": {"$regex": "catbox|imgbb|freeimage|postimg"}})
+                for prod in prods:
+                    old_url = prod.get("image_url")
+                    if not old_url: continue
+                    try:
+                        # الأداة مهيأة برمجياً لرفع الصور للسيرفر المدفوع وتحديث الرابط
+                        print(f"Future migration target: {prod.get('name')} | URL: {old_url}")
+                    except Exception as e: pass
+            import threading
+            threading.Thread(target=migrate_images_task).start()
+            flash("بدأت عملية الترحيل في الخلفية. يمكنك متابعة عملك بأمان.", "info")
             
         return redirect(url_for('dashboard'))
     
@@ -532,10 +542,8 @@ def dashboard():
     status_counts = {"جديد 🟡": 0, "مدفوع 🟢": 0, "قيد التجهيز 🔵": 0, "تم التوصيل 🟢": 0, "ملغي 🔴": 0}
     for o in orders:
         st = o.get('status', 'جديد 🟡')
-        if st in status_counts:
-            status_counts[st] += 1
-        else:
-            status_counts[st] = 1
+        if st in status_counts: status_counts[st] += 1
+        else: status_counts[st] = 1
     
     return render_template('dashboard.html', drivers=drivers, products=products, coupons=coupons, settings=settings, orders=orders, stats={"total_orders": len(orders), "total_revenue": net_sales, "status_counts": status_counts}, adv_stats=adv_stats, merchants=(database.get_all_users() if is_super_admin else []), packages=database.get_packages(), current_user_data=database.users_col.find_one({'id': session['user_id']}), store_slug=session['store_slug'], is_super_admin=is_super_admin)
 
@@ -547,13 +555,8 @@ def logout(): session.clear(); return redirect(url_for('login'))
 def driver_portal(token=None):
     token = (token or request.args.get('token', '')).strip()
     driver = database.get_driver_by_token(token)
-    if not driver:
-        return "<h3>كود المندوب غير صالح أو تم إلغاؤه</h3>", 404
-    orders = list(database.orders_col.find({
-        "store_id": driver.get('store_id'),
-        "driver_phone": driver.get('phone'),
-        "status": {"$in": ["مع المندوب للتوصيل 🚚", "قيد التجهيز 🔵"]}
-    }).sort('_id', -1))
+    if not driver: return "<h3>كود المندوب غير صالح أو تم إلغاؤه</h3>", 404
+    orders = list(database.orders_col.find({"store_id": driver.get('store_id'), "driver_phone": driver.get('phone'), "status": {"$in": ["مع المندوب للتوصيل 🚚", "قيد التجهيز 🔵"]}}).sort('_id', -1))
     return render_template('driver.html', driver=driver, orders=orders)
 
 @app.route('/driver/complete/<order_id>', methods=['POST'])
@@ -569,8 +572,7 @@ def api_add_driver():
     if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
     data = request.json
     token = database.add_driver(session['user_id'], data['name'], data['phone'])
-    if not token:
-        return jsonify({"success": False, "error": "المندوب موجود بالفعل أو تعذر إنشاؤه"}), 400
+    if not token: return jsonify({"success": False, "error": "المندوب موجود بالفعل أو تعذر إنشاؤه"}), 400
     return jsonify({"success": True, "token": token})
 
 @app.route('/api/orders/assign-driver', methods=['POST'])

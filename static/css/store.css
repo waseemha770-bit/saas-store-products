@@ -65,3 +65,21 @@
     
 
 .modal-star:hover, .modal-star:hover ~ .modal-star { fill: #ffc107 !important; transform: scale(1.15); } .star-selected { fill: #ffc107 !important; }
+
+
+/* تأثير التحميل النبضي للصور */
+.img-wrapper, .store-logo, td img {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeletonLoading 1.5s infinite;
+    position: relative;
+}
+@keyframes skeletonLoading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+img { 
+    /* إخفاء تأثير التحميل بمجرد ظهور الصورة الفعلية فوقه */
+    position: relative; 
+    z-index: 1; 
+}
