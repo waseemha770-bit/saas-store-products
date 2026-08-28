@@ -81,7 +81,8 @@
                                 <tbody id="ordersTableBody">
                                     {% if orders %}
                                         {% for o in orders %}
-                                        <tr class="order-row" data-date="{{ o.date.strftime('%Y-%m-%d') if o.date else '' }}">
+                                        <!-- التعديل الآمن للتاريخ هنا -->
+                                        <tr class="order-row" data-date="{{ (o.date|string)[:10] if o.date else '' }}">
                                             <td>
                                                 <span class="fw-bold text-dark d-block mb-1">{{ o.order_id }}</span>
                                                 <a href="/track/{{ o.order_id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-0" style="font-size: 0.72rem;">
