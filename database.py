@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-import uuid, os
+import uuid, os, re
 from datetime import datetime
 import config
 
@@ -28,8 +28,20 @@ def get_all_users():
     return list(users_col.find({}))
 
 def create_new_merchant(name, slug, password):
-    if users_col.find_one({"store_slug": slug}): return False
-    users_col.insert_one({"id": f"U-{uuid.uuid4().hex[:6]}", "username": name, "store_slug": slug, "password": password, "active": "TRUE"})
+    name = str(name or '').strip()
+    slug = str(slug or '').strip().lower()
+    password = str(password or '')
+    if not name or not slug or not password or not re.fullmatch(r'[a-z0-9][a-z0-9-]{1,49}', slug):
+        return False
+    if users_col.find_one({"store_slug": slug}):
+        return False
+    users_col.insert_one({
+        "id": f"U-{uuid.uuid4().hex[:6]}",
+        "username": name,
+        "store_slug": slug,
+        "password": password,
+        "active": "TRUE"
+    })
     return True
 
 def toggle_user_status(user_id, current_status): 
@@ -43,20 +55,27 @@ def delete_user(user_id):
     coupons_col.delete_many({"u_id": user_id})
 
 def change_user_password(user_id, old_password, new_password):
-    if not users_col.find_one({"id": user_id, "password": old_password}): return False
-    users_col.update_one({"id": user_id}, {"$set": {"password": new_password}})
-    return True
+    if not str(new_password or '') or len(str(new_password)) < 6:
+        return False
+    if not users_col.find_one({"id": user_id, "password": old_password}):
+        return False
+    result = users_col.update_one({"id": user_id}, {"$set": {"password": str(new_password)}})
+    return result.matched_count > 0
 
 def edit_merchant_info(user_id, new_slug, new_package):
+    new_slug = str(new_slug or '').strip().lower()
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{1,49}', new_slug):
+        return False
     existing = users_col.find_one({'store_slug': new_slug})
-    if existing and str(existing.get('id', existing.get('_id'))) != str(user_id): return False
+    if existing and str(existing.get('id', existing.get('_id'))) != str(user_id):
+        return False
     try:
         from bson.objectid import ObjectId
         query = {'$or': [{'id': user_id}, {'_id': ObjectId(user_id)}]}
-    except: 
+    except Exception:
         query = {'id': user_id}
-    users_col.update_one(query, {'$set': {'store_slug': new_slug, 'package': new_package}})
-    return True
+    result = users_col.update_one(query, {'$set': {'store_slug': new_slug, 'package': new_package}})
+    return result.matched_count > 0
 
 # ==========================================
 # إدارة الإعدادات
@@ -95,45 +114,64 @@ def get_products(user_id):
 
 def create_secure_order(store_id, customer_name, customer_phone, customer_address, payment, cart_items, coupon_code=""):
     import secrets
+
+    if not isinstance(cart_items, list) or not cart_items:
+        raise ValueError("السلة فارغة")
+
     order_id = "ORD-" + secrets.token_hex(3).upper()
-    
     secure_cart = []
-    total = 0.0
-    
+    subtotal_total = 0.0
+
     for item in cart_items:
-        # جلب بيانات المنتج من قاعدة البيانات للتأكد من الاسم والسعر الحقيقي
-        prod_id = item.get('id') or item.get('product_id') or item.get('_id')
-        p_name = item.get('name') or item.get('title')
-        p_price = float(item.get('price', 0))
+        if not isinstance(item, dict):
+            raise ValueError("صيغة المنتج غير صحيحة")
+
+        prod_id = str(item.get('id') or item.get('product_id') or '').strip()
         qty = int(item.get('qty', 1))
-        
-        if prod_id:
-            db_prod = products_col.find_one({"_id": prod_id, "store_id": store_id}) or products_col.find_one({"id": prod_id, "store_id": store_id})
-            if db_prod:
-                p_name = db_prod.get('name') or db_prod.get('title') or p_name
-                p_price = float(db_prod.get('price', p_price))
-        
-        if not p_name:
-            p_name = f"منتج #{str(prod_id)[:6]}" if prod_id else "منتج"
-            
+        if not prod_id or qty < 1:
+            raise ValueError("بيانات المنتج أو الكمية غير صحيحة")
+
+        db_prod = products_col.find_one({"id": prod_id, "u_id": store_id})
+        if not db_prod:
+            raise ValueError("أحد المنتجات غير موجود في هذا المتجر")
+
+        stock = db_prod.get('stock')
+        if stock is not None and str(stock).strip() != '':
+            try:
+                stock_value = int(stock)
+            except (TypeError, ValueError):
+                stock_value = None
+            if stock_value is not None and stock_value < qty:
+                raise ValueError(f"الكمية المطلوبة من المنتج «{db_prod.get('name', 'المنتج')}» غير متوفرة")
+
+        p_name = str(db_prod.get('name') or db_prod.get('title') or 'منتج')
+        p_price = float(db_prod.get('price', 0) or 0)
         subtotal = p_price * qty
-        total += subtotal
+        subtotal_total += subtotal
         secure_cart.append({
-            "id": str(prod_id) if prod_id else "",
-            "name": str(p_name),
+            "id": prod_id,
+            "name": p_name,
             "price": p_price,
             "qty": qty,
-            "subtotal": subtotal
+            "subtotal": round(subtotal, 2)
         })
 
+    discount_percent = 0.0
     discount_info = {}
     if coupon_code:
         coupon = validate_coupon(store_id, coupon_code)
         if coupon:
-            disc_val = float(coupon['discount'])
-            total = max(0.0, total - disc_val)
-            discount_info = {"code": coupon_code, "discount": disc_val}
+            discount_percent = max(0.0, min(100.0, float(coupon.get('discount', 0) or 0)))
+            discount_value = round(subtotal_total * discount_percent / 100, 2)
+            discount_info = {
+                "code": str(coupon.get('code', coupon_code)).upper(),
+                "percent": discount_percent,
+                "amount": discount_value
+            }
 
+    total = max(0.0, subtotal_total - (subtotal_total * discount_percent / 100))
+
+    now = datetime.now()
     order_doc = {
         "order_id": order_id,
         "store_id": store_id,
@@ -142,29 +180,47 @@ def create_secure_order(store_id, customer_name, customer_phone, customer_addres
         "customer_address": customer_address,
         "payment": payment,
         "cart": secure_cart,
+        "cart_items": secure_cart,
+        "subtotal": round(subtotal_total, 2),
         "total": round(total, 2),
         "status": "جديد 🟡",
         "discount_info": discount_info,
-        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M")
+        "date": now,
+        "created_at": now
     }
-    
+
     orders_col.insert_one(order_doc)
     return order_id, round(total, 2), secure_cart, discount_info
 
-
-
-def get_orders(store_id): 
-    return list(orders_col.find({"store_id": store_id}).sort("date", -1))
+def get_orders(store_id):
+    orders = list(orders_col.find({"store_id": store_id}).sort("_id", -1))
+    for order in orders:
+        if not order.get("date") and order.get("created_at"):
+            order["date"] = order["created_at"]
+    return orders
 
 # ==========================================
 # الكوبونات والباقات (تمت استعادتها وتأمينها)
 # ==========================================
-def add_coupon(user_id, code, discount_percent): 
-    coupons_col.insert_one({"id": f"C-{uuid.uuid4().hex[:6]}", "u_id": user_id, "code": code.upper(), "discount": int(discount_percent)})
+def add_coupon(user_id, code, discount_percent):
+    code = str(code or '').strip().upper()
+    discount_percent = int(discount_percent)
+    if not code or not 1 <= discount_percent <= 99:
+        return False
+    if coupons_col.find_one({"u_id": user_id, "code": code}):
+        return False
+    coupons_col.insert_one({
+        "id": f"C-{uuid.uuid4().hex[:6]}",
+        "u_id": user_id,
+        "code": code,
+        "discount": discount_percent
+    })
+    return True
 def get_coupons(user_id): 
     return list(coupons_col.find({"u_id": user_id}))
-def delete_coupon(coupon_id, user_id): 
-    coupons_col.delete_one({"id": coupon_id, "u_id": user_id})
+def delete_coupon(coupon_id, user_id):
+    result = coupons_col.delete_one({"id": coupon_id, "u_id": user_id})
+    return result.deleted_count > 0
 def validate_coupon(user_id, code): 
     return coupons_col.find_one({"u_id": user_id, "code": code.upper()})
 
@@ -250,7 +306,10 @@ def delete_driver(store_id, phone):
 
 
 def get_driver_by_token(token):
-    return drivers_col.find_one({"token": token.lower()}, {"_id": 0})
+    token = str(token or '').strip().lower()
+    if not token:
+        return None
+    return drivers_col.find_one({"token": token}, {"_id": 0})
 
 
 def assign_order_driver(order_id, store_id, driver_name, driver_phone):
@@ -323,7 +382,7 @@ def resolve_order_items(order, store_id=None):
     results = []
     
     # خريطة سريعة لمنتجات المتجر بالمعرف والسعر
-    store_prods = list(products_col.find({"store_id": store_id})) if store_id else list(products_col.find({}))
+    store_prods = list(products_col.find({"u_id": store_id})) if store_id else list(products_col.find({}))
     prod_by_id = {}
     prod_by_price = {}
     
@@ -402,7 +461,7 @@ def get_store_orders_enhanced(store_id):
     orders = list(orders_col.find({"store_id": store_id}).sort('_id', -1))
     
     # 1. جلب خريطة المنتجات لمطابقتها مع الأكواد
-    prods = list(products_col.find({"store_id": store_id}))
+    prods = list(products_col.find({"u_id": store_id}))
     prod_map = {}
     for p in prods:
         name = p.get('name') or p.get('title')
@@ -492,7 +551,7 @@ def check_product_limit(store_id):
             max_prods = 9999999 # رقم لا نهائي في حال الباقة المفتوحة
             
         # حساب العدد الفعلي للمنتجات الحالية في متجر التاجر
-        current_count = products_col.count_documents({"store_id": store_id})
+        current_count = products_col.count_documents({"u_id": store_id})
         
         if current_count >= max_prods:
             return False, f"عذراً! باقتك الحالية ({pkg_name}) تسمح بإضافة {max_prods} منتج كحد أقصى. يرجى ترقية باقتك لإضافة المزيد."

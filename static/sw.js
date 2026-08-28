@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tajergo-cache-v20260827';
+const CACHE_NAME = 'tajergo-cache-v20260828';
 const STATIC_EXTENSIONS = /\.(?:css|js|png|jpg|jpeg|webp|svg|woff2?|ico)$/i;
 
 self.addEventListener('install', event => {

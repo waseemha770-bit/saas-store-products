@@ -6,7 +6,7 @@ MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "tajergo_db")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 MAIN_DOMAIN = os.getenv("MAIN_DOMAIN", "saas-store-products.vercel.app")
-STATIC_VERSION = os.getenv("STATIC_VERSION", "20260825.1")
+STATIC_VERSION = os.getenv("STATIC_VERSION", "20260828.1")
 
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is required")

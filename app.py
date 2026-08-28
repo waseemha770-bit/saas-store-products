@@ -45,13 +45,13 @@ def extract_clean_products(order):
     return parsed
 
 def get_pwa_icon_url(raw_url, size):
-    """دالة لتحويل أي شعار إلى أيقونة PWA قياسية"""
-    if not raw_url or 'icon-' in raw_url:
+    """إرجاع شعار المتجر مباشرة للـPWA مع أيقونة المنصة كبديل."""
+    raw_url = (raw_url or '').strip()
+    if not raw_url:
         return f"/static/icon-{size}.png"
-    encoded_url = urllib.parse.quote(raw_url)
-    return f"https://wsrv.nl/?url={encoded_url}&w={size}&h={size}&fit=contain&output=png&bg=white"
+    return raw_url
 
-import re, os, io, csv, json, urllib.request, urllib.error
+import os, io, csv, json, urllib.request, urllib.error
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, Response, abort, send_from_directory
 import database, config
 from datetime import datetime, timedelta
@@ -130,8 +130,8 @@ def dashboard_manifest():
         if sett: logo = sett.get('platform_logo', '')
     
     return jsonify({
-        "name": "لوحة تحكم المنصة",
-        "short_name": "اللوحة",
+        "name": "تاجر جو",
+        "short_name": "تاجر جو",
         "start_url": "/dashboard",
         "display": "standalone",
         "background_color": "#f8f9fa",
@@ -220,15 +220,21 @@ def proxy_upload():
 @app.route('/api/rate_product', methods=['POST'])
 def rate_product_api():
     try:
-        data = request.get_json()
-        pid, stars = data.get('product_id'), int(data.get('rating', 0))
-        if stars < 1 or stars > 5: return jsonify({"success": False}), 400
+        data = request.get_json(silent=True) or {}
+        pid = str(data.get('product_id') or '').strip()
+        store_slug = str(data.get('store_slug') or '').strip()
+        stars = int(data.get('rating', 0))
+        if not pid or not store_slug or stars < 1 or stars > 5:
+            return jsonify({"success": False, "error": "بيانات التقييم غير مكتملة"}), 400
+        user = database.get_user_by_slug(store_slug)
+        if not user:
+            return jsonify({"success": False, "error": "المتجر غير موجود"}), 404
         ip_addr = request.headers.get('X-Forwarded-For', request.remote_addr)
         if ip_addr: ip_addr = ip_addr.split(',')[0].strip()
         else: ip_addr = 'unknown'
 
         prod_col = database.db.products
-        product = prod_col.find_one({"id": pid})
+        product = prod_col.find_one({"id": pid, "u_id": user['id']})
         if product:
             rated_ips = product.get('rated_ips', {})
             if not isinstance(rated_ips, dict): rated_ips = {}
@@ -252,7 +258,8 @@ def rate_product_api():
 def apply_coupon(slug):
     user = database.get_user_by_slug(slug)
     if not user: return jsonify({"error": "Store not found"}), 404
-    coupon = database.validate_coupon(user['id'], request.json.get('code', ''))
+    data = request.get_json(silent=True) or {}
+    coupon = database.validate_coupon(user['id'], data.get('code', ''))
     if coupon: return jsonify({"success": True, "discount": coupon['discount']})
     return jsonify({"success": False, "message": "الكوبون غير صالح"})
 
@@ -260,52 +267,76 @@ def apply_coupon(slug):
 def checkout(slug):
     user = database.get_user_by_slug(slug)
     if not user:
-        return jsonify({"error": "Store not found"}), 404
-        
-    data = request.json
+        return jsonify({"success": False, "error": "المتجر غير موجود"}), 404
+
+    data = request.get_json(silent=True) or {}
     settings = database.get_settings(user.get('id'))
-    wallet_provider = data.get('wallet_provider', 'cash')
-    payment_str = data.get('payment', '')
-    
-    order_id, real_total, secure_cart, discount_info = database.create_secure_order(
-        user.get('id'), data['name'], data['phone'], data.get('address', ''),
-        payment_str, data['cart'], data.get('coupon_code', '').strip()
-    )
-    
-    payment_status_msg = "⏳ حالة الدفع: الدفع عند الاستلام"
+    wallet_provider = str(data.get('wallet_provider', 'cash')).strip()
+    payment_str = str(data.get('payment', '')).strip()
+    name = str(data.get('name', '')).strip()
+    phone = str(data.get('phone', '')).strip()
+    address = str(data.get('address', '')).strip()
+    cart = data.get('cart')
+    coupon_code = str(data.get('coupon_code', '')).strip()
+
+    if not name or not phone or not isinstance(cart, list) or not cart:
+        return jsonify({"success": False, "error": "بيانات الطلب غير مكتملة"}), 400
+
+    try:
+        order_id, real_total, secure_cart, discount_info = database.create_secure_order(
+            user.get('id'), name, phone, address, payment_str, cart, coupon_code
+        )
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except Exception:
+        return jsonify({"success": False, "error": "تعذر إنشاء الطلب حالياً"}), 500
+
     if wallet_provider != 'cash':
         mock_txn = f"TXN-{order_id}"
         database.orders_col.update_one(
             {"order_id": order_id, "store_id": user.get('id')},
             {"$set": {"status": "مدفوع 🟢", "transaction_id": mock_txn}}
         )
-        payment_status_msg = f"✅ حالة الدفع: مدفوع إلكترونياً ({mock_txn})"
-        
-    items_list_str = '\n'.join([f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart])
+
+    items_list_str = '\n'.join(
+        [f"- {it['name']} (x{it.get('qty', 1)}) = {it['price']}" for it in secure_cart]
+    )
     currency_label = settings.get('currency', 'ريال')
-    
-    msg = f"🛍️ طلب جديد من المتجر\nرقم الطلب: {order_id}\nالعميل: {data['name']}\nالهاتف: {data['phone']}\nالعنوان: {data.get('address', 'غير محدد')}\nطريقة الدفع: {payment_str}\n\nالمنتجات:\n{items_list_str}\n\nالإجمالي: {real_total} {currency_label}"
+    address_label = address or "غير محدد"
+    msg = (
+        f"🛍️ طلب جديد من المتجر\n"
+        f"رقم الطلب: {order_id}\n"
+        f"العميل: {name}\n"
+        f"الهاتف: {phone}\n"
+        f"العنوان: {address_label}\n"
+        f"طريقة الدفع: {payment_str}\n\n"
+        f"المنتجات:\n{items_list_str}\n\n"
+        f"الإجمالي: {real_total} {currency_label}"
+    )
 
     wa_phone = settings.get('whatsapp') or user.get('phone', '')
     wa_link = "https://wa.me/" + str(wa_phone) + "?text=" + urllib.parse.quote(msg)
-    
+
     if settings.get('enable_telegram') and settings.get('telegram_chat_id'):
         try:
             bot_token = config.TELEGRAM_BOT_TOKEN
             if bot_token:
                 t_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
                 t_data = json.dumps({"chat_id": settings.get('telegram_chat_id'), "text": msg}).encode('utf-8')
-                req = urllib.request.Request(t_url, data=t_data, headers={'Content-Type': 'application/json'}, method='POST')
+                req = urllib.request.Request(
+                    t_url, data=t_data,
+                    headers={'Content-Type': 'application/json'}, method='POST'
+                )
                 urllib.request.urlopen(req, timeout=3)
-        except Exception as e:
+        except Exception:
             pass
 
     return jsonify({
         "success": True,
         "order_id": order_id,
-        "wa_link": wa_link
+        "wa_link": wa_link,
+        "discount": discount_info
     })
-
 
 @app.route('/track', methods=['GET'])
 @app.route('/track/<order_id>', methods=['GET'])
@@ -358,14 +389,20 @@ def export_orders():
     orders = database.get_orders(session['user_id']); output = io.StringIO(); writer = csv.writer(output)
     writer.writerow(['رقم الطلب', 'التاريخ', 'العميل', 'الهاتف', 'العنوان', 'طريقة الدفع', 'المنتجات', 'الخصم', 'الإجمالي', 'الحالة'])
     for o in orders:
-        items_str = " | ".join([f"{i['name']} (x{i['qty']})" for i in o.get('cart_items', [])])
-        writer.writerow([o['order_id'], o['date'].strftime('%Y-%m-%d %H:%M'), o['customer_name'], o['customer_phone'], o.get('customer_address', ''), o.get('payment_info', ''), items_str, o.get('discount_info', ''), o['total'], o.get('status', 'جديد 🟡')])
+        order_date = o.get('date') or o.get('created_at') or ''
+        if isinstance(order_date, datetime):
+            order_date = order_date.strftime('%Y-%m-%d %H:%M')
+        cart_items = o.get('cart_items') or o.get('cart') or []
+        items_str = " | ".join([f"{i.get('name', 'منتج')} (x{i.get('qty', 1)})" for i in cart_items if isinstance(i, dict)])
+        writer.writerow([o.get('order_id', ''), order_date, o.get('customer_name', ''), o.get('customer_phone', ''), o.get('customer_address', ''), o.get('payment') or o.get('payment_info', ''), items_str, o.get('discount_info', ''), o.get('total', 0), o.get('status', 'جديد 🟡')])
     return Response(output.getvalue().encode('utf-8-sig'), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=TajerGo_Orders.csv"})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        user = database.authenticate_user(request.form.get('slug'), request.form.get('pass'))
+        slug = str(request.form.get('slug', '')).strip().lower()
+        password = str(request.form.get('pass', ''))
+        user = database.authenticate_user(slug, password)
         if user: session['user_id'] = user.get('id'); session['store_slug'] = user.get('store_slug'); return redirect(url_for('dashboard'))
         flash("بيانات الدخول خاطئة أو المتجر موقوف", "danger")
     return render_template('login.html')
@@ -382,22 +419,40 @@ def dashboard():
             if not can_add:
                 flash(err_msg, "danger")
             else:
-                database.add_product(
-                    session['user_id'], 
-                    request.form.get('name'), 
-                    request.form.get('desc'), 
-                    (request.form.get('price') or 0), 
-                    request.form.get('cat'), 
-                    request.form.get('img'), 
-                    request.form.get('stock'),
-                    request.form.get('unit', 'حبة')
+                created = database.add_product(
+                    session['user_id'],
+                    request.form.get('name', '').strip(),
+                    request.form.get('desc', '').strip(),
+                    request.form.get('price') or 0,
+                    request.form.get('cat', '').strip(),
+                    request.form.get('img', '').strip(),
+                    request.form.get('stock') or 0,
+                    request.form.get('unit', 'حبة').strip()
                 )
-                flash(f"تم إضافة المنتج بنجاح 📦 ({cur_cnt + 1} من {max_lim})", "success")
-        elif action == 'edit_product': 
-            database.edit_product(request.form.get('product_id'), session['user_id'], request.form.get('name'), request.form.get('desc'), (request.form.get('price') or 0), request.form.get('cat'), request.form.get('img'), request.form.get('stock'), request.form.get('unit', 'حبة'))
-            flash("تم التعديل", "success")
+                flash(f"تم إضافة المنتج بنجاح 📦 ({cur_cnt + 1} من {max_lim})", "success" if created else "danger")
+                if not created:
+                    flash("تعذر إضافة المنتج. تحقق من البيانات.", "danger")
+        elif action == 'edit_product':
+            updated = database.edit_product(
+                request.form.get('product_id', '').strip(), session['user_id'],
+                request.form.get('name', '').strip(), request.form.get('desc', '').strip(),
+                request.form.get('price') or 0, request.form.get('cat', '').strip(),
+                request.form.get('img', '').strip(), request.form.get('stock') or 0,
+                request.form.get('unit', 'حبة').strip()
+            )
+            flash("تم التعديل" if updated else "تعذر تعديل المنتج", "success" if updated else "danger")
         elif action == 'delete_product': database.delete_product(request.form.get('product_id'), session['user_id']); flash("تم الحذف", "danger")
-        elif action == 'update_order_status': database.orders_col.update_one({"order_id": request.form.get('order_id'), "store_id": session['user_id']}, {"$set": {"status": request.form.get('new_status')}}); flash("تم التحديث", "success")
+        elif action == 'update_order_status':
+            allowed_statuses = {"جديد 🟡", "مدفوع 🟢", "قيد التجهيز 🔵", "مع المندوب للتوصيل 🚚", "تم التوصيل 🟢", "ملغي 🔴"}
+            new_status = request.form.get('new_status', '').strip()
+            if new_status not in allowed_statuses:
+                flash("حالة الطلب غير صحيحة", "danger")
+            else:
+                result = database.orders_col.update_one(
+                    {"order_id": request.form.get('order_id', '').strip(), "store_id": session['user_id']},
+                    {"$set": {"status": new_status}}
+                )
+                flash("تم التحديث" if result.matched_count else "الطلب غير موجود", "success" if result.matched_count else "danger")
         elif action == 'add_driver':
             d_name = request.form.get('driver_name') or request.form.get('name')
             d_phone = request.form.get('driver_phone') or request.form.get('phone')
@@ -410,12 +465,28 @@ def dashboard():
             d_phone = request.form.get('driver_phone') or request.form.get('phone')
             database.delete_driver(session['user_id'], d_phone)
             flash("تم حذف المندوب 🗑️", "danger")
-        elif action == 'add_coupon': database.add_coupon(session['user_id'], request.form.get('code'), request.form.get('discount')); flash("تم إنشاء الكوبون", "success")
-        elif action == 'delete_coupon': database.delete_coupon(request.form.get('coupon_id'), session['user_id']); flash("تم حذف الكوبون", "danger")
+        elif action == 'add_coupon':
+            code = request.form.get('code', '').strip()
+            discount = request.form.get('discount', '').strip()
+            try:
+                discount_value = int(discount)
+            except (TypeError, ValueError):
+                discount_value = 0
+            if not code or not 1 <= discount_value <= 99:
+                flash("كود ونسبة الخصم مطلوبان (1% إلى 99%)", "danger")
+            elif database.add_coupon(session['user_id'], code, discount_value):
+                flash("تم إنشاء الكوبون", "success")
+            else:
+                flash("تعذر إنشاء الكوبون", "danger")
+        elif action == 'delete_coupon':
+            deleted = database.delete_coupon(request.form.get('coupon_id', '').strip(), session['user_id'])
+            flash("تم حذف الكوبون" if deleted else "الكوبون غير موجود", "danger" if deleted else "warning")
         elif action == 'change_password':
             old_p, new_p, confirm_p = request.form.get('old_password', ''), request.form.get('new_password', ''), request.form.get('confirm_password', '')
             if new_p != confirm_p: flash("كلمة المرور غير متطابقة", "danger")
-            else: flash("تم التغيير" if database.change_user_password(session['user_id'], old_p, new_p) else "كلمة المرور الحالية خاطئة", "success" if database.change_user_password(session['user_id'], old_p, new_p) else "danger")
+            else:
+                changed = database.change_user_password(session['user_id'], old_p, new_p)
+                flash("تم التغيير" if changed else "كلمة المرور الحالية خاطئة", "success" if changed else "danger")
         
         elif action == 'save_telegram_settings':
             telegram_data = {
@@ -471,7 +542,11 @@ def dashboard():
             def migrate_images_task():
                 import requests
                 # import cloudinary.uploader # يتم التفعيل لاحقاً عند اشتراكك
-                prods = database.products_col.find({"image_url": {"$regex": "catbox|imgbb|freeimage|postimg"}})
+                
+                # تضمين كافة المنصات المذكورة في القائمة المنسدلة للبحث عنها
+                target_hosts = "catbox|imgbb|freeimage|imgur|postimg|postimages|cloudinary"
+                prods = database.products_col.find({"image_url": {"$regex": target_hosts, "$options": "i"}})
+                
                 for prod in prods:
                     old_url = prod.get("image_url")
                     if not old_url: continue
@@ -479,9 +554,10 @@ def dashboard():
                         # الأداة مهيأة برمجياً لرفع الصور للسيرفر المدفوع وتحديث الرابط
                         print(f"Future migration target: {prod.get('name')} | URL: {old_url}")
                     except Exception as e: pass
+            
             import threading
             threading.Thread(target=migrate_images_task).start()
-            flash("بدأت عملية الترحيل في الخلفية. يمكنك متابعة عملك بأمان.", "info")
+            flash("بدأت عملية الترحيل في الخلفية. يتم الآن فحص وجلب الصور من جميع المنصات (Catbox, ImgBB, Imgur, وغيرها).", "info")
             
         return redirect(url_for('dashboard'))
     
@@ -570,16 +646,27 @@ def driver_complete_order(order_id):
 @app.route('/api/drivers/add', methods=['POST'])
 def api_add_driver():
     if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
-    data = request.json
-    token = database.add_driver(session['user_id'], data['name'], data['phone'])
+    data = request.get_json(silent=True) or {}
+    name = str(data.get('name', '')).strip()
+    phone = str(data.get('phone', '')).strip()
+    if not name or not phone:
+        return jsonify({"success": False, "error": "اسم ورقم المندوب مطلوبان"}), 400
+    token = database.add_driver(session['user_id'], name, phone)
     if not token: return jsonify({"success": False, "error": "المندوب موجود بالفعل أو تعذر إنشاؤه"}), 400
     return jsonify({"success": True, "token": token})
 
 @app.route('/api/orders/assign-driver', methods=['POST'])
 def api_assign_driver():
     if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
-    data = request.json
-    database.assign_order_driver(data['order_id'], session['user_id'], data['driver_name'], data['driver_phone'])
+    data = request.get_json(silent=True) or {}
+    order_id = str(data.get('order_id', '')).strip()
+    driver_name = str(data.get('driver_name', '')).strip()
+    driver_phone = str(data.get('driver_phone', '')).strip()
+    if not order_id or not driver_name or not driver_phone:
+        return jsonify({"success": False, "error": "بيانات الإسناد غير مكتملة"}), 400
+    result = database.assign_order_driver(order_id, session['user_id'], driver_name, driver_phone)
+    if result.matched_count == 0:
+        return jsonify({"success": False, "error": "الطلب غير موجود"}), 404
     return jsonify({"success": True})
 
 @app.route('/api/drivers/delete/<token>', methods=['POST'])
@@ -591,8 +678,15 @@ def api_delete_driver(token):
 @app.route('/api/orders/update-status', methods=['POST'])
 def api_update_order_status():
     if not session.get('user_id'): return jsonify({"error": "Unauthorized"}), 401
-    data = request.json
-    database.orders_col.update_one({"order_id": data['order_id'], "store_id": session.get('user_id')}, {"$set": {"status": data['status']}})
+    data = request.get_json(silent=True) or {}
+    order_id = str(data.get('order_id', '')).strip()
+    status = str(data.get('status', '')).strip()
+    allowed_statuses = {"جديد 🟡", "مدفوع 🟢", "قيد التجهيز 🔵", "مع المندوب للتوصيل 🚚", "تم التوصيل 🟢", "ملغي 🔴"}
+    if not order_id or status not in allowed_statuses:
+        return jsonify({"success": False, "error": "بيانات الحالة غير صحيحة"}), 400
+    result = database.orders_col.update_one({"order_id": order_id, "store_id": session.get('user_id')}, {"$set": {"status": status}})
+    if result.matched_count == 0:
+        return jsonify({"success": False, "error": "الطلب غير موجود"}), 404
     return jsonify({"success": True})
 
 if __name__ == '__main__':

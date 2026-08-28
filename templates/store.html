@@ -151,7 +151,7 @@
                                     </div>
                                     {% set current_stock = p.get('stock', 1) %}
                                     {% if current_stock > 0 %}
-                                        <button class="btn btn-custom w-100" onclick="addToCart('{{ p.name }}', {{ p.price }})"><i class="fas fa-cart-plus me-1"></i> {{ settings.get('btn_text', 'إضافة للسلة') }}</button>
+                                        <button class="btn btn-custom w-100" onclick='addToCart({{ p.id|tojson }}, {{ p.name|tojson }}, {{ p.price|tojson }})'><i class="fas fa-cart-plus me-1"></i> {{ settings.get('btn_text', 'إضافة للسلة') }}</button>
                                     {% else %}
                                         <button class="btn btn-secondary-custom w-100" disabled>نفذت الكمية</button>
                                     {% endif %}
@@ -252,7 +252,7 @@
             }
         });
 
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js'); }); }
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js', {updateViaCache: 'none'}).then(reg => reg.update()).catch(() => {}); }); }
 
         function toggleWalletInput() {
             let method = document.getElementById('payment-method').value;
@@ -313,10 +313,11 @@
             else { navigator.clipboard.writeText(storeUrl); alert("تم نسخ رابط المتجر!"); } 
         }
 
-        // كود سحب الصورة ومشاركتها مع الرابط في رسالة واحدة
+        // كود سحب الصورة ومشاركتها مع الرابط في رسالة واحدة (تم التحديث لضمان ظهور الرابط الصريح)
         async function shareProduct(name, desc, imgUrl) {
             const storeUrl = window.location.origin + window.location.pathname;
-            const shareText = `🛍️ متوفر الآن: ${name}\n\n${desc ? desc.substring(0, 80) + '...' : ''}\n\nللطلب، تفضل بزيارة متجرنا عبر الرابط:\n${storeUrl}`;
+            // قمنا بإضافة رابط الصورة صراحةً في النص لكي يسحبه الواتساب تلقائياً كمعاينة
+            const shareText = `🛍️ متوفر الآن: ${name}\n\n${desc ? desc.substring(0, 80) + '...' : ''}\n\nللطلب، تفضل بزيارة متجرنا عبر الرابط:\n${storeUrl}\n\nرابط صورة المنتج:\n${imgUrl}`;
             
             if (navigator.share) {
                 try {
@@ -326,19 +327,21 @@
                     
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
                         await navigator.share({ title: name, text: shareText, files: [file] });
-                    } else {
-                        await navigator.share({ title: name, text: shareText });
+                        return;
                     }
                 } catch(err) { 
-                    try { await navigator.share({ title: name, text: shareText }); } catch(e){}
+                    console.log('CORS blocked file share, falling back to text format');
                 }
+                
+                try { await navigator.share({ title: name, text: shareText }); } catch(e){}
             } else {
-                navigator.clipboard.writeText(shareText);
-                alert("تم نسخ تفاصيل المنتج والرابط بنجاح!");
+                // كود الطوارئ للكمبيوتر أو المتصفحات القديمة (يفتح واتساب ويب مباشرة)
+                const waLink = "https://wa.me/?text=" + encodeURIComponent(shareText);
+                window.open(waLink, '_blank');
             }
         }
 
-        let cart = []; let cartModalInstance = null; let detailsModalInstance = null; let currentDiscountPercent = 0; let currentDiscountInfo = '';
+        let cart = []; let cartModalInstance = null; let detailsModalInstance = null; let currentDiscountPercent = 0; let currentDiscountInfo = ''; let currentCouponCode = '';
         document.addEventListener("DOMContentLoaded", function(){ cartModalInstance = new bootstrap.Modal(document.getElementById('cartModal')); detailsModalInstance = new bootstrap.Modal(document.getElementById('detailsModal')); });
 
         function openDetailsModal(id, price, unit) {
@@ -356,7 +359,7 @@
             document.getElementById('detailsDesc').innerText = desc || 'لا يوجد وصف متاح لهذا المنتج.';
             
             let addBtn = document.getElementById('detailsAddToCartBtn'); 
-            addBtn.onclick = function() { addToCart(name, price); detailsModalInstance.hide(); }; 
+            addBtn.onclick = function() { addToCart(id, name, price); detailsModalInstance.hide(); }; 
             
             let shareBtn = document.getElementById('detailsShareBtn');
             shareBtn.onclick = function() { shareProduct(name, desc, imgUrl); };
@@ -364,11 +367,37 @@
             detailsModalInstance.show();
         }
 
-        function addToCart(name, price) { let item = cart.find(i => i.name === name); if(item) { item.qty++; } else { cart.push({name: name, price: price, qty: 1}); } updateCartUI(); }
-        function changeQty(name, delta) { let item = cart.find(i => i.name === name); if(item) { item.qty += delta; if(item.qty <= 0) cart = cart.filter(i => i.name !== name); } updateCartUI(); renderModalItems(); }
-        function applyCoupon() { let code = document.getElementById('coupon-code').value.trim(); if(!code) return; let msg = document.getElementById('coupon-msg'); msg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...'; msg.className = "fw-bold mt-1 d-block text-primary"; fetch('/api/apply_coupon/{{ user.store_slug }}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: code}) }).then(res => res.json()).then(data => { if(data.success) { currentDiscountPercent = data.discount; currentDiscountInfo = `كوبون (${code.toUpperCase()}) - خصم ${data.discount}%`; msg.innerHTML = `<i class="fas fa-check-circle"></i> تم الخصم ${data.discount}%`; msg.className = "fw-bold mt-1 d-block text-success"; updateCartUI(); } else { currentDiscountPercent = 0; currentDiscountInfo = ''; msg.innerHTML = `<i class="fas fa-times-circle"></i> غير صالح`; msg.className = "fw-bold mt-1 d-block text-danger"; updateCartUI(); } }); }
+        function addToCart(id, name, price) {
+            let item = cart.find(i => i.id === id);
+            if (item) item.qty++;
+            else cart.push({id: String(id), name: String(name), price: Number(price) || 0, qty: 1});
+            updateCartUI();
+        }
+        function changeQty(id, delta) {
+            let item = cart.find(i => i.id === String(id));
+            if (item) {
+                item.qty += delta;
+                if (item.qty <= 0) cart = cart.filter(i => i.id !== String(id));
+            }
+            updateCartUI();
+            renderModalItems();
+        }
+        function applyCoupon() { let code = document.getElementById('coupon-code').value.trim(); if(!code) return; let msg = document.getElementById('coupon-msg'); msg.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...'; msg.className = "fw-bold mt-1 d-block text-primary"; fetch('/api/apply_coupon/{{ user.store_slug }}', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: code}) }).then(res => res.json()).then(data => { if(data.success) { currentDiscountPercent = Number(data.discount) || 0; currentCouponCode = code.toUpperCase(); currentDiscountInfo = `كوبون (${currentCouponCode}) - خصم ${currentDiscountPercent}%`; msg.innerHTML = `<i class="fas fa-check-circle"></i> تم الخصم ${data.discount}%`; msg.className = "fw-bold mt-1 d-block text-success"; updateCartUI(); } else { currentDiscountPercent = 0; currentDiscountInfo = ''; currentCouponCode = ''; msg.innerHTML = `<i class="fas fa-times-circle"></i> غير صالح`; msg.className = "fw-bold mt-1 d-block text-danger"; updateCartUI(); } }); }
         function updateCartUI() { let count = 0; let subTotal = 0; cart.forEach(item => { count += item.qty; subTotal += (item.price * item.qty); }); let finalTotal = subTotal - (subTotal * (currentDiscountPercent / 100)); document.getElementById('cart-count').innerText = count; document.getElementById('cart-total').innerText = subTotal; document.getElementById('modal-total').innerText = finalTotal.toFixed(2); document.getElementById('floating-cart').style.display = count > 0 ? 'block' : 'none'; if(count === 0 && cartModalInstance) cartModalInstance.hide(); }
-        function renderModalItems() { let list = document.getElementById('cart-items'); list.innerHTML = ''; cart.forEach((item) => { list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center mb-2 border-0 bg-light rounded-3 p-2"><div><h6 class="mb-1 fw-bold">${item.name}</h6><small class="text-primary fw-bold">${item.price} {{ settings.currency }}</small></div><div class="d-flex align-items-center bg-white rounded-pill shadow-sm p-1 border"><button class="btn btn-sm btn-light rounded-circle px-2 py-0 fw-bold" onclick="changeQty('${item.name}', -1)">−</button><span class="mx-3 fw-bold">${item.qty}</span><button class="btn btn-sm btn-light rounded-circle px-2 py-0 fw-bold" onclick="changeQty('${item.name}', 1)">+</button></div></li>`; }); }
+        function renderModalItems() {
+            let list = document.getElementById('cart-items');
+            list.innerHTML = '';
+            cart.forEach(item => {
+                list.innerHTML += `<li class="list-group-item d-flex justify-content-between align-items-center mb-2 border-0 bg-light rounded-3 p-2">
+                    <div><h6 class="mb-1 fw-bold">${item.name}</h6><small class="text-primary fw-bold">${item.price} {{ settings.currency }}</small></div>
+                    <div class="d-flex align-items-center bg-white rounded-pill shadow-sm p-1 border">
+                        <button class="btn btn-sm btn-light rounded-circle px-2 py-0 fw-bold" onclick="changeQty('${item.id}', -1)">−</button>
+                        <span class="mx-3 fw-bold">${item.qty}</span>
+                        <button class="btn btn-sm btn-light rounded-circle px-2 py-0 fw-bold" onclick="changeQty('${item.id}', 1)">+</button>
+                    </div>
+                </li>`;
+            });
+        }
         function openCartModal() { renderModalItems(); cartModalInstance.show(); }
         function checkout() { 
             let name = document.getElementById('customer-name').value; 
@@ -394,22 +423,45 @@
                 payment: paymentStr, 
                 wallet_provider: paymentMethod,
                 wallet_phone: walletPhone,
-                cart: cart, final_total: document.getElementById('modal-total').innerText, discount_info: currentDiscountInfo
+                cart: cart, coupon_code: currentCouponCode, final_total: document.getElementById('modal-total').innerText, discount_info: currentDiscountInfo
             };
 
-            fetch('/api/checkout/{{ user.store_slug }}', { 
-                method: 'POST', headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify(payload) 
-            }).then(res => res.json()).then(data => { 
-                cart = []; currentDiscountPercent = 0; currentDiscountInfo = ''; document.getElementById('coupon-code').value = ''; document.getElementById('coupon-msg').innerText = ''; updateCartUI(); cartModalInstance.hide(); document.getElementById('btn-submit').innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب"; document.getElementById('btn-submit').disabled = false; window.open(data.wa_link || data.whatsapp_url, '_blank'); 
-            }); 
+            fetch('/api/checkout/{{ user.store_slug }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            })
+            .then(async res => ({ok: res.ok, data: await res.json()}))
+            .then(({ok, data}) => {
+                if (!ok || !data.success) {
+                    alert(data.error || 'تعذر إرسال الطلب');
+                    return;
+                }
+                cart = [];
+                currentDiscountPercent = 0;
+                currentDiscountInfo = '';
+                currentCouponCode = '';
+                document.getElementById('coupon-code').value = '';
+                document.getElementById('coupon-msg').innerText = '';
+                updateCartUI();
+                cartModalInstance.hide();
+                if (data.wa_link) window.open(data.wa_link, '_blank');
+            })
+            .catch(() => alert('فشل الاتصال بالخادم'))
+            .finally(() => {
+                const btn = document.getElementById('btn-submit');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = "<i class='fab fa-whatsapp'></i> إرسال الطلب";
+                }
+            });
         }
 
         let currentRatingProductId = null; let ratingModal = null; let selectedRating = 0; let previousRating = null;
         function openRatingModal(pid, pname) { currentRatingProductId = pid; document.getElementById('ratingModalProductName').innerText = pname; document.getElementById('ratingModalMessage').classList.add('d-none'); let btn = document.getElementById('confirmRatingBtn'); btn.classList.remove('d-none'); let savedRating = localStorage.getItem('rated_val_' + pid); if(savedRating) { previousRating = parseInt(savedRating); selectedRating = previousRating; document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-edit text-warning"></i> تعديل تقييمك'; btn.innerText = 'تحديث التقييم'; btn.disabled = false; } else { previousRating = null; selectedRating = 0; document.getElementById('ratingModalHeaderTitle').innerHTML = '<i class="fas fa-star text-warning"></i> تقييم المنتج'; btn.innerText = 'تأكيد التقييم'; btn.disabled = true; } document.querySelectorAll('.modal-star').forEach(s => { let val = parseInt(s.getAttribute('data-val')); if(val <= selectedRating) { s.classList.add('star-selected'); s.setAttribute('fill', '#ffc107'); } else { s.classList.remove('star-selected'); s.setAttribute('fill', '#e4e5e9'); } }); if(!ratingModal) ratingModal = new bootstrap.Modal(document.getElementById('globalRatingModal')); ratingModal.show(); }
         function resetHover() { document.querySelectorAll('.modal-star').forEach(s => { let val = parseInt(s.getAttribute('data-val')); if(val <= selectedRating) { s.setAttribute('fill', '#ffc107'); } else { s.setAttribute('fill', '#e4e5e9'); } }); }
         document.querySelectorAll('.modal-star').forEach(star => { star.addEventListener('click', function() { selectedRating = parseInt(this.getAttribute('data-val')); document.querySelectorAll('.modal-star').forEach(s => { if(parseInt(s.getAttribute('data-val')) <= selectedRating) { s.classList.add('star-selected'); s.setAttribute('fill', '#ffc107'); } else { s.classList.remove('star-selected'); s.setAttribute('fill', '#e4e5e9'); } }); let btn = document.getElementById('confirmRatingBtn'); btn.disabled = false; if(previousRating && selectedRating === previousRating) { btn.disabled = true; } }); });
-        document.getElementById('confirmRatingBtn').addEventListener('click', function() { if(selectedRating === 0 || !currentRatingProductId) return; let pid = currentRatingProductId; let btn = this; btn.disabled = true; btn.innerHTML = 'جاري الحفظ...'; let payload = { product_id: pid, rating: selectedRating }; if (previousRating) { payload.old_rating = previousRating; } fetch('/api/rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }).then(r => r.json()).then(data => { if(data.success) { localStorage.setItem('rated_val_' + pid, selectedRating); let msg = document.getElementById('ratingModalMessage'); msg.innerText = previousRating ? 'تم التحديث بنجاح!' : 'تم التقييم بنجاح!'; msg.classList.remove('d-none'); btn.classList.add('d-none'); document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1); document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ')'; let svgStars = ''; let newRate = Math.round(data.new_rating); for(let i=1; i<=5; i++){ let color = (newRate >= i) ? '#ffc107' : '#e4e5e9'; svgStars += `<svg width="15" height="15" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`; } document.getElementById('display-stars-' + pid).innerHTML = svgStars; setTimeout(() => { ratingModal.hide(); }, 1500); } else { btn.innerText = 'حدث خطأ'; btn.disabled = false; } }).catch(err => { btn.innerText = 'فشل الاتصال'; btn.disabled = false; }); });
+        document.getElementById('confirmRatingBtn').addEventListener('click', function() { if(selectedRating === 0 || !currentRatingProductId) return; let pid = currentRatingProductId; let btn = this; btn.disabled = true; btn.innerHTML = 'جاري الحفظ...'; let payload = { product_id: pid, rating: selectedRating, store_slug: '{{ user.store_slug }}' }; if (previousRating) { payload.old_rating = previousRating; } fetch('/api/rate_product', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }).then(r => r.json()).then(data => { if(data.success) { localStorage.setItem('rated_val_' + pid, selectedRating); let msg = document.getElementById('ratingModalMessage'); msg.innerText = previousRating ? 'تم التحديث بنجاح!' : 'تم التقييم بنجاح!'; msg.classList.remove('d-none'); btn.classList.add('d-none'); document.getElementById('display-avg-' + pid).innerText = data.new_rating.toFixed(1); document.getElementById('display-count-' + pid).innerText = '(' + data.total_reviews + ')'; let svgStars = ''; let newRate = Math.round(data.new_rating); for(let i=1; i<=5; i++){ let color = (newRate >= i) ? '#ffc107' : '#e4e5e9'; svgStars += `<svg width="15" height="15" viewBox="0 0 24 24" fill="${color}" stroke="#ffc107" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-right:1px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`; } document.getElementById('display-stars-' + pid).innerHTML = svgStars; setTimeout(() => { ratingModal.hide(); }, 1500); } else { btn.innerText = 'حدث خطأ'; btn.disabled = false; } }).catch(err => { btn.innerText = 'فشل الاتصال'; btn.disabled = false; }); });
     </script>
 </body>
 </html>
