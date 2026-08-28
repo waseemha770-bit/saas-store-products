@@ -5,7 +5,6 @@
 {% block dashboard_content %}
 {% set cats = products | map(attribute='category') | unique | list %}
 
-<!-- بداية حاوية التبويبات المتوافقة مع شريط التنقل -->
 <div class="tab-content">
     
     <!-- 1. الإحصائيات -->
@@ -33,7 +32,20 @@
             <div class="col-md-12 mb-4">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
-                        <a href="/export/orders" class="btn btn-success btn-sm fw-bold shadow-sm mb-3"><i class="fas fa-file-excel"></i> تصدير Excel</a>
+                        
+                        <!-- الحاوية الجديدة لتصدير إكسل وفلترة التواريخ -->
+                        <div class="d-flex flex-wrap gap-2 mb-3 align-items-center bg-light p-2 rounded border">
+                            <a href="/export/orders" id="exportBtn" class="btn btn-success btn-sm fw-bold shadow-sm">
+                                <i class="fas fa-file-excel"></i> تصدير Excel
+                            </a>
+                            <div class="input-group input-group-sm w-auto shadow-sm">
+                                <span class="input-group-text bg-white fw-bold text-muted">من</span>
+                                <input type="date" id="filterFromDate" class="form-control" onchange="filterOrdersTable()">
+                                <span class="input-group-text bg-white fw-bold text-muted">إلى</span>
+                                <input type="date" id="filterToDate" class="form-control" onchange="filterOrdersTable()">
+                                <button class="btn btn-outline-danger fw-bold" onclick="document.getElementById('filterFromDate').value=''; document.getElementById('filterToDate').value=''; filterOrdersTable();" title="مسح التواريخ"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
 
                         <div class="table-responsive bg-white rounded-4 shadow-sm border p-2">
                             <table class="table table-hover align-middle mb-0 text-center">
@@ -69,7 +81,7 @@
                                 <tbody id="ordersTableBody">
                                     {% if orders %}
                                         {% for o in orders %}
-                                        <tr class="order-row">
+                                        <tr class="order-row" data-date="{{ o.date.strftime('%Y-%m-%d') if o.date else '' }}">
                                             <td>
                                                 <span class="fw-bold text-dark d-block mb-1">{{ o.order_id }}</span>
                                                 <a href="/track/{{ o.order_id }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-2 py-0" style="font-size: 0.72rem;">
@@ -430,7 +442,6 @@
             <option value="jawali" {% if settings.get('wallet_provider') == 'jawali' %}selected{% endif %}>جوالي (Jawali)</option>
             <option value="floosak" {% if settings.get('wallet_provider') == 'floosak' %}selected{% endif %}>فلوسك (Floosak)</option>
             <option value="kuraimi" {% if settings.get('wallet_provider') == 'kuraimi' %}selected{% endif %}>ام فلوس - الكريمي</option>
-            <option value="jeeb" {% if settings.get('wallet_provider') == 'jeeb' %}selected{% endif %}>محفظة جيب (Jeeb)</option>
             <option value="custom" {% if settings.get('wallet_provider') == 'custom' %}selected{% endif %}>محفظة بنكية أخرى (Custom API)</option>
         </select>
     </div>
@@ -476,82 +487,45 @@
                             </div>
 </div></div></div><div class="col-lg-4 mb-4"><div class="card shadow-sm border-0 h-100 border-top border-4 border-warning"><div class="card-body"><h5 class="fw-bold mb-3 text-dark"><i class="fas fa-shield-alt text-warning"></i> كلمة المرور</h5><form method="POST" class="d-flex flex-column gap-3"><input type="hidden" name="action" value="change_password"><div><label class="small fw-bold">الحالية</label><input type="password" name="old_password" class="form-control" required></div><div><label class="small fw-bold">الجديدة</label><input type="password" name="new_password" class="form-control" required></div><div><label class="small fw-bold">تأكيد</label><input type="password" name="confirm_password" class="form-control" required></div><button type="submit" class="btn btn-warning fw-bold text-dark w-100"><i class="fas fa-key"></i> تحديث</button></form></div></div></div></div></div>
 
-    <!-- 7. مدير المنصة (للمدير فقط) -->
-    {% if is_super_admin %}
-    <div class="tab-pane fade" id="superadmin" role="tabpanel">
-        
-        <!-- أداة ترحيل الصور المتقدمة الخاصة بالمدير فقط -->
-        <div class="card bg-dark text-white border-info shadow-lg mb-4">
-            <div class="card-body">
-                <h5 class="fw-bold text-info mb-3"><i class="fas fa-database me-2"></i> ترحيل الصور المتقدم (أداة المدير)</h5>
-                <p class="small text-light mb-3" style="line-height: 1.6;">تُستخدم هذه الأداة مستقبلاً عند اشتراكك في باقة استضافة صور مدفوعة. ستقوم الأداة بسحب صورك من الاستضافات المجانية ورفعها لمساحتك الآمنة دون فقدان أي بيانات.</p>
-                <form method="POST" onsubmit="return confirm('تنبيه: سيتم تشغيل سكربت الترحيل في الخلفية. هل أنت متأكد من المتابعة؟');">
-                    <input type="hidden" name="action" value="migrate_images">
-                    <button type="submit" class="btn btn-info w-100 fw-bold text-dark"><i class="fas fa-sync me-1"></i> تشغيل أداة ترحيل الصور الآن</button>
-                </form>
-            </div>
+            {% if is_super_admin %}<div class="tab-pane fade" id="superadmin" role="tabpanel">
+<div class="row mb-4"><div class="col-12"><div class="card border-primary shadow-sm"><div class="card-body"><h5 class="fw-bold text-primary mb-3">📦 إدارة باقات المنصة (SaaS Plans)</h5>
+<div class="row"><div class="col-md-4 mb-3"><form method="POST" class="p-3 bg-light rounded border"><input type="hidden" name="action" value="add_package"><label class="small fw-bold">اسم الباقة</label><input type="text" name="pkg_name" class="form-control mb-2" placeholder="مثال: VIP أو Pro" required><label class="small fw-bold">السعر (شهرياً/سنوياً)</label><input type="text" name="pkg_price" class="form-control mb-2" placeholder="مثال: 50$ شهرياً" required><label class="small fw-bold">الحد الأقصى للمنتجات</label><input type="number" name="pkg_max" class="form-control mb-2" placeholder="مثال: 100" required><label class="small fw-bold">المميزات (مفصولة بفاصلة)</label><input type="text" name="pkg_features" class="form-control mb-3" placeholder="دعم فني, دومين مخصص" required><button type="submit" class="btn btn-primary w-100 fw-bold">إضافة الباقة</button></form></div>
+<div class="col-md-8"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>الباقة</th><th>السعر</th><th>الحد الأقصى</th><th>المميزات</th><th>إجراء</th></tr></thead><tbody>
+{% for pkg in packages %}<tr><td class="fw-bold">{{ pkg.name }}</td><td class="text-success fw-bold">{{ pkg.price }}</td><td>{{ pkg.max_products }} منتج</td><td><small>{{ pkg.features }}</small></td><td><form method="POST" onsubmit="return confirm('حذف هذه الباقة؟');"><input type="hidden" name="action" value="delete_package"><input type="hidden" name="pkg_id" value="{{ pkg._id }}"><button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="5" class="text-center text-muted">لا توجد باقات، قم بإضافة باقة جديدة.</td></tr>{% endfor %}
+</tbody></table></div></div></div></div></div></div></div>
+<div class="row"><div class="col-md-4 mb-4"><div class="card bg-dark text-white border-warning shadow-lg"><div class="card-body"><h5 class="fw-bold text-warning mb-3">➕ إضافة تاجر جديد</h5><form method="POST"><input type="hidden" name="action" value="add_merchant"><input type="text" name="name" class="form-control mb-3" placeholder="اسم التاجر" required><input type="text" name="slug" class="form-control mb-3" placeholder="رابط المتجر" required><input type="text" name="password" class="form-control mb-3" placeholder="كلمة المرور" required><select name="package" class="form-select mb-3" required><option value="" disabled selected>-- اختر باقة المتجر --</option>{% for pkg in packages %}<option value="{{ pkg.name }}">{{ pkg.name }}</option>{% endfor %}</select><button type="submit" class="btn btn-warning w-100 fw-bold text-dark">إنشاء وبناء المتجر</button></form></div></div></div><div class="col-md-8"><div class="card border-danger shadow-sm"><div class="card-body"><h5 class="fw-bold text-danger mb-3">🏢 المتاجر المشتركة في منصتك</h5><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>التاجر</th><th>الباقة</th><th>الرابط</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>{% for m in merchants %}<tr><td>{{ m.username }}<br><small class="text-muted">Pass: {{ m.password }}</small></td><td><span class="badge bg-info text-dark">{{ m.get("package", "أساسية") }}</span></td><td><a href="/store/{{ m.store_slug }}" target="_blank" class="fw-bold">{{ m.store_slug }}</a></td><td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td><td><form method="POST" class="d-inline"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button type="submit" class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button></form>{% if m.store_slug != 'admin-store' %}<form method="POST" class="d-inline" onsubmit="return confirm('حذف نهائي؟');"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button type="submit" class="btn btn-sm btn-danger">حذف</button></form>{% endif %} <button type="button" class="btn btn-sm btn-primary ms-1" data-bs-toggle="modal" data-bs-target="#editSlugModal{{ m.id }}"><i class="fas fa-edit"></i> تعديل</button></td></tr><div class="modal fade" id="editSlugModal{{ m.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit"></i> تعديل بيانات المتجر: {{ m.username }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST"><input type="hidden" name="action" value="edit_merchant_info"><input type="hidden" name="user_id" value="{{ m.id }}"><label class="small fw-bold mb-2">الرابط الجديد (بدون مسافات):</label><input type="text" name="new_slug" class="form-control mb-3" value="{{ m.store_slug }}" required>
+<label class="small fw-bold mb-2">باقة الاشتراك:</label>
+<select name="new_package" class="form-select mb-3">
+    {% for pkg in packages %}
+    <option value="{{ pkg.name }}" {% if m.get('package', 'أساسية') == pkg.name %}selected{% endif %}>{{ pkg.name }}</option>
+    {% endfor %}
+    {% if not packages %}<option value="أساسية">أساسية (الرجاء إنشاء باقات أولاً)</option>{% endif %}
+</select>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-4">
+            <label class="form-label small fw-bold text-muted">التصنيف الفرعي</label>
+            <input type="text" name="subcategory" class="form-control form-control-sm" placeholder="مثال: هواتف ذكية">
         </div>
-
-        <div class="row mb-4"><div class="col-12"><div class="card border-primary shadow-sm"><div class="card-body"><h5 class="fw-bold text-primary mb-3">📦 إدارة باقات المنصة (SaaS Plans)</h5>
-        <div class="row"><div class="col-md-4 mb-3"><form method="POST" class="p-3 bg-light rounded border"><input type="hidden" name="action" value="add_package"><label class="small fw-bold">اسم الباقة</label><input type="text" name="pkg_name" class="form-control mb-2" placeholder="مثال: VIP أو Pro" required><label class="small fw-bold">السعر (شهرياً/سنوياً)</label><input type="text" name="pkg_price" class="form-control mb-2" placeholder="مثال: 50$ شهرياً" required><label class="small fw-bold">الحد الأقصى للمنتجات</label><input type="number" name="pkg_max" class="form-control mb-2" placeholder="مثال: 100" required><label class="small fw-bold">المميزات (مفصولة بفاصلة)</label><input type="text" name="pkg_features" class="form-control mb-3" placeholder="دعم فني, دومين مخصص" required><button type="submit" class="btn btn-primary w-100 fw-bold">إضافة الباقة</button></form></div>
-        <div class="col-md-8"><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>الباقة</th><th>السعر</th><th>الحد الأقصى</th><th>المميزات</th><th>إجراء</th></tr></thead><tbody>
-        {% for pkg in packages %}<tr><td class="fw-bold">{{ pkg.name }}</td><td class="text-success fw-bold">{{ pkg.price }}</td><td>{{ pkg.max_products }} منتج</td><td><small>{{ pkg.features }}</small></td><td><form method="POST" onsubmit="return confirm('حذف هذه الباقة؟');"><input type="hidden" name="action" value="delete_package"><input type="hidden" name="pkg_id" value="{{ pkg._id }}"><button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-trash"></i></button></form></td></tr>{% else %}<tr><td colspan="5" class="text-center text-muted">لا توجد باقات، قم بإضافة باقة جديدة.</td></tr>{% endfor %}
-        </tbody></table></div></div></div></div></div></div></div>
-        <div class="row"><div class="col-md-4 mb-4"><div class="card bg-dark text-white border-warning shadow-lg"><div class="card-body"><h5 class="fw-bold text-warning mb-3">➕ إضافة تاجر جديد</h5><form method="POST"><input type="hidden" name="action" value="add_merchant"><input type="text" name="name" class="form-control mb-3" placeholder="اسم التاجر" required><input type="text" name="slug" class="form-control mb-3" placeholder="رابط المتجر" required><input type="text" name="password" class="form-control mb-3" placeholder="كلمة المرور" required><select name="package" class="form-select mb-3" required><option value="" disabled selected>-- اختر باقة المتجر --</option>{% for pkg in packages %}<option value="{{ pkg.name }}">{{ pkg.name }}</option>{% endfor %}</select><button type="submit" class="btn btn-warning w-100 fw-bold text-dark">إنشاء وبناء المتجر</button></form></div></div></div><div class="col-md-8"><div class="card border-danger shadow-sm"><div class="card-body"><h5 class="fw-bold text-danger mb-3">🏢 المتاجر المشتركة في منصتك</h5><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>التاجر</th><th>الباقة</th><th>الرابط</th><th>الحالة</th><th>إجراءات</th></tr></thead><tbody>{% for m in merchants %}<tr><td>{{ m.username }}<br><small class="text-muted">Pass: {{ m.password }}</small></td><td><span class="badge bg-info text-dark">{{ m.get("package", "أساسية") }}</span></td><td><a href="/store/{{ m.store_slug }}" target="_blank" class="fw-bold">{{ m.store_slug }}</a></td><td><span class="badge bg-{{ 'success' if m.active == 'TRUE' else 'secondary' }}">{{ 'نشط' if m.active == 'TRUE' else 'موقوف' }}</span></td><td><form method="POST" class="d-inline"><input type="hidden" name="action" value="toggle_status"><input type="hidden" name="user_id" value="{{ m.id }}"><input type="hidden" name="current_status" value="{{ m.active }}"><button type="submit" class="btn btn-sm btn-{{ 'warning' if m.active == 'TRUE' else 'success' }}">{{ 'إيقاف' if m.active == 'TRUE' else 'تفعيل' }}</button></form>{% if m.store_slug != 'admin-store' %}<form method="POST" class="d-inline" onsubmit="return confirm('حذف نهائي؟');"><input type="hidden" name="action" value="delete_merchant"><input type="hidden" name="user_id" value="{{ m.id }}"><button type="submit" class="btn btn-sm btn-danger">حذف</button></form>{% endif %} <button type="button" class="btn btn-sm btn-primary ms-1" data-bs-toggle="modal" data-bs-target="#editSlugModal{{ m.id }}"><i class="fas fa-edit"></i> تعديل</button></td></tr><div class="modal fade" id="editSlugModal{{ m.id }}"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-light"><h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit"></i> تعديل بيانات المتجر: {{ m.username }}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><form method="POST"><input type="hidden" name="action" value="edit_merchant_info"><input type="hidden" name="user_id" value="{{ m.id }}"><label class="small fw-bold mb-2">الرابط الجديد (بدون مسافات):</label><input type="text" name="new_slug" class="form-control mb-3" value="{{ m.store_slug }}" required>
-        <label class="small fw-bold mb-2">باقة الاشتراك:</label>
-        <select name="new_package" class="form-select mb-3">
-            {% for pkg in packages %}
-            <option value="{{ pkg.name }}" {% if m.get('package', 'أساسية') == pkg.name %}selected{% endif %}>{{ pkg.name }}</option>
-            {% endfor %}
-            {% if not packages %}<option value="أساسية">أساسية (الرجاء إنشاء باقات أولاً)</option>{% endif %}
-        </select>
-            <div class="row g-2 mb-3">
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">التصنيف الفرعي</label>
-                    <input type="text" name="subcategory" class="form-control form-control-sm" placeholder="مثال: هواتف ذكية">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">الماركة / الموديل</label>
-                    <input type="text" name="brand" class="form-control form-control-sm" placeholder="مثال: سامسونج / آبل">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label small fw-bold text-muted">النوع / الخصائص</label>
-                    <input type="text" name="p_type" class="form-control form-control-sm" placeholder="مثال: 128 جيجابايت">
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary w-100 fw-bold">حفظ التعديلات</button></form><div class="alert alert-warning mt-3 small fw-bold mb-0"><i class="fas fa-exclamation-triangle"></i> تنبيه: سيتغير رابط الدخول الخاص بالتاجر، ويجب إبلاغه بالرابط الجديد.</div></div></div></div></div>{% endfor %}</tbody></table></div></div></div></div></div></div>
+        <div class="col-md-4">
+            <label class="form-label small fw-bold text-muted">الماركة / الموديل</label>
+            <input type="text" name="brand" class="form-control form-control-sm" placeholder="مثال: سامسونج / آبل">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small fw-bold text-muted">النوع / الخصائص</label>
+            <input type="text" name="p_type" class="form-control form-control-sm" placeholder="مثال: 128 جيجابايت">
+        </div>
     </div>
-    {% endif %}
+    <button type="submit" class="btn btn-primary w-100 fw-bold">حفظ التعديلات</button></form><div class="alert alert-warning mt-3 small fw-bold mb-0"><i class="fas fa-exclamation-triangle"></i> تنبيه: سيتغير رابط الدخول الخاص بالتاجر، ويجب إبلاغه بالرابط الجديد.</div></div></div></div></div>{% endfor %}</tbody></table></div></div></div></div></div></div>{% endif %}
+        </div>
+    </div>
 
-</div> <!-- نهاية tab-content -->
-
-<!-- النوافذ المنبثقة خارج الـ Tabs -->
-{% include 'partials/add_driver_modal.html' %}
-{% include 'partials/guide_modal.html' %}
-
+    <!-- نافذة الدليل السحابي المحدثة -->
+    {% include 'partials/guide_modal.html' %}
 {% endblock %}
 
 {% block page_scripts %}
 <script>
-function filterOrdersTable() {
-    let idFilter = document.getElementById('filterOrdId').value.toLowerCase();
-    let custFilter = document.getElementById('filterOrdCust').value.toLowerCase();
-    let statFilter = document.getElementById('filterOrdStat').value.toLowerCase();
-    
-    let rows = document.querySelectorAll('#ordersTableBody tr.order-row');
-    rows.forEach(row => {
-        let idTxt = row.cells[0].innerText.toLowerCase();
-        let custTxt = row.cells[1].innerText.toLowerCase();
-        let statTxt = row.cells[4].innerText.toLowerCase();
-        
-        if (idTxt.includes(idFilter) && custTxt.includes(custFilter) && statTxt.includes(statFilter)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
 function toggleProviderFields() { 
             let provider = document.getElementById('providerSelect').value; 
             if(provider === 'cloudinary') { 
@@ -697,12 +671,33 @@ function toggleProviderFields() {
         }
     });
 
-    // دالة مشاركة المنتج مباشرة من لوحة التحكم
-    function shareDashboardProduct(name, desc, imgUrl) {
-        const storeUrl = window.location.origin + '/store/{{ store_slug }}';
-        const shareText = `🛍️ متوفر الآن: ${name}\n\n${desc ? desc.substring(0, 80) + '...' : ''}\n\nلطلب المنتج، تفضل بزيارة متجرنا عبر الرابط:\n${storeUrl}\n\nرابط صورة المنتج:\n${imgUrl}`;
-        const waLink = "https://wa.me/?text=" + encodeURIComponent(shareText);
-        window.open(waLink, '_blank');
+    function filterOrdersTable() {
+        let fromDate = document.getElementById('filterFromDate') ? document.getElementById('filterFromDate').value : '';
+        let toDate = document.getElementById('filterToDate') ? document.getElementById('filterToDate').value : '';
+        
+        let exportBtn = document.getElementById('exportBtn');
+        if (exportBtn) { exportBtn.href = `/export/orders?from_date=${fromDate}&to_date=${toDate}`; }
+
+        let ordIdFilter = document.getElementById('filterOrdId') ? document.getElementById('filterOrdId').value.toLowerCase() : '';
+        let ordCustFilter = document.getElementById('filterOrdCust') ? document.getElementById('filterOrdCust').value.toLowerCase() : '';
+        let ordStatFilter = document.getElementById('filterOrdStat') ? document.getElementById('filterOrdStat').value : '';
+
+        let rows = document.querySelectorAll('.order-row');
+        rows.forEach(row => {
+            let rowDate = row.getAttribute('data-date') || '';
+            let txtContent = row.innerText.toLowerCase();
+            let badgeEl = row.querySelector('.badge');
+            let rowStat = badgeEl ? badgeEl.innerText.trim() : '';
+            
+            let show = true;
+            if (fromDate && rowDate < fromDate) show = false;
+            if (toDate && rowDate > toDate) show = false;
+            if (ordIdFilter && !txtContent.includes(ordIdFilter)) show = false;
+            if (ordCustFilter && !txtContent.includes(ordCustFilter)) show = false;
+            if (ordStatFilter && !rowStat.includes(ordStatFilter)) show = false;
+            
+            row.style.display = show ? '' : 'none';
+        });
     }
 </script>
 {% if not is_super_admin %}
@@ -773,9 +768,16 @@ document.addEventListener("DOMContentLoaded", function() {
     </div>
     `;
     
-    let productsTab = document.getElementById('products');
+    let productsTab = document.getElementById('v-pills-products') || document.getElementById('products');
+    let dashboardTab = document.getElementById('v-pills-dashboard') || document.getElementById('dashboard');
+    
     if (productsTab) {
         productsTab.insertAdjacentHTML('afterbegin', progressHtml);
+    } else if (dashboardTab) {
+        dashboardTab.insertAdjacentHTML('afterbegin', progressHtml);
+    } else {
+        let topContainer = document.querySelector('.container') || document.querySelector('.container-fluid');
+        if(topContainer) topContainer.insertAdjacentHTML('afterbegin', progressHtml);
     }
 });
 </script>

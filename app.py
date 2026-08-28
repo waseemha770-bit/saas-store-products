@@ -45,7 +45,6 @@ def extract_clean_products(order):
     return parsed
 
 def get_pwa_icon_url(raw_url, size):
-    """إرجاع شعار المتجر مباشرة للـPWA مع أيقونة المنصة كبديل."""
     raw_url = (raw_url or '').strip()
     if not raw_url:
         return f"/static/icon-{size}.png"
@@ -169,6 +168,11 @@ def pwa_manifest(slug):
 
 @app.route('/sw.js')
 def service_worker(): return send_from_directory(app.static_folder, 'sw.js', mimetype='application/javascript')
+
+@app.route('/favicon.ico')
+def favicon():
+    import os
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'icon-192.png', mimetype='image/png')
 
 @app.route('/api/proxy_upload', methods=['POST'])
 def proxy_upload():
@@ -386,15 +390,32 @@ def track_order(order_id=None):
 @app.route('/export/orders')
 def export_orders():
     if 'user_id' not in session: return redirect(url_for('login'))
-    orders = database.get_orders(session['user_id']); output = io.StringIO(); writer = csv.writer(output)
+    
+    from_date = request.args.get('from_date', '')
+    to_date = request.args.get('to_date', '')
+    
+    all_orders = database.get_orders(session['user_id'])
+    orders = []
+    
+    for o in all_orders:
+        order_date = o.get('date') or o.get('created_at') or ''
+        o_date_str = order_date.strftime('%Y-%m-%d') if isinstance(order_date, datetime) else str(order_date)[:10]
+        
+        if from_date and o_date_str < from_date: continue
+        if to_date and o_date_str > to_date: continue
+        orders.append(o)
+
+    output = io.StringIO(); writer = csv.writer(output)
     writer.writerow(['رقم الطلب', 'التاريخ', 'العميل', 'الهاتف', 'العنوان', 'طريقة الدفع', 'المنتجات', 'الخصم', 'الإجمالي', 'الحالة'])
     for o in orders:
         order_date = o.get('date') or o.get('created_at') or ''
-        if isinstance(order_date, datetime):
-            order_date = order_date.strftime('%Y-%m-%d %H:%M')
+        if isinstance(order_date, datetime): order_date = order_date.strftime('%Y-%m-%d %H:%M')
+        
         cart_items = o.get('cart_items') or o.get('cart') or []
         items_str = " | ".join([f"{i.get('name', 'منتج')} (x{i.get('qty', 1)})" for i in cart_items if isinstance(i, dict)])
+        
         writer.writerow([o.get('order_id', ''), order_date, o.get('customer_name', ''), o.get('customer_phone', ''), o.get('customer_address', ''), o.get('payment') or o.get('payment_info', ''), items_str, o.get('discount_info', ''), o.get('total', 0), o.get('status', 'جديد 🟡')])
+        
     return Response(output.getvalue().encode('utf-8-sig'), mimetype="text/csv", headers={"Content-Disposition": "attachment;filename=TajerGo_Orders.csv"})
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -536,31 +557,7 @@ def dashboard():
         elif action == 'edit_merchant_info' and is_super_admin:
             if database.edit_merchant_info(request.form.get('user_id'), request.form.get('new_slug', '').strip(), request.form.get('new_package', 'أساسية')): flash("تم تحديث التاجر", "success")
             else: flash("الرابط محجوز!", "danger")
-        
-        # --- سكربت الترحيل الجاهز للمستقبل الخاص بالمدير ---
-        elif action == 'migrate_images' and is_super_admin:
-            def migrate_images_task():
-                import requests
-                # import cloudinary.uploader # يتم التفعيل لاحقاً عند اشتراكك
-                
-                # تضمين كافة المنصات المذكورة في القائمة المنسدلة للبحث عنها
-                target_hosts = "catbox|imgbb|freeimage|imgur|postimg|postimages|cloudinary"
-                prods = database.products_col.find({"image_url": {"$regex": target_hosts, "$options": "i"}})
-                
-                for prod in prods:
-                    old_url = prod.get("image_url")
-                    if not old_url: continue
-                    try:
-                        # الأداة مهيأة برمجياً لرفع الصور للسيرفر المدفوع وتحديث الرابط
-                        print(f"Future migration target: {prod.get('name')} | URL: {old_url}")
-                    except Exception as e: pass
             
-            import threading
-            threading.Thread(target=migrate_images_task).start()
-            flash("بدأت عملية الترحيل في الخلفية. يتم الآن فحص وجلب الصور من جميع المنصات (Catbox, ImgBB, Imgur, وغيرها).", "info")
-            
-        return redirect(url_for('dashboard'))
-    
     orders = database.get_orders(session['user_id'])
     products = database.get_products(session['user_id'])
     settings = database.get_settings(session['user_id'])

@@ -197,10 +197,15 @@ def get_orders(store_id):
     for order in orders:
         if not order.get("date") and order.get("created_at"):
             order["date"] = order["created_at"]
+        
+        # ربط دالة الاستخراج الذكية لإصلاح المنتجات المفقودة تلقائياً
+        if not order.get('cart_items') or not isinstance(order.get('cart_items'), list):
+            order['cart_items'] = extract_real_order_items(order, store_id)
+            
     return orders
 
 # ==========================================
-# الكوبونات والباقات (تمت استعادتها وتأمينها)
+# الكوبونات والباقات
 # ==========================================
 def add_coupon(user_id, code, discount_percent):
     code = str(code or '').strip().upper()
@@ -229,7 +234,6 @@ def get_packages():
 def add_package(name, price, max_products, features):
     try:
         import re as regex_lib
-        # استخراج الأرقام فقط لضمان تحويلها لـ int
         val = str(max_products)
         clean_str = regex_lib.sub(r'\D', '', val)
         clean_max = int(clean_str) if clean_str else 999999
@@ -244,11 +248,9 @@ def add_package(name, price, max_products, features):
         "features": str(features).strip()
     })
 
-
 def delete_package(pkg_id):
     from bson.objectid import ObjectId
     packages_col.delete_one({'_id': ObjectId(pkg_id)})
-
 
 # ==========================================
 # إدارة المناديب (Drivers Management)
@@ -275,7 +277,6 @@ def add_driver(store_id, name, phone):
         print("Driver Insert Error:", e)
         return False
 
-
 def get_store_drivers(store_id):
     try:
         import secrets
@@ -284,7 +285,6 @@ def get_store_drivers(store_id):
         for d in drivers:
             d_id_str = str(d['_id'])
             d['_id'] = d_id_str
-            # إذا كان المندوب لا يملك رمز بوابة، نقوم بتوليده وحفظه فوراً
             if 'token' not in d:
                 new_token = secrets.token_hex(8)
                 drivers_col.update_one({"_id": ObjectId(d_id_str)}, {"$set": {"token": new_token}})
@@ -294,7 +294,6 @@ def get_store_drivers(store_id):
         print("Driver Fetch Error:", e)
         return []
 
-
 def delete_driver(store_id, phone):
     try:
         drivers_col.delete_one({"store_id": store_id, "phone": str(phone).strip()})
@@ -303,14 +302,11 @@ def delete_driver(store_id, phone):
         print("Driver Delete Error:", e)
         return False
 
-
-
 def get_driver_by_token(token):
     token = str(token or '').strip().lower()
     if not token:
         return None
     return drivers_col.find_one({"token": token}, {"_id": 0})
-
 
 def assign_order_driver(order_id, store_id, driver_name, driver_phone):
     return orders_col.update_one(
@@ -322,15 +318,11 @@ def assign_order_driver(order_id, store_id, driver_name, driver_phone):
         }}
     )
 
-
-
-
 def extract_real_order_items(order, store_id=None):
     """استخراج وتنسيق أسماء المنتجات الحقيقية بدقة من كافة صيغ الطلبات"""
     import json
     extracted = []
     
-    # 1. فحص حقل cart سواء كان مصفوفة أو نص JSON
     cart_data = order.get('cart')
     if isinstance(cart_data, str):
         try:
@@ -347,7 +339,6 @@ def extract_real_order_items(order, store_id=None):
                 qty = item.get('qty') or item.get('quantity') or 1
                 prod_id = item.get('id') or item.get('product_id') or item.get('_id')
                 
-                # إذا كان الاسم غير متوفر أو عام، نبحث عنه في المنتجات
                 if (not p_name or p_name in ['منتج', 'منتجات متنوعة', '']) and prod_id:
                     prod = products_col.find_one({"id": str(prod_id)}) or products_col.find_one({"_id": prod_id})
                     if prod:
@@ -358,13 +349,11 @@ def extract_real_order_items(order, store_id=None):
             elif isinstance(item, str) and item.strip():
                 extracted.append({"name": item.strip(), "qty": 1})
 
-    # 2. فحص الحقول الفردية القديمة
     if not extracted:
         single_name = order.get('product_name') or order.get('item_name')
         if single_name:
             extracted.append({"name": str(single_name), "qty": order.get('qty', 1)})
 
-    # 3. التحقق من نص المنتجات الصريح إن وجد
     if not extracted:
         raw_text = order.get('items_text') or order.get('order_details')
         if raw_text:
@@ -372,16 +361,13 @@ def extract_real_order_items(order, store_id=None):
 
     return extracted if extracted else [{"name": "طلب #" + str(order.get('order_id', '')), "qty": 1}]
 
-
 def resolve_order_items(order, store_id=None):
-    """محرك استخراج ومطابقة أسماء المنتجات بدقة واحترافية من قاعدة البيانات"""
     import json
     from bson.objectid import ObjectId
     
     store_id = store_id or order.get('store_id')
     results = []
     
-    # خريطة سريعة لمنتجات المتجر بالمعرف والسعر
     store_prods = list(products_col.find({"u_id": store_id})) if store_id else list(products_col.find({}))
     prod_by_id = {}
     prod_by_price = {}
@@ -398,35 +384,27 @@ def resolve_order_items(order, store_id=None):
             except:
                 pass
 
-    # 1. فحص حقل السلة cart
     cart = order.get('cart')
     if isinstance(cart, str):
-        try:
-            cart = json.loads(cart)
-        except:
-            pass
+        try: cart = json.loads(cart)
+        except: pass
             
     if isinstance(cart, list) and len(cart) > 0:
         for it in cart:
             if isinstance(it, dict):
-                # البحث عن أي مفتاح يحمل اسم المنتج
                 name = (it.get('name') or it.get('title') or it.get('product_name') or 
                         it.get('item_name') or it.get('name_ar') or it.get('label'))
-                
                 prod_id = str(it.get('id') or it.get('product_id') or it.get('_id') or '')
                 qty = it.get('qty') or it.get('quantity') or 1
                 
-                # مطابقة المعرف مع جدول المنتجات إذا كان الاسم مفقوداً
                 if (not name or name in ['منتج', 'منتجات متنوعة', '']) and prod_id:
                     name = prod_by_id.get(prod_id)
                 
-                # مطابقة السعر مع جدول المنتجات كحل بديل
                 if not name or name in ['منتج', 'منتجات متنوعة', '']:
                     try:
                         p_price = float(it.get('price', 0))
                         name = prod_by_price.get(p_price)
-                    except:
-                        pass
+                    except: pass
                         
                 if name and name not in ['منتج', 'منتجات متنوعة']:
                     results.append(f"{name} (x{qty})")
@@ -434,33 +412,25 @@ def resolve_order_items(order, store_id=None):
             elif isinstance(it, str) and it.strip() and it.strip() != 'منتج':
                 results.append(it.strip())
 
-    # 2. فحص الحقول النصية والفردية
     if not results:
         direct_name = order.get('product_name') or order.get('item_name') or order.get('title')
         if direct_name and direct_name != 'منتج':
             results.append(f"{direct_name} (x{order.get('qty', 1)})")
 
-    # 3. مطابقة إجمالي الطلب مع أسعار منتجات المتجر للطلبات القديمة جداً
     if not results:
         try:
             total_val = float(order.get('total', 0))
             if total_val in prod_by_price:
                 results.append(f"{prod_by_price[total_val]} (x1)")
-        except:
-            pass
+        except: pass
 
-    # 4. في حال تعذر المطابقة التامة نضع كود الطلب المرجعي
     if not results:
         results.append(f"طلب {order.get('order_id', '')}")
 
     return results
 
-
 def get_store_orders_enhanced(store_id):
-    """دالة مطورة وذكية لجلب الطلبات مع مطابقة أسماء المنتجات"""
     orders = list(orders_col.find({"store_id": store_id}).sort('_id', -1))
-    
-    # 1. جلب خريطة المنتجات لمطابقتها مع الأكواد
     prods = list(products_col.find({"u_id": store_id}))
     prod_map = {}
     for p in prods:
@@ -476,45 +446,34 @@ def get_store_orders_enhanced(store_id):
         final_list = []
         cart = o.get('cart')
         
-        # 2. فك السلة لو كانت نصاً
         if isinstance(cart, str):
             try: cart = json.loads(cart)
             except: 
                 if cart.strip(): final_list.append(f"▪️ {cart.strip()}")
         
-        # تحويل القاموس لمصفوفة إن وجد
         if isinstance(cart, dict):
             cart = [cart]
             
-        # 3. قراءة المصفوفة بدقة
         if isinstance(cart, list):
             for item in cart:
                 if isinstance(item, dict):
                     name = item.get('name') or item.get('title') or item.get('product_name')
-                    # المطابقة عبر ID في حال غياب الاسم
                     if not name or name == 'منتج':
                         pid = str(item.get('id') or item.get('_id') or item.get('product_id') or '')
-                        if pid in prod_map:
-                            name = prod_map[pid]
+                        if pid in prod_map: name = prod_map[pid]
                             
-                    if not name or name == 'منتج':
-                        name = "منتج غير مسجل"
-                        
+                    if not name or name == 'منتج': name = "منتج غير مسجل"
                     qty = item.get('qty') or item.get('quantity') or 1
                     final_list.append(f"▪️ {name} (x{qty})")
                 elif isinstance(item, str) and item.strip():
                     final_list.append(f"▪️ {item.strip()}")
                     
-        # 4. قراءة الحقول القديمة (دعم الإصدارات السابقة للطلبات)
         if not final_list:
             legacy = o.get('product_name') or o.get('item_name') or o.get('items')
             if isinstance(legacy, str) and legacy.strip():
-                if '▪️' not in legacy:
-                    final_list.append(f"▪️ {legacy} (x{o.get('qty', 1)})")
-                else:
-                    final_list.append(legacy)
+                if '▪️' not in legacy: final_list.append(f"▪️ {legacy} (x{o.get('qty', 1)})")
+                else: final_list.append(legacy)
                     
-        # 5. خطة الطوارئ
         if not final_list:
             final_list.append("▪️ منتج غير محدد")
             
@@ -522,35 +481,20 @@ def get_store_orders_enhanced(store_id):
         
     return orders
 
-
-
 def check_product_limit(store_id):
-    """التحقق من تجاوز التاجر للحد الأقصى للمنتجات بناءً على باقته"""
     try:
         user = users_col.find_one({"id": store_id})
-        if not user: 
-            return False, "حساب المتجر غير موجود."
-            
-        # استثناء المتجر الرئيسي (المدير) من القيود
-        if user.get("store_slug") == "admin-store":
-            return True, ""
+        if not user: return False, "حساب المتجر غير موجود."
+        if user.get("store_slug") == "admin-store": return True, ""
             
         pkg_name = user.get("package", "أساسية")
-        
-        # جلب بيانات الباقة من قاعدة البيانات
-        try:
-            pkg = db.packages.find_one({"name": pkg_name})
-        except:
-            pkg = None
+        try: pkg = db.packages.find_one({"name": pkg_name})
+        except: pkg = None
             
-        # معالجة الحد الأقصى (في حال كتب المدير "لامحدود" نصياً بدلاً من رقم)
         max_str = str(pkg.get("max_products", 20)) if pkg else "20"
-        try:
-            max_prods = int(max_str)
-        except ValueError:
-            max_prods = 9999999 # رقم لا نهائي في حال الباقة المفتوحة
+        try: max_prods = int(max_str)
+        except ValueError: max_prods = 9999999
             
-        # حساب العدد الفعلي للمنتجات الحالية في متجر التاجر
         current_count = products_col.count_documents({"u_id": store_id})
         
         if current_count >= max_prods:
@@ -559,9 +503,7 @@ def check_product_limit(store_id):
         return True, ""
     except Exception as e:
         print("Package Limit Check Error:", e)
-        return True, "" # في حال الخطأ التقني نسمح بالمرور كي لا يتوقف المتجر
-
-
+        return True, ""
 
 def check_merchant_product_limit(user_id):
     try:
@@ -569,27 +511,19 @@ def check_merchant_product_limit(user_id):
         from bson.objectid import ObjectId
         user = users_col.find_one({"id": user_id})
         if not user:
-            try:
-                user = users_col.find_one({"_id": ObjectId(str(user_id))})
-            except:
-                pass
+            try: user = users_col.find_one({"_id": ObjectId(str(user_id))})
+            except: pass
 
-        if not user:
-            return True, 0, 999999, "عامة", ""
+        if not user: return True, 0, 999999, "عامة", ""
 
         pkg_name = str(user.get("package", "أساسية")).strip()
-        
-        # البحث في قاعدة البيانات بمطابقة مرنة
         target_pkg = db.packages.find_one({"name": {"$regex": f"^{regex_lib.escape(pkg_name)}$", "$options": "i"}})
 
         if target_pkg:
             raw_val = target_pkg.get("max_products") if target_pkg.get("max_products") is not None else target_pkg.get("pkg_max", 20)
-            try:
-                max_limit = int(raw_val)
-            except:
-                max_limit = 20
+            try: max_limit = int(raw_val)
+            except: max_limit = 20
         else:
-            # إذا لم توجد الباقة في الجدول، نأخذ حداً صغيراً بدلاً من 20
             max_limit = 5
 
         current_prods = get_products(user_id)
