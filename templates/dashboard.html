@@ -33,7 +33,7 @@
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
                         
-                        <!-- الحاوية الجديدة لتصدير إكسل وفلترة التواريخ -->
+                        <!-- الحاوية لتصدير إكسل وفلترة التواريخ -->
                         <div class="d-flex flex-wrap gap-2 mb-3 align-items-center bg-light p-2 rounded border">
                             <a href="/export/orders" id="exportBtn" class="btn btn-success btn-sm fw-bold shadow-sm">
                                 <i class="fas fa-file-excel"></i> تصدير Excel
@@ -81,7 +81,6 @@
                                 <tbody id="ordersTableBody">
                                     {% if orders %}
                                         {% for o in orders %}
-                                        <!-- التعديل الآمن للتاريخ هنا -->
                                         <tr class="order-row" data-date="{{ (o.date|string)[:10] if o.date else '' }}">
                                             <td>
                                                 <span class="fw-bold text-dark d-block mb-1">{{ o.order_id }}</span>
@@ -161,9 +160,8 @@
         </div>
     </div>
 
-    <!-- 3. المنتجات (النشط افتراضياً) -->
+    <!-- 3. المنتجات -->
     <div class="tab-pane fade show active" id="products">
-        
         <datalist id="unit-options">
             <option value="حبة"></option><option value="كجم"></option><option value="جرام"></option><option value="لتر"></option>
             <option value="مل"></option><option value="كرتون"></option><option value="درزن"></option><option value="طقم"></option>
@@ -520,6 +518,9 @@
     <button type="submit" class="btn btn-primary w-100 fw-bold">حفظ التعديلات</button></form><div class="alert alert-warning mt-3 small fw-bold mb-0"><i class="fas fa-exclamation-triangle"></i> تنبيه: سيتغير رابط الدخول الخاص بالتاجر، ويجب إبلاغه بالرابط الجديد.</div></div></div></div></div>{% endfor %}</tbody></table></div></div></div></div></div></div>{% endif %}
         </div>
     </div>
+
+    <!-- نافذة إضافة مندوب جديد -->
+    {% include 'partials/add_driver_modal.html' %}
 
     <!-- نافذة الدليل السحابي المحدثة -->
     {% include 'partials/guide_modal.html' %}

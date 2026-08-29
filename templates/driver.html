@@ -22,7 +22,7 @@
     <div class="container">
         
         <div class="mb-3 mt-3 text-start">
-            <button onclick="history.back()" class="btn btn-outline-secondary btn-sm fw-bold rounded-pill shadow-sm">
+            <button onclick="if(window.history.length > 1 && document.referrer !== '') { window.history.back(); } else { window.close(); }" class="btn btn-outline-secondary btn-sm fw-bold rounded-pill shadow-sm">
                 <i class="fas fa-arrow-right me-1"></i> رجوع
             </button>
         </div>
